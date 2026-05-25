@@ -46,7 +46,7 @@ def validate_file_type(f, allowed_extensions, allowed_mime_prefixes):
     return True, ''
 
 def register_routes(app, bcrypt, login_manager, limiter):
-    supabase_url = app.config.get("SUPABASE_URL", "")
+    supabase_url = app.config.get("SUPABASE_URL", "").rstrip("/")
     supabase_key = app.config.get("SUPABASE_STORAGE_KEY", "")
     supabase_bucket = "uploads"
 
@@ -64,7 +64,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             method="POST",
         )
         try:
-            urllib.request.urlopen(req)
+            urllib.request.urlopen(req, timeout=15)
             return f"{supabase_url}/storage/v1/object/public/{bucket}/{path}"
         except Exception:
             return None
@@ -1226,6 +1226,30 @@ def register_routes(app, bcrypt, login_manager, limiter):
         from seed import _run_seed
         _run_seed(bcrypt)
         return jsonify({"message": "Database reset and re-seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
+
+    @app.route('/api/clean-data')
+    def api_clean_data():
+        EventRegistration.query.delete()
+        UserLike.query.delete()
+        Connection.query.delete()
+        TeamApplicant.query.delete()
+        MentorshipRequest.query.delete()
+        MentorInteraction.query.delete()
+        Notification.query.delete()
+        ChatMessage.query.delete()
+        Comment.query.delete()
+        Post.query.delete()
+        Achievement.query.delete()
+        Project.query.delete()
+        VerificationRequest.query.delete()
+        SchoolAnnouncement.query.delete()
+        TeamRequest.query.delete()
+        Mentor.query.delete()
+        Opportunity.query.delete()
+        Ad.query.delete()
+        School.query.delete()
+        db.session.commit()
+        return jsonify({"message": "All seed data removed. Test users preserved."})
 
     @app.route('/api/health')
     def api_health():
