@@ -1221,6 +1221,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
         _run_seed(bcrypt)
         return jsonify({"message": "Database seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
 
+    @app.route('/api/reset-db')
+    def api_reset_db():
+        from seed import _run_seed
+        _run_seed(bcrypt)
+        return jsonify({"message": "Database reset and re-seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
+
     @app.route('/api/health')
     def api_health():
         return jsonify({"status": "healthy"})
