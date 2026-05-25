@@ -22,23 +22,23 @@
     <form method="POST">
       <div style="margin-bottom: 0.75rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Full Name</label>
-        <input type="text" name="name" placeholder="e.g. Aarav Sharma" required>
+        <input type="text" id="regName" name="name" placeholder="e.g. Aarav Sharma" required>
       </div>
       <div style="margin-bottom: 0.75rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Email</label>
-        <input type="email" name="email" placeholder="your@email.com" required>
+        <input type="email" id="regEmail" name="email" placeholder="your@email.com" required>
       </div>
       <div style="margin-bottom: 0.75rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Password</label>
-        <input type="password" name="password" placeholder="Min. 6 characters" required minlength="6">
+        <input type="password" id="regPassword" name="password" placeholder="Min. 6 characters" required minlength="6">
       </div>
       <div style="margin-bottom: 0.75rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">School / Institution</label>
-        <input type="text" name="school" placeholder="e.g. Delhi Public School">
+        <input type="text" id="regSchool" name="school" placeholder="e.g. Delhi Public School">
       </div>
       <div style="margin-bottom: 1rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Role</label>
-        <select name="role">
+        <select id="regRole" name="role">
           <option value="student">Student</option>
           <option value="teacher">Teacher</option>
           <option value="mentor">Mentor</option>
