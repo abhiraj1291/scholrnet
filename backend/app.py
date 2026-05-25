@@ -1217,7 +1217,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             except Exception:
                 return jsonify({"success": False, "error": "Invalid image file"}), 400
         safe_name = f"{uuid.uuid4().hex[:16]}_{current_user.id}.{ext}"
-        url = _save_to_supabase(f.read(), 'uploads', safe_name, f'image/{ext}' if ext not in ('mp4', 'mov') else f'video/{ext}')
+        url = _save_to_supabase(f.read(), 'uploads', safe_name)
         if not url:
             return jsonify({"success": False, "error": "Failed to upload file"}), 500
         return jsonify({"success": True, "url": url})
