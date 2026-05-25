@@ -1191,6 +1191,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
         url = f"/static/uploads/{safe_name}"
         return jsonify({"success": True, "url": url})
 
+    @app.route('/api/seed')
+    def api_seed():
+        if User.query.first():
+            return jsonify({"message": "Already seeded"})
+        from seed import _run_seed
+        _run_seed(bcrypt)
+        return jsonify({"message": "Database seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
+
     @app.route('/api/health')
     def api_health():
         return jsonify({"status": "healthy"})
