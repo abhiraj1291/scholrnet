@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:56rem;margin:0 auto;">
+  <h1 class="text-xl font-black mb-4">Admin Panel</h1>
+
+  <!-- Manage Ads -->
+  <div class="card mb-3">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="image" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        <span class="font-bold text-sm">Manage Ads</span>
+      </div>
+      <button id="toggleAdFormBtn" class="btn btn-primary btn-sm"><i data-lucide="plus" style="width:1rem;height:1rem;"></i> Create Ad</button>
+    </div>
+
+    <!-- Create Ad Form -->
+    <div id="adFormContainer" class="hidden mb-3 p-3 rounded-xl" style="background:var(--bg-hover);">
+      <form id="adForm">
+        <div class="grid gap-2" style="grid-template-columns:1fr 1fr;">
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Title</label>
+            <input type="text" id="adTitle" placeholder="Ad title" required>
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Company</label>
+            <input type="text" id="adCompany" placeholder="Company name" required>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Content</label>
+          <textarea id="adContent" rows="2" placeholder="Ad description" required></textarea>
+        </div>
+        <div class="grid gap-2" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">CTA Text</label>
+            <input type="text" id="adCtaText" placeholder="Learn More">
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">CTA URL</label>
+            <input type="url" id="adCtaUrl" placeholder="https://...">
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Placement</label>
+            <select id="adPlacement">
+              <option value="sidebar">Sidebar</option>
+              <option value="in-feed">In-feed</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Create Ad</button>
+      </form>
+    </div>
+
+    <!-- Ads List -->
+    <div id="adsList"></div>
+  </div>
+
+  <!-- Manage Posts -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="file-text" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">All Posts</span>
+    </div>
+    <div id="adminPostsList"></div>
+    <div id="postsLoader" class="text-center py-4 hidden">
+      <div class="shimmer" style="height:6rem;width:100%;"></div>
+    </div>
+  </div>
+
+  <!-- Manage Schools -->
+  <div class="card">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="building-2" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">Schools</span>
+    </div>
+    <div id="schoolsList"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle ad form
+  document.getElementById('toggleAdFormBtn').addEventListener('click', function() {
+    var container = document.getElementById('adFormContainer');
+    container.classList.toggle('hidden');
+    lucide.createIcons();
+  });
+
+  // Load ads
+  function loadAds() {
+    fetch('/api/admin/ads')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('adsList');
+        list.innerHTML = '';
+        if (data.ads && data.ads.length > 0) {
+          data.ads.forEach(function(ad) {
+            var el = document.createElement('div');
+            el.className = 'flex items-center justify-between p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div style="flex:1;min-width:0;">' +
+                '<div class="text-sm font-bold">' + escapeHtml(ad.title) + '</div>' +
+                '<div class="text-xs text-muted">' + escapeHtml(ad.company) + ' &middot; ' + escapeHtml(ad.placement || 'sidebar') + '</div>' +
+                (ad.content ? '<div class="text-xs text-muted mt-1">' + escapeHtml(ad.content) + '</div>' : '') +
+              '</div>' +
+              '<button class="btn btn-danger btn-sm delete-ad" data-id="' + ad.id + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No ads created yet</div>';
+        }
+
+        // Delete ads
+        document.querySelectorAll('.delete-ad').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            if (!confirm('Delete this ad?')) return;
+            fetch('/api/admin/ad/' + id + '/delete', { method: 'DELETE' })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data.success) {
+                  showToast('Ad deleted', 'success');
+                  loadAds();
+                } else {
+                  showToast(data.error || 'Error', 'info');
+                }
+              })
+              .catch(function() { showToast('Error deleting ad', 'info'); });
+          });
+        });
+      })
+      .catch(function() {});
+  }
+
+  // Load posts
+  function loadPosts() {
+    document.getElementById('postsLoader').classList.remove('hidden');
+    fetch('/api/admin/posts')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('postsLoader').classList.add('hidden');
+        var list = document.getElementById('adminPostsList');
+        list.innerHTML = '';
+        if (data.posts && data.posts.length > 0) {
+          data.posts.forEach(function(post) {
+            var el = document.createElement('div');
+            el.className = 'flex items-center justify-between p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div style="flex:1;min-width:0;">' +
+                '<div class="flex items-center gap-2">' +
+                  '<span class="text-sm font-bold">' + escapeHtml(post.author ? post.author.name : 'Unknown') + '</span>' +
+                  (post.title ? '<span class="text-xs text-muted">- ' + escapeHtml(post.title) + '</span>' : '') +
+                '</div>' +
+                (post.content ? '<div class="text-xs text-muted truncate">' + escapeHtml(post.content) + '</div>' : '') +
+                '<div class="text-xs text-muted mt-1">' + (post.created_at || '') + ' &middot; <span class="font-bold">' + (post.likes_count || 0) + ' likes</span></div>' +
+              '</div>' +
+              '<button class="btn btn-danger btn-sm delete-post" data-id="' + post.id + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No posts yet</div>';
+        }
+
+        // Delete posts
+        document.querySelectorAll('.delete-post').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            if (!confirm('Delete this post? This cannot be undone.')) return;
+            fetch('/api/admin/post/' + id + '/delete', { method: 'DELETE' })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data.success) {
+                  showToast('Post deleted', 'success');
+                  loadPosts();
+                } else {
+                  showToast(data.error || 'Error', 'info');
+                }
+              })
+              .catch(function() { showToast('Error deleting post', 'info'); });
+          });
+        });
+      })
+      .catch(function() {
+        document.getElementById('postsLoader').classList.add('hidden');
+      });
+  }
+
+  // Load schools
+  function loadSchools() {
+    fetch('/api/admin/schools')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('schoolsList');
+        list.innerHTML = '';
+        if (data.schools && data.schools.length > 0) {
+          data.schools.forEach(function(s) {
+            var el = document.createElement('div');
+            el.className = 'p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div class="flex items-center gap-3">' +
+                '<i data-lucide="building-2" style="width:1.5rem;height:1.5rem;color:var(--primary);"></i>' +
+                '<div>' +
+                  '<div class="font-bold text-sm">' + escapeHtml(s.name || 'Unknown School') + '</div>' +
+                  '<div class="text-xs text-muted">' + (s.students_count || 0) + ' students &middot; ' + (s.achievements_count || 0) + ' achievements</div>' +
+                '</div>' +
+              '</div>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No schools registered</div>';
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Create ad form
+  document.getElementById('adForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var body = {
+      title: document.getElementById('adTitle').value,
+      company: document.getElementById('adCompany').value,
+      content: document.getElementById('adContent').value,
+      cta_text: document.getElementById('adCtaText').value,
+      cta_url: document.getElementById('adCtaUrl').value,
+      placement: document.getElementById('adPlacement').value
+    };
+    fetch('/api/admin/ad/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        document.getElementById('adForm').reset();
+        document.getElementById('adFormContainer').classList.add('hidden');
+        showToast('Ad created!', 'success');
+        loadAds();
+      } else {
+        showToast(data.error || 'Error', 'info');
+      }
+    })
+    .catch(function() { showToast('Error creating ad', 'info'); });
+  });
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  loadAds();
+  loadPosts();
+  loadSchools();
+});
+</script>
+{% endblock %}

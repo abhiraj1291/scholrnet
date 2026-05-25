@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-xl font-black">Opportunities</h1>
+      <p class="text-sm text-muted">Discover competitions, scholarships, and programs</p>
+    </div>
+    <div class="relative hidden sm:block" style="max-width:16rem;width:100%;">
+      <i data-lucide="search" class="search-icon" style="width:1rem;height:1rem;"></i>
+      <input type="text" id="oppSearch" placeholder="Search opportunities..." class="w-full">
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex gap-2 mb-4 overflow-x-auto" style="scrollbar-width:none;">
+    <button class="btn btn-sm opp-filter active" data-type="all" style="background:var(--primary);color:#fff;">All</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="competition">Competitions</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="scholarship">Scholarships</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="internship">Internships</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="program">Programs</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="workshop">Workshops</button>
+  </div>
+
+  <!-- Opportunities Grid -->
+  <div id="oppGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(18rem,1fr));gap:1rem;"></div>
+
+  <div id="oppLoader" class="text-center py-4 hidden">
+    <div class="shimmer" style="height:12rem;width:100%;max-width:20rem;margin:0 auto;"></div>
+  </div>
+  <div id="oppEmpty" class="text-center text-muted text-sm py-8 hidden">
+    <i data-lucide="search-x" style="width:2rem;height:2rem;margin:0 auto 0.5rem;display:block;"></i>
+    No opportunities found
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var currentFilter = 'all';
+  var allOpportunities = [];
+
+  function loadOpportunities() {
+    document.getElementById('oppLoader').classList.remove('hidden');
+    fetch('/api/opportunities')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('oppLoader').classList.add('hidden');
+        allOpportunities = data.opportunities || [];
+        renderOpportunities();
+      })
+      .catch(function() {
+        document.getElementById('oppLoader').classList.add('hidden');
+        document.getElementById('oppEmpty').classList.remove('hidden');
+        document.getElementById('oppEmpty').querySelector('span').textContent = 'Failed to load opportunities';
+      });
+  }
+
+  function renderOpportunities() {
+    var grid = document.getElementById('oppGrid');
+    var empty = document.getElementById('oppEmpty');
+    grid.innerHTML = '';
+    var filtered = allOpportunities;
+    if (currentFilter !== 'all') {
+      filtered = allOpportunities.filter(function(o) { return o.type === currentFilter; });
+    }
+    if (filtered.length === 0) {
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    filtered.forEach(function(opp) {
+      var el = document.createElement('div');
+      el.className = 'card flex flex-col';
+      var deadline = opp.deadline ? new Date(opp.deadline).toLocaleDateString() : 'No deadline';
+      el.innerHTML =
+        '<div class="flex items-start justify-between mb-2">' +
+          '<span class="badge badge-primary">' + escapeHtml(opp.type || 'opportunity') + '</span>' +
+          (opp.prize_pool ? '<span class="font-bold text-sm" style="color:var(--accent);">' + escapeHtml(opp.prize_pool) + '</span>' : '') +
+        '</div>' +
+        '<h3 class="font-bold text-sm">' + escapeHtml(opp.name) + '</h3>' +
+        (opp.provider ? '<div class="text-xs text-muted mb-1">by ' + escapeHtml(opp.provider) + '</div>' : '') +
+        (opp.description ? '<p class="text-xs text-muted mt-1" style="line-height:1.5;">' + escapeHtml(opp.description) + '</p>' : '') +
+        (opp.eligibility ? '<div class="text-xs mt-2"><span class="font-bold">Eligibility:</span> ' + escapeHtml(opp.eligibility) + '</div>' : '') +
+        '<div class="flex items-center justify-between mt-3 pt-3" style="border-top:1px solid var(--border);margin-top:auto;">' +
+          '<span class="text-xs text-muted"><i data-lucide="clock" style="width:0.75rem;height:0.75rem;display:inline;"></i> ' + deadline + '</span>' +
+          '<button class="btn btn-primary btn-sm apply-btn" data-id="' + opp.id + '">Apply Now</button>' +
+        '</div>';
+      grid.appendChild(el);
+    });
+    lucide.createIcons();
+
+    // Apply buttons
+    document.querySelectorAll('.apply-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = this.getAttribute('data-id');
+        var originalText = this.textContent;
+        this.textContent = 'Applying...';
+        this.disabled = true;
+        fetch('/api/opportunity/' + id + '/apply', { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.success) {
+              showToast('Applied successfully!', 'success');
+              btn.textContent = 'Applied';
+              btn.classList.remove('btn-primary');
+              btn.classList.add('btn-success');
+            } else {
+              showToast(data.error || 'Error applying', 'info');
+              btn.textContent = originalText;
+              btn.disabled = false;
+            }
+          })
+          .catch(function() {
+            showToast('Error applying', 'info');
+            btn.textContent = originalText;
+            btn.disabled = false;
+          });
+      });
+    });
+  }
+
+  // Filter buttons
+  document.querySelectorAll('.opp-filter').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.opp-filter').forEach(function(b) {
+        b.className = 'btn btn-sm opp-filter btn-outline';
+      });
+      this.className = 'btn btn-sm opp-filter active';
+      this.style.background = 'var(--primary)';
+      this.style.color = '#fff';
+      currentFilter = this.getAttribute('data-type');
+      renderOpportunities();
+    });
+  });
+
+  // Search
+  document.getElementById('oppSearch').addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    if (q.length > 1) {
+      var grid = document.getElementById('oppGrid');
+      grid.querySelectorAll('.card').forEach(function(card) {
+        var text = card.textContent.toLowerCase();
+        card.style.display = text.includes(q) ? 'flex' : 'none';
+      });
+    } else {
+      grid.querySelectorAll('.card').forEach(function(card) { card.style.display = 'flex'; });
+    }
+  });
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  loadOpportunities();
+});
+</script>
+{% endblock %}

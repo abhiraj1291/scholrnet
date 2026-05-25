@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ 'dark' if request.cookies.get('theme') == 'dark' else '' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScholrNet - Academic Trust Network</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://www.gstatic.com">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://unpkg.com/lucide@0.468.0" defer></script>
+  {% set palettes = {
+    'navy': {'--primary':'#1a2744','--primary-hover':'#2d4a7a','--accent':'#c9a84c','--accent-soft':'#e8d48b','--bg':'#ebf4ff','--bg-card':'#ffffff','--bg-hover':'#fdf0f0','--border':'#cbd5e1','--text-muted':'#5a6a7a','--danger':'#e86565'},
+    'coral': {'--primary':'#e86565','--primary-hover':'#d45050','--accent':'#f4b84a','--accent-soft':'#f8d48a','--bg':'#fff5f5','--bg-card':'#ffffff','--bg-hover':'#fef0f0','--border':'#f0d0d0','--text-muted':'#8a6a6a','--danger':'#c0392b'},
+    'blush': {'--primary':'#d48a8a','--primary-hover':'#c07070','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#fef7f7','--bg-card':'#ffffff','--bg-hover':'#faecec','--border':'#e8d0d0','--text-muted':'#8a7a7a','--danger':'#e86565'},
+    'gold': {'--primary':'#b8942e','--primary-hover':'#9a7a20','--accent':'#1a2744','--accent-soft':'#4a6a8a','--bg':'#fefcf0','--bg-card':'#ffffff','--bg-hover':'#f8f4e0','--border':'#e0d8b8','--text-muted':'#7a7260','--danger':'#c0392b'},
+    'slate': {'--primary':'#4a5568','--primary-hover':'#5a6a7a','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#f8fafc','--bg-card':'#ffffff','--bg-hover':'#eef2f6','--border':'#cbd5e1','--text-muted':'#64748b','--danger':'#e86565'},
+    'ice-blue': {'--primary':'#5a9fd4','--primary-hover':'#4a8ac0','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#f0f8ff','--bg-card':'#ffffff','--bg-hover':'#e6f0fa','--border':'#c8dce8','--text-muted':'#5a7a8a','--danger':'#e86565'}
+  } %}
+  {% if current_user.is_authenticated and current_user.theme_color in palettes %}
+  {% set p = palettes[current_user.theme_color] %}
+  <style>
+    :root {
+      {% for var, val in p.items() %}
+      {{ var }}: {{ val }};
+      {% endfor %}
+    }
+  </style>
+  {% endif %}
+  <style>
+    .hover\:bg-hover:hover { background: var(--bg-hover); }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="flex items-center gap-3">
+        <a href="{{ url_for('dashboard') }}" class="logo"><span>Scholr</span><span>Net</span></a>
+      </div>
+
+      <div class="search-bar flex-1 hidden sm:block max-w-md mx-auto">
+        <input type="text" id="global-search" placeholder="Search posts, people, opportunities..." class="w-full">
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Search Button (visible on all screens) -->
+        <a href="{{ url_for('search_page') }}" class="btn btn-ghost btn-sm sm:hidden" title="Search">
+          <i data-lucide="search" style="width:1.25rem;height:1.25rem;"></i>
+        </a>
+        <!-- Dark Mode Toggle -->
+        <label class="toggle hidden sm:block">
+          <input type="checkbox" id="themeToggle" {{ 'checked' if request.cookies.get('theme') == 'dark' else '' }}>
+          <span class="toggle-slider"></span>
+        </label>
+
+        <!-- Notification Bell -->
+        <div class="relative">
+          <button id="notif-btn" class="btn btn-ghost btn-sm relative">
+            <i data-lucide="bell" style="width:1.25rem;height:1.25rem;"></i>
+            <span id="notifBadge" class="hidden" style="position:absolute;top:-2px;right:-2px;width:16px;height:16px;background:var(--danger);color:#fff;border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;">0</span>
+          </button>
+          <div id="notif-panel" class="notif-panel hidden fade-in"></div>
+        </div>
+
+        <!-- Account Dropdown -->
+        <div class="relative">
+          <button id="account-btn" class="flex items-center gap-2 btn btn-ghost btn-sm">
+            <div class="avatar avatar-sm" style="width:28px;height:28px;font-size:10px;overflow:hidden;">
+              {% if user.avatar_url %}<img src="{{ user.avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;">{% else %}{{ user.avatar or user.name[:2]|upper }}{% endif %}
+            </div>
+            <span class="hidden sm:inline text-sm font-bold">{{ user.name }}</span>
+            <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+          </button>
+          <div id="account-dropdown" class="hidden" style="position:absolute;right:0;top:100%;margin-top:8px;width:220px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:200;">
+            <div class="p-3 border-b" style="border-color:var(--border);">
+              <div class="font-bold text-sm">{{ user.name }}</div>
+              <div class="text-xs text-muted">{{ user.email }}</div>
+            </div>
+            <a href="{{ url_for('profile_page') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover"><i data-lucide="user" style="width:16px;height:16px;"></i> My Profile</a>
+            <button id="settings-btn" class="flex items-center gap-2 px-3 py-2 text-sm w-full text-left hover:bg-hover" style="background:none;border:none;color:var(--text);"><i data-lucide="settings" style="width:16px;height:16px;"></i> Settings</button>
+            <a href="{{ url_for('logout') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover" style="color:var(--danger);"><i data-lucide="log-out" style="width:16px;height:16px;"></i> Sign Out</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav" id="mainTabs">
+    {% set tabs = [
+      ('dashboard', 'home', 'Home Feed'),
+      ('profile_page', 'book-open', 'My Portfolio'),
+      ('opportunities_page', 'sparkles', 'Opportunities'),
+      ('teams_page', 'users', 'Teams'),
+      ('mentors_page', 'graduation-cap', 'Mentors'),
+      ('advisor_page', 'bot', 'Advisor'),
+      ('analytics_page', 'bar-chart-3', 'Analytics'),
+      ('search_page', 'search', 'Search'),
+      ('chat_page', 'message-circle', 'Chat'),
+    ] %}
+    {% for endpoint, icon, label in tabs %}
+    <a href="{{ url_for(endpoint) }}" class="tab-btn {{ 'active' if request.endpoint == endpoint else '' }}">
+      <i data-lucide="{{ icon }}" style="width:16px;height:16px;"></i> {{ label }}
+    </a>
+    {% endfor %}
+    {% if user.role in ('admin','super_admin') %}
+    <a href="{{ url_for('school_desk') }}" class="tab-btn {{ 'active' if request.endpoint == 'school_desk' else '' }}">
+      <i data-lucide="building-2" style="width:16px;height:16px;"></i> School Desk
+    </a>
+    {% endif %}
+    {% if user.role == 'super_admin' %}
+    <a href="{{ url_for('admin_panel') }}" class="tab-btn {{ 'active' if request.endpoint == 'admin_panel' else '' }}">
+      <i data-lucide="shield" style="width:16px;height:16px;"></i> Admin Panel
+    </a>
+    {% endif %}
+  </nav>
+
+  <!-- Page Content -->
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="bottom-nav" id="bottomNav">
+    {% set bnav = [
+      ('dashboard', 'home', 'Home'),
+      ('profile_page', 'book-open', 'Portfolio'),
+      ('opportunities_page', 'sparkles', 'Opps'),
+    ] %}
+    {% for endpoint, icon, label in bnav %}
+    <a href="{{ url_for(endpoint) }}" class="bottom-nav-btn {{ 'active' if request.endpoint == endpoint else '' }}">
+      <i data-lucide="{{ icon }}"></i><span>{{ label }}</span>
+    </a>
+    {% endfor %}
+    <button id="more-btn" class="bottom-nav-btn">
+      <i data-lucide="grid-3x3"></i><span>More</span>
+    </button>
+  </nav>
+
+  <!-- More Menu Overlay (Mobile) -->
+  <div id="more-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:80;"></div>
+  <div id="more-panel" class="hidden" style="position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border-radius:24px 24px 0 0;padding:24px;z-index:81;animation:slideUp 0.2s ease;">
+    <div class="flex items-center justify-between mb-4">
+      <span class="font-bold">All Sections</span>
+      <button id="close-more-btn" class="btn btn-ghost btn-sm"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      {% for endpoint, icon, label in tabs %}
+      <a href="{{ url_for(endpoint) }}" class="card text-center py-4 flex flex-col items-center gap-2" style="text-decoration:none;color:var(--text);">
+        <i data-lucide="{{ icon }}" style="width:24px;height:24px;color:var(--primary);"></i>
+        <span class="text-xs font-bold">{{ label }}</span>
+      </a>
+      {% endfor %}
+      {% if user.role in ('admin','super_admin') %}
+      <a href="{{ url_for('school_desk') }}" class="card text-center py-4 flex flex-col items-center gap-2" style="text-decoration:none;color:var(--text);">
+        <i data-lucide="building-2" style="width:24px;height:24px;color:var(--primary);"></i>
+        <span class="text-xs font-bold">School Desk</span>
+      </a>
+      {% endif %}
+      {% if user.role == 'super_admin' %}
+      <a href="{{ url_for('admin_panel') }}" class="card text-center py-4 flex flex-col items-center gap-2" style="text-decoration:none;color:var(--text);">
+        <i data-lucide="shield" style="width:24px;height:24px;color:var(--primary);"></i>
+        <span class="text-xs font-bold">Admin Panel</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Chat Drawer -->
+  <div id="chat-drawer" class="chat-drawer minimized">
+    <div class="chat-header" id="chat-toggle">
+      <span class="flex items-center gap-2"><i data-lucide="message-circle" style="width:20px;height:20px;"></i> Messages</span>
+      <span class="flex items-center gap-1">
+        <button id="newChatBtn" class="btn btn-ghost btn-sm" style="padding:2px;border:none;background:none;color:var(--text-muted);cursor:pointer;" title="New Chat"><i data-lucide="plus" style="width:18px;height:18px;"></i></button>
+        <i data-lucide="chevron-up" style="width:20px;height:20px;"></i>
+      </span>
+    </div>
+    <div id="chat-body" class="hidden">
+      <div id="chat-contact-list"></div>
+      <div id="new-chat-view" class="hidden">
+        <div class="flex items-center gap-2 p-2" style="border-bottom:1px solid var(--border);">
+          <i data-lucide="arrow-left" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;color:var(--text-muted);" onclick="hideNewChat()"></i>
+          <input type="text" id="newChatSearch" placeholder="Search users..." style="flex:1;border:none;outline:none;background:transparent;color:var(--text);font-size:0.8125rem;">
+        </div>
+        <div id="newChatResults" class="chat-contact-list"></div>
+      </div>
+      <div id="chat-messages-view" class="hidden">
+        <div class="chat-header" style="background:var(--bg-hover);color:var(--text);border-radius:0;cursor:pointer;" onclick="backToContacts()">
+          <span class="flex items-center gap-2"><i data-lucide="arrow-left" style="width:16px;height:16px;"></i> <span class="chat-contact-name font-bold">User</span></span>
+        </div>
+        <div id="chat-messages-container" class="chat-messages"></div>
+        <div class="chat-input">
+          <input type="text" id="chatInput" placeholder="Type a message...">
+          <button class="btn btn-primary btn-sm" onclick="sendChatMessage(document.getElementById('chatInput'))"><i data-lucide="send" style="width:16px;height:16px;"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" style="position:fixed;bottom:5rem;right:1rem;z-index:1000;display:flex;flex-direction:column;gap:8px;"></div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="font-bold">Settings</span>
+        <button id="close-settings-btn" class="btn btn-ghost btn-sm"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="flex items-center justify-between mb-4">
+          <div><div class="font-bold text-sm">Dark Mode</div><div class="text-xs text-muted">Toggle dark theme</div></div>
+          <label class="toggle">
+            <input type="checkbox" id="settingsThemeToggle" {{ 'checked' if request.cookies.get('theme') == 'dark' else '' }}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="text-center text-xs text-muted py-6 px-4" style="padding-bottom:5rem;">
+    &copy; 2026 ScholrNet. Built for the academic community.<br>
+    Support: <a href="mailto:scolrnetsupport@gmail.com" style="color:var(--primary);text-decoration:underline;">scolrnetsupport@gmail.com</a>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/feed.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+
+  <script>
+  // Theme toggle (needed early; rest of init is in main.js)
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    const themeToggle = document.getElementById('themeToggle');
+    const settingsThemeToggle = document.getElementById('settingsThemeToggle');
+    function setTheme(dark) {
+      document.documentElement.classList.toggle('dark', dark);
+      document.cookie = 'theme=' + (dark ? 'dark' : 'light') + '; path=/; max-age=' + 60*60*24*365;
+      if (themeToggle) themeToggle.checked = dark;
+      if (settingsThemeToggle) settingsThemeToggle.checked = dark;
+    }
+    if (themeToggle) themeToggle.addEventListener('change', function() { setTheme(this.checked); });
+    if (settingsThemeToggle) settingsThemeToggle.addEventListener('change', function() { setTheme(this.checked); });
+  });
+  </script>
+</body>
+</html>

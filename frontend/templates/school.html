@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:48rem;margin:0 auto;">
+  <h1 class="text-xl font-black mb-4">School Desk</h1>
+
+  <!-- School Info Card -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-3">
+      <i data-lucide="building-2" style="width:2rem;height:2rem;color:var(--primary);"></i>
+      <div>
+        <div class="font-bold text-lg">{{ user.school or 'Your School' }}</div>
+        <div class="text-sm text-muted">School Administration Dashboard</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-4 mt-3 text-sm">
+      <span><span class="font-bold" id="schoolStudents">0</span> <span class="text-muted">Students</span></span>
+      <span><span class="font-bold" id="schoolAchievements">0</span> <span class="text-muted">Achievements</span></span>
+      <span><span class="font-bold" id="schoolPending">0</span> <span class="text-muted">Pending Verifications</span></span>
+    </div>
+  </div>
+
+  <!-- Create Announcement -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="megaphone" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
+      <span class="font-bold text-sm">Create Announcement</span>
+    </div>
+    <form id="announcementForm">
+      <div class="mb-2">
+        <input type="text" id="annTitle" placeholder="Announcement title" required>
+      </div>
+      <div class="mb-2">
+        <textarea id="annContent" rows="3" placeholder="Announcement content..." required></textarea>
+      </div>
+      <div class="grid gap-2 mb-3" style="grid-template-columns:1fr 1fr;">
+        <input type="text" id="annBadge" placeholder="Badge text (e.g. IMPORTANT)">
+        <select id="annType">
+          <option value="general">General</option>
+          <option value="event">Event</option>
+          <option value="deadline">Deadline</option>
+          <option value="achievement">Achievement</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Publish Announcement</button>
+    </form>
+  </div>
+
+  <!-- Announcements List -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="list" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">School Announcements</span>
+    </div>
+    <div id="announcementsList"></div>
+  </div>
+
+  <!-- Verification Desk -->
+  <div class="card">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="shield-check" style="width:1.25rem;height:1.25rem;color:var(--success);"></i>
+      <span class="font-bold text-sm">Verification Desk</span>
+    </div>
+    <div id="verificationList"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Load school data
+  function loadSchoolData() {
+    fetch('/api/school/dashboard')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('schoolStudents').textContent = data.students_count || 0;
+        document.getElementById('schoolAchievements').textContent = data.achievements_count || 0;
+        document.getElementById('schoolPending').textContent = data.pending_verifications || 0;
+      })
+      .catch(function() {});
+  }
+
+  // Load announcements
+  function loadAnnouncements() {
+    fetch('/api/school/announcements')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('announcementsList');
+        list.innerHTML = '';
+        if (data.announcements && data.announcements.length > 0) {
+          data.announcements.forEach(function(a) {
+            var el = document.createElement('div');
+            el.className = 'p-3 rounded-xl mb-2 flex items-start justify-between';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div style="flex:1;min-width:0;">' +
+                '<div class="flex items-center gap-2">' +
+                  '<span class="font-bold text-sm">' + escapeHtml(a.title) + '</span>' +
+                  (a.badge ? '<span class="badge badge-primary">' + escapeHtml(a.badge) + '</span>' : '') +
+                  (a.type ? '<span class="badge badge-muted">' + escapeHtml(a.type) + '</span>' : '') +
+                '</div>' +
+                (a.content ? '<div class="text-xs text-muted mt-1">' + escapeHtml(a.content) + '</div>' : '') +
+                '<div class="text-xs text-muted mt-1">' + (a.created_at || '') + '</div>' +
+              '</div>' +
+              '<button class="btn btn-danger btn-sm delete-ann" data-id="' + a.id + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No announcements yet</div>';
+        }
+
+        // Delete announcements
+        document.querySelectorAll('.delete-ann').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            if (!confirm('Delete this announcement?')) return;
+            fetch('/api/school/announcement/' + id + '/delete', { method: 'DELETE' })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data.success) {
+                  showToast('Announcement deleted', 'success');
+                  loadAnnouncements();
+                } else {
+                  showToast(data.error || 'Error', 'info');
+                }
+              })
+              .catch(function() { showToast('Error deleting', 'info'); });
+          });
+        });
+      })
+      .catch(function() {});
+  }
+
+  // Load verification requests
+  function loadVerifications() {
+    fetch('/api/school/verifications')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('verificationList');
+        list.innerHTML = '';
+        if (data.requests && data.requests.length > 0) {
+          data.requests.forEach(function(v) {
+            var el = document.createElement('div');
+            el.className = 'p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div class="flex items-center gap-2 mb-1">' +
+                '<div class="avatar avatar-sm">' + (v.student ? v.student.name.slice(0,2).toUpperCase() : '??') + '</div>' +
+                '<span class="font-bold text-sm">' + escapeHtml(v.student ? v.student.name : 'Unknown') + '</span>' +
+              '</div>' +
+              '<div class="text-xs font-bold mb-1">' + escapeHtml(v.achievement_title || 'Achievement') + '</div>' +
+              (v.attachment ? '<div class="text-xs text-muted mb-2">Attachment: ' + escapeHtml(v.attachment) + '</div>' : '') +
+              '<div class="flex gap-2">' +
+                '<button class="btn btn-sm btn-success verify-action" data-id="' + v.id + '" data-action="approve">Approve</button>' +
+                '<button class="btn btn-sm btn-danger verify-action" data-id="' + v.id + '" data-action="reject">Reject</button>' +
+              '</div>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No pending verification requests</div>';
+        }
+
+        // Verify action
+        document.querySelectorAll('.verify-action').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            var action = this.getAttribute('data-action');
+            fetch('/api/verification/' + id + '/action', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({action: action})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (data.success) {
+                showToast('Verification ' + action + 'd!', 'success');
+                loadVerifications();
+                loadSchoolData();
+              } else {
+                showToast(data.error || 'Error', 'info');
+              }
+            })
+            .catch(function() { showToast('Error processing', 'info'); });
+          });
+        });
+      })
+      .catch(function() {});
+  }
+
+  // Create announcement
+  document.getElementById('announcementForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var body = {
+      title: document.getElementById('annTitle').value,
+      content: document.getElementById('annContent').value,
+      badge: document.getElementById('annBadge').value,
+      type: document.getElementById('annType').value
+    };
+    fetch('/api/school/announcement/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        document.getElementById('announcementForm').reset();
+        showToast('Announcement created!', 'success');
+        loadAnnouncements();
+      } else {
+        showToast(data.error || 'Error', 'info');
+      }
+    })
+    .catch(function() { showToast('Error creating', 'info'); });
+  });
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  loadSchoolData();
+  loadAnnouncements();
+  loadVerifications();
+});
+</script>
+{% endblock %}

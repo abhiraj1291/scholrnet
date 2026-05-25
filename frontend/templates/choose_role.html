@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScholrNet - Choose Your Role</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #f3f2f0; font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .role-container { width: 100%; max-width: 28rem; text-align: center; }
+    .role-card { background: #fff; border-radius: 0.5rem; padding: 2rem; box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05); }
+    .role-card h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.25rem; color: rgba(0,0,0,0.9); }
+    .role-card p.sub { font-size: 0.875rem; color: rgba(0,0,0,0.6); margin: 0 0 1.5rem; }
+    .role-option { display: block; width: 100%; padding: 1rem; border: 2px solid rgba(0,0,0,0.08); border-radius: 0.75rem; background: #fff; cursor: pointer; transition: all 0.15s; margin-bottom: 0.75rem; text-align: left; }
+    .role-option:hover { border-color: var(--primary); background: rgba(10,102,194,0.02); }
+    .role-option.selected { border-color: var(--primary); background: rgba(10,102,194,0.04); }
+    .role-option .role-title { font-size: 1rem; font-weight: 700; color: rgba(0,0,0,0.9); display: flex; align-items: center; gap: 0.75rem; }
+    .role-option .role-desc { font-size: 0.8125rem; color: rgba(0,0,0,0.5); margin-top: 0.25rem; padding-left: 2.25rem; }
+    .btn-continue { width: 100%; padding: 0.75rem; background: var(--primary); color: #fff; border: none; border-radius: 1.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 0.5rem; }
+    .btn-continue:hover { background: var(--primary-hover); }
+    .btn-continue:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="role-container">
+    <div class="role-card">
+      <div style="margin-bottom:1rem;">
+        <div class="logo" style="font-size:1.75rem;justify-content:center;"><span>Scholr</span><span>Net</span></div>
+      </div>
+      <h1>Welcome to ScholrNet</h1>
+      <p class="sub">What describes you best?</p>
+
+      <div id="roleList">
+        <div class="role-option" data-role="student" onclick="selectRole('student')">
+          <div class="role-title"><i data-lucide="graduation-cap" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i> Student</div>
+          <div class="role-desc">Explore opportunities, track achievements, and connect with peers</div>
+        </div>
+        <div class="role-option" data-role="teacher" onclick="selectRole('teacher')">
+          <div class="role-title"><i data-lucide="presentation" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i> Teacher</div>
+          <div class="role-desc">Verify achievements, mentor students, and share resources</div>
+        </div>
+        <div class="role-option" data-role="mentor" onclick="selectRole('mentor')">
+          <div class="role-title"><i data-lucide="sparkles" style="width:1.25rem;height:1.25rem;color:#e86565;"></i> Mentor</div>
+          <div class="role-desc">Guide students, offer internships, and shape academic careers</div>
+        </div>
+      </div>
+
+      <button class="btn-continue" id="continueBtn" disabled onclick="submitRole()">Continue</button>
+    </div>
+  </div>
+
+  <script>
+    var selectedRole = '';
+
+    function selectRole(role) {
+      selectedRole = role;
+      document.querySelectorAll('.role-option').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      document.querySelector('.role-option[data-role="' + role + '"]').classList.add('selected');
+      document.getElementById('continueBtn').disabled = false;
+      lucide.createIcons();
+    }
+
+    function submitRole() {
+      if (!selectedRole) return;
+      var btn = document.getElementById('continueBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      fetch('/api/profile/role', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({role: selectedRole})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) {
+          window.location.href = d.redirect || '/dashboard';
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Continue';
+          alert(d.error || 'Error');
+        }
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+        alert('Error saving role');
+      });
+    }
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>

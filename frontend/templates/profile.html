@@ -1,0 +1,703 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:48rem;margin:0 auto;">
+  <!-- Profile Header -->
+  <div class="card mb-3">
+    <div class="profile-header">
+      <div class="profile-avatar" id="profileAvatarWrap" style="{% if is_own %}cursor:pointer;{% endif %}position:relative;">
+        {% if puser.avatar_url %}
+        <img src="{{ puser.avatar_url }}" alt="{{ puser.name }}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+        {% else %}
+        {{ puser.avatar or puser.name[:2]|upper }}
+        {% endif %}
+        {% if is_own %}
+        <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-card);"><i data-lucide="camera" style="width:12px;height:12px;color:#fff;"></i></div>
+        <input type="file" id="avatarUploadInput" accept="image/*" style="display:none;">
+        {% endif %}
+      </div>
+      <div>
+        <div class="profile-name">{{ puser.name }}</div>
+        <div class="profile-school">{{ puser.school }}{% if puser.grade %} &middot; Grade {{ puser.grade }}{% endif %}</div>
+        {% if puser.bio %}<p class="text-sm text-muted mt-1">{{ puser.bio }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="skills" id="profileSkills"></div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-num" id="pStatVerified">0</div><div class="stat-label">Verified</div></div>
+      <div class="stat-box"><div class="stat-num" id="pStatProjects">0</div><div class="stat-label">Projects</div></div>
+      <div class="stat-box"><div class="stat-num" id="pStatCollabs">0</div><div class="stat-label">Collabs</div></div>
+      <div class="stat-box"><div class="stat-num" id="pStatFriends">0</div><div class="stat-label">Friends</div></div>
+    </div>
+    <!-- Friend Action Button + Message (for other users) -->
+    {% if not is_own %}
+    <div class="mt-3 text-center flex items-center justify-center gap-2">
+      <button id="friendActionBtn" class="btn btn-primary" data-friend-status="{{ friend_status }}">
+        {% if friend_status == 'friends' %}Friends <i data-lucide="check" style="width:14px;height:14px;"></i>
+        {% elif friend_status == 'pending_sent' %}Request Sent <i data-lucide="clock" style="width:14px;height:14px;"></i>
+        {% elif friend_status == 'pending_received' %}Accept Request <i data-lucide="user-plus" style="width:14px;height:14px;"></i>
+        {% else %}Add Friend <i data-lucide="user-plus" style="width:14px;height:14px;"></i>{% endif %}
+      </button>
+      <button id="messageUserBtn" class="btn btn-secondary"><i data-lucide="message-circle" style="width:16px;height:16px;"></i> Message</button>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if is_own %}
+  <!-- Edit Profile -->
+  <div class="card mb-3">
+    <button id="toggleEditProfile" class="w-full flex items-center justify-between text-left" style="background:none;border:none;color:var(--text);padding:0;">
+      <span class="font-bold text-sm"><i data-lucide="settings" style="width:1rem;height:1rem;display:inline;margin-right:0.375rem;"></i> Edit Profile</span>
+      <i data-lucide="chevron-down" id="editChevron" style="width:1.25rem;height:1.25rem;transition:transform 0.2s;"></i>
+    </button>
+    <form id="editProfileForm" class="hidden mt-3">
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Name</label>
+        <input type="text" id="editName" value="{{ user.name }}">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">School</label>
+        <input type="text" id="editSchool" value="{{ user.school }}">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Grade</label>
+        <input type="text" id="editGrade" value="{{ user.grade }}">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Bio</label>
+        <textarea id="editBio" rows="2">{{ user.bio }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Save Profile</button>
+    </form>
+  </div>
+
+  <!-- Color Palette -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="palette" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
+      <span class="font-bold text-sm">Theme Color</span>
+    </div>
+    {% set palettes = {
+      'navy': {'p':'#1a2744','ph':'#2d4a7a','a':'#c9a84c','as':'#e8d48b','bg':'#ebf4ff','bc':'#ffffff','bh':'#fdf0f0','bo':'#cbd5e1','tm':'#5a6a7a','d':'#e86565','label':'Navy Deep'},
+      'coral': {'p':'#e86565','ph':'#d45050','a':'#f4b84a','as':'#f8d48a','bg':'#fff5f5','bc':'#ffffff','bh':'#fef0f0','bo':'#f0d0d0','tm':'#8a6a6a','d':'#c0392b','label':'Coral'},
+      'blush': {'p':'#d48a8a','ph':'#c07070','a':'#c9a84c','as':'#e0c878','bg':'#fef7f7','bc':'#ffffff','bh':'#faecec','bo':'#e8d0d0','tm':'#8a7a7a','d':'#e86565','label':'Blush'},
+      'gold': {'p':'#b8942e','ph':'#9a7a20','a':'#1a2744','as':'#4a6a8a','bg':'#fefcf0','bc':'#ffffff','bh':'#f8f4e0','bo':'#e0d8b8','tm':'#7a7260','d':'#c0392b','label':'Gold'},
+      'slate': {'p':'#4a5568','ph':'#5a6a7a','a':'#c9a84c','as':'#e0c878','bg':'#f8fafc','bc':'#ffffff','bh':'#eef2f6','bo':'#cbd5e1','tm':'#64748b','d':'#e86565','label':'Slate'},
+      'ice-blue': {'p':'#5a9fd4','ph':'#4a8ac0','a':'#c9a84c','as':'#e0c878','bg':'#f0f8ff','bc':'#ffffff','bh':'#e6f0fa','bo':'#c8dce8','tm':'#5a7a8a','d':'#e86565','label':'Ice Blue'}
+    } %}
+    <div class="flex gap-3 flex-wrap">
+      {% for key, p in palettes.items() %}
+      <button class="palette-option" data-palette="{{ key }}" title="{{ p.label }}" style="width:2.5rem;height:2.5rem;border-radius:50%;border:3px solid transparent;cursor:pointer;background:linear-gradient(135deg, {{ p.p }}, {{ p.a }});{% if user.theme_color == key %}border-color:var(--primary);box-shadow:0 0 0 2px var(--bg-card), 0 0 0 4px {{ p.p }};{% endif %}"></button>
+      {% endfor %}
+    </div>
+    <p class="text-xs text-muted mt-2">Pick a color theme for your ScholrNet experience</p>
+  </div>
+
+  <!-- Friend Requests -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="user-plus" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
+      <span class="font-bold text-sm">Friend Requests</span>
+      <span id="friendReqBadge" class="badge badge-primary hidden" style="margin-left:auto;">0</span>
+    </div>
+    <div id="friendRequestsList">
+      <p class="text-xs text-muted text-center py-2">No pending requests</p>
+    </div>
+  </div>
+
+  <!-- Friends List -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="users" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">Friends</span>
+      <span class="text-xs text-muted" id="friendsCount" style="margin-left:auto;">0</span>
+    </div>
+    <div id="friendsList">
+      <p class="text-xs text-muted text-center py-2">No friends yet</p>
+    </div>
+  </div>
+
+  <!-- Add Achievement -->
+  <div class="card mb-3">
+    <button id="toggleAchievementForm" class="w-full flex items-center justify-between text-left" style="background:none;border:none;color:var(--text);padding:0;">
+      <span class="font-bold text-sm"><i data-lucide="award" style="width:1rem;height:1rem;display:inline;margin-right:0.375rem;"></i> Add Achievement</span>
+      <i data-lucide="chevron-down" id="achChevron" style="width:1.25rem;height:1.25rem;transition:transform 0.2s;"></i>
+    </button>
+    <form id="achievementForm" class="hidden mt-3">
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Title</label>
+        <input type="text" id="achTitle" placeholder="e.g. National Science Olympiad Winner" required>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Description</label>
+        <textarea id="achDesc" rows="2" placeholder="Describe your achievement"></textarea>
+      </div>
+      <div class="grid gap-2" style="grid-template-columns:1fr 1fr;">
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Category</label>
+          <select id="achCategory">
+            <option value="academic">Academic</option>
+            <option value="sports">Sports</option>
+            <option value="arts">Arts</option>
+            <option value="research">Research</option>
+            <option value="community">Community Service</option>
+            <option value="leadership">Leadership</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Institution</label>
+          <input type="text" id="achInstitution" placeholder="e.g. NCERT">
+        </div>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Year</label>
+        <input type="number" id="achYear" placeholder="e.g. 2026" min="1900" max="2100">
+      </div>
+      <div class="mb-3">
+        <label class="text-xs font-bold text-muted block mb-1">Certificate File Name</label>
+        <input type="text" id="achCertificate" placeholder="filename.pdf">
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Add Achievement</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Achievements List -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="trophy" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
+      <span class="font-bold text-sm">Achievements</span>
+    </div>
+    <div id="achievementsList"></div>
+  </div>
+
+  {% if is_own %}
+  <!-- Add Project -->
+  <div class="card mb-3">
+    <button id="toggleProjectForm" class="w-full flex items-center justify-between text-left" style="background:none;border:none;color:var(--text);padding:0;">
+      <span class="font-bold text-sm"><i data-lucide="folder-git-2" style="width:1rem;height:1rem;display:inline;margin-right:0.375rem;"></i> Add Project</span>
+      <i data-lucide="chevron-down" id="projChevron" style="width:1.25rem;height:1.25rem;transition:transform 0.2s;"></i>
+    </button>
+    <form id="projectForm" class="hidden mt-3">
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Title</label>
+        <input type="text" id="projTitle" placeholder="e.g. AI-powered Crop Disease Detection" required>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Description</label>
+        <textarea id="projDesc" rows="2" placeholder="Describe your project"></textarea>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Collaborators (comma separated)</label>
+        <input type="text" id="projCollabs" placeholder="e.g. Priya Sharma, Rohan Patel">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Link</label>
+        <input type="url" id="projLink" placeholder="https://github.com/...">
+      </div>
+      <div class="mb-3">
+        <label class="text-xs font-bold text-muted block mb-1">Skills (comma separated)</label>
+        <input type="text" id="projSkills" placeholder="e.g. Python, TensorFlow, Flask">
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Add Project</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Projects List -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="briefcase" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">Projects</span>
+    </div>
+    <div id="projectsList"></div>
+  </div>
+</div>
+
+<script>
+var puserId = {{ puser.id }};
+var puserName = '{{ puser.name|replace("'", "\\'") }}';
+var puserAvatar = '{{ puser.avatar or "" }}';
+var puserAvatarUrl = '{{ puser.avatar_url or "" }}';
+var isOwn = {{ 'true' if is_own else 'false' }};
+document.addEventListener('DOMContentLoaded', function() {
+  {% if is_own %}
+  // Toggle achievement form
+  document.getElementById('toggleAchievementForm').addEventListener('click', function() {
+    var form = document.getElementById('achievementForm');
+    var chevron = document.getElementById('achChevron');
+    form.classList.toggle('hidden');
+    chevron.style.transform = form.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    lucide.createIcons();
+  });
+
+  // Toggle project form
+  document.getElementById('toggleProjectForm').addEventListener('click', function() {
+    var form = document.getElementById('projectForm');
+    var chevron = document.getElementById('projChevron');
+    form.classList.toggle('hidden');
+    chevron.style.transform = form.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    lucide.createIcons();
+  });
+  {% endif %}
+
+  // Load achievements
+  function loadAchievements() {
+    var url = isOwn ? '/api/achievements' : '/api/user/' + puserId + '/achievements';
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('achievementsList');
+        list.innerHTML = '';
+        if (data.achievements && data.achievements.length > 0) {
+          data.achievements.forEach(function(a) {
+            var el = document.createElement('div');
+            el.className = 'flex items-start gap-3 p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            var showVerify = false;
+            if (isOwn) {
+              var statusClass = 'muted';
+              var statusText = 'Not Verified';
+              if (a.verified === true) { statusClass = 'success'; statusText = 'Verified'; }
+              else if (a.verified === 'pending') { statusClass = 'warning'; statusText = 'Pending'; }
+              showVerify = (a.verified === false || a.verified === null);
+            }
+            el.innerHTML =
+              '<i data-lucide="award" style="width:1.5rem;height:1.5rem;color:var(--accent);flex-shrink:0;margin-top:0.125rem;"></i>' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div class="font-bold text-sm">' + escapeHtml(a.title) + '</div>' +
+                (a.description ? '<div class="text-xs text-muted">' + escapeHtml(a.description) + '</div>' : '') +
+                '<div class="flex items-center gap-2 mt-1 flex-wrap">' +
+                  '<span class="badge badge-primary">' + escapeHtml(a.category || 'other') + '</span>' +
+                  (a.institution ? '<span class="text-xs text-muted">' + escapeHtml(a.institution) + '</span>' : '') +
+                  (a.year ? '<span class="text-xs text-muted">' + a.year + '</span>' : '') +
+                '</div>' +
+                (isOwn ? '<div class="flex items-center gap-2 mt-2">' +
+                  '<span class="verified-badge ' + statusClass + '"><i data-lucide="' + (a.verified === true ? 'badge-check' : a.verified === 'pending' ? 'clock' : 'x-circle') + '" style="width:0.75rem;height:0.75rem;"></i> ' + statusText + '</span>' +
+                  (a.verified === true && a.verification_hash ? '<button class="btn btn-ghost btn-sm copy-hash" data-hash="' + a.verification_hash + '"><i data-lucide="copy" style="width:0.75rem;height:0.75rem;"></i> Hash</button>' : '') +
+                  (showVerify ? '<button class="btn btn-outline btn-sm request-verify" data-id="' + a.id + '"><i data-lucide="shield" style="width:0.75rem;height:0.75rem;"></i> Request Verification</button>' : '') +
+                '</div>' : '') +
+              '</div>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+
+          // Copy hash
+          document.querySelectorAll('.copy-hash').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var hash = this.getAttribute('data-hash');
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(hash).then(function() {
+                  showToast('Hash copied!', 'success');
+                });
+              } else {
+                var ta = document.createElement('textarea');
+                ta.value = hash;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('Hash copied!', 'success');
+              }
+            });
+          });
+
+          // Request verification
+          document.querySelectorAll('.request-verify').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              fetch('/api/achievement/' + id + '/verify-request', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                  if (data.success) {
+                    showToast('Verification requested!', 'success');
+                    loadAchievements();
+                  } else {
+                    showToast(data.error || 'Error', 'info');
+                  }
+                })
+                .catch(function() { showToast('Error requesting verification', 'info'); });
+            });
+          });
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No achievements yet.</div>';
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Load projects
+  function loadProjects() {
+    var url = isOwn ? '/api/projects' : '/api/user/' + puserId + '/projects';
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('projectsList');
+        list.innerHTML = '';
+        if (data.projects && data.projects.length > 0) {
+          data.projects.forEach(function(p) {
+            var el = document.createElement('div');
+            el.className = 'p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            var skillsHtml = '';
+            if (p.skills && p.skills.length > 0) {
+              skillsHtml = '<div class="skills mt-1">' + p.skills.map(function(s) { return '<span class="skill">' + s + '</span>'; }).join('') + '</div>';
+            }
+            var collabText = '';
+            if (p.collaborators && p.collaborators.length > 0) {
+              var collabs = typeof p.collaborators === 'string' ? p.collaborators.split(',').map(function(t){return t.trim()}).filter(Boolean) : p.collaborators;
+              collabText = '<div class="text-xs text-muted mt-1">With: ' + collabs.join(', ') + '</div>';
+            }
+            el.innerHTML =
+              '<div class="flex items-start gap-3">' +
+                '<i data-lucide="folder-git-2" style="width:1.5rem;height:1.5rem;color:var(--primary);flex-shrink:0;margin-top:0.125rem;"></i>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div class="font-bold text-sm">' + escapeHtml(p.title) + '</div>' +
+                  (p.description ? '<div class="text-xs text-muted">' + escapeHtml(p.description) + '</div>' : '') +
+                  collabText +
+                  (p.link ? '<a href="' + p.link + '" target="_blank" rel="noopener noreferrer" class="text-xs font-bold mt-1 inline-block">View Project <i data-lucide="external-link" style="width:0.75rem;height:0.75rem;display:inline;"></i></a>' : '') +
+                  skillsHtml +
+                '</div>' +
+              '</div>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No projects yet.</div>';
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Load profile skills & stats
+  function loadProfile() {
+    var url = isOwn ? '/api/user/stats' : '/api/user/' + puserId + '/profile';
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('pStatVerified').textContent = data.verified_achievements || 0;
+        document.getElementById('pStatProjects').textContent = data.projects || 0;
+        document.getElementById('pStatCollabs').textContent = data.collaborations || 0;
+        if (data.friends !== undefined) {
+          var fc = document.getElementById('pStatFriends');
+          if (fc) fc.textContent = data.friends;
+        }
+        if (data.skills && data.skills.length > 0) {
+          var skillsEl = document.getElementById('profileSkills');
+          skillsEl.innerHTML = data.skills.map(function(s) { return '<span class="skill">' + s + '</span>'; }).join('');
+        }
+      })
+      .catch(function() {});
+  }
+
+  {% if is_own %}
+  // Achievement form submit
+  document.getElementById('achievementForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var body = {
+      title: document.getElementById('achTitle').value,
+      description: document.getElementById('achDesc').value,
+      category: document.getElementById('achCategory').value,
+      institution: document.getElementById('achInstitution').value,
+      year: document.getElementById('achYear').value,
+      certificate: document.getElementById('achCertificate').value
+    };
+    fetch('/api/achievement/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        document.getElementById('achievementForm').reset();
+        document.getElementById('achievementForm').classList.add('hidden');
+        document.getElementById('achChevron').style.transform = 'rotate(0deg)';
+        showToast('Achievement added!', 'success');
+        loadAchievements();
+        loadProfile();
+      } else {
+        showToast(data.error || 'Error adding achievement', 'info');
+      }
+    })
+    .catch(function() { showToast('Error adding achievement', 'info'); });
+  });
+
+  // Project form submit
+  document.getElementById('projectForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var body = {
+      title: document.getElementById('projTitle').value,
+      description: document.getElementById('projDesc').value,
+      collaborators: document.getElementById('projCollabs').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean),
+      link: document.getElementById('projLink').value,
+      skills: document.getElementById('projSkills').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean)
+    };
+    fetch('/api/project/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        document.getElementById('projectForm').reset();
+        document.getElementById('projectForm').classList.add('hidden');
+        document.getElementById('projChevron').style.transform = 'rotate(0deg)';
+        showToast('Project added!', 'success');
+        loadProjects();
+        loadProfile();
+      } else {
+        showToast(data.error || 'Error adding project', 'info');
+      }
+    })
+    .catch(function() { showToast('Error adding project', 'info'); });
+  });
+
+  // Avatar upload
+  var avatarWrap = document.getElementById('profileAvatarWrap');
+  var avatarInput = document.getElementById('avatarUploadInput');
+  if (avatarWrap && avatarInput) {
+    avatarWrap.addEventListener('click', function() { avatarInput.click(); });
+    avatarInput.addEventListener('change', function() {
+      var fd = new FormData();
+      fd.append('file', this.files[0]);
+      fetch('/api/profile/avatar', { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) {
+            avatarWrap.innerHTML = '<img src="' + d.url + '?t=' + Date.now() + '" alt="Avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"><div style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-card);"><i data-lucide="camera" style="width:12px;height:12px;color:#fff;"></i></div>';
+            lucide.createIcons();
+            showToast('Avatar updated!', 'success');
+          } else { showToast(d.error || 'Upload failed', 'info'); }
+        })
+        .catch(function() { showToast('Upload error', 'info'); });
+    });
+  }
+
+  // Friend request: accept/reject
+  function loadFriendRequests() {
+    fetch('/api/friend/requests')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var list = document.getElementById('friendRequestsList');
+        var badge = document.getElementById('friendReqBadge');
+        if (!list) return;
+        list.innerHTML = '';
+        if (d.requests && d.requests.length > 0) {
+          if (badge) { badge.classList.remove('hidden'); badge.textContent = d.requests.length; }
+          d.requests.forEach(function(req) {
+            var el = document.createElement('div');
+            el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div class="avatar avatar-sm">' + (req.user.avatar || '?') + '</div>' +
+              '<span class="font-bold text-sm flex-1">' + escapeHtml(req.user.name) + '</span>' +
+              '<button class="btn btn-sm btn-primary friend-accept" data-id="' + req.id + '">Accept</button>' +
+              '<button class="btn btn-sm btn-ghost friend-reject" data-id="' + req.id + '"><i data-lucide="x" style="width:14px;height:14px;"></i></button>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+          document.querySelectorAll('.friend-accept').forEach(function(b) {
+            b.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              fetch('/api/friend/respond', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({request_id: parseInt(id), action:'accept'}) })
+                .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Friend request accepted!','success');loadFriendRequests();loadFriends();loadProfile();}});
+            });
+          });
+          document.querySelectorAll('.friend-reject').forEach(function(b) {
+            b.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              fetch('/api/friend/respond', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({request_id: parseInt(id), action:'reject'}) })
+                .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Request declined','success');loadFriendRequests();}});
+            });
+          });
+        } else {
+          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No pending requests</p>';
+          if (badge) badge.classList.add('hidden');
+        }
+      });
+  }
+
+  // Friend list
+  function loadFriends() {
+    fetch('/api/friend/list')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var list = document.getElementById('friendsList');
+        var count = document.getElementById('friendsCount');
+        if (!list) return;
+        list.innerHTML = '';
+        if (d.friends && d.friends.length > 0) {
+          if (count) count.textContent = d.friends.length;
+          d.friends.forEach(function(f) {
+            var el = document.createElement('div');
+            el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div class="avatar avatar-sm">' + (f.avatar || '?') + '</div>' +
+              '<div><a href="/profile/' + f.id + '" class="font-bold text-xs hover:underline">' + escapeHtml(f.name) + '</a><div class="text-xs text-muted">' + escapeHtml(f.school || '') + '</div></div>';
+            list.appendChild(el);
+          });
+        } else {
+          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No friends yet</p>';
+          if (count) count.textContent = '0';
+        }
+      });
+  }
+
+  // Toggle edit profile
+  document.getElementById('toggleEditProfile').addEventListener('click', function() {
+    var form = document.getElementById('editProfileForm');
+    var chevron = document.getElementById('editChevron');
+    form.classList.toggle('hidden');
+    chevron.style.transform = form.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    lucide.createIcons();
+  });
+
+  // Edit profile form submit
+  document.getElementById('editProfileForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var body = {
+      name: document.getElementById('editName').value,
+      school: document.getElementById('editSchool').value,
+      grade: document.getElementById('editGrade').value,
+      bio: document.getElementById('editBio').value
+    };
+    fetch('/api/profile/update', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('Profile updated!', 'success');
+        location.reload();
+      } else {
+        showToast(data.error || 'Error', 'info');
+      }
+    })
+    .catch(function() { showToast('Error updating profile', 'info'); });
+  });
+
+  // Color palette picker
+  var paletteMap = {
+    'navy': {'--primary':'#1a2744','--primary-hover':'#2d4a7a','--accent':'#c9a84c','--accent-soft':'#e8d48b','--bg':'#ebf4ff','--bg-card':'#ffffff','--bg-hover':'#fdf0f0','--border':'#cbd5e1','--text-muted':'#5a6a7a','--danger':'#e86565'},
+    'coral': {'--primary':'#e86565','--primary-hover':'#d45050','--accent':'#f4b84a','--accent-soft':'#f8d48a','--bg':'#fff5f5','--bg-card':'#ffffff','--bg-hover':'#fef0f0','--border':'#f0d0d0','--text-muted':'#8a6a6a','--danger':'#c0392b'},
+    'blush': {'--primary':'#d48a8a','--primary-hover':'#c07070','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#fef7f7','--bg-card':'#ffffff','--bg-hover':'#faecec','--border':'#e8d0d0','--text-muted':'#8a7a7a','--danger':'#e86565'},
+    'gold': {'--primary':'#b8942e','--primary-hover':'#9a7a20','--accent':'#1a2744','--accent-soft':'#4a6a8a','--bg':'#fefcf0','--bg-card':'#ffffff','--bg-hover':'#f8f4e0','--border':'#e0d8b8','--text-muted':'#7a7260','--danger':'#c0392b'},
+    'slate': {'--primary':'#4a5568','--primary-hover':'#5a6a7a','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#f8fafc','--bg-card':'#ffffff','--bg-hover':'#eef2f6','--border':'#cbd5e1','--text-muted':'#64748b','--danger':'#e86565'},
+    'ice-blue': {'--primary':'#5a9fd4','--primary-hover':'#4a8ac0','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#f0f8ff','--bg-card':'#ffffff','--bg-hover':'#e6f0fa','--border':'#c8dce8','--text-muted':'#5a7a8a','--danger':'#e86565'}
+  };
+  document.querySelectorAll('.palette-option').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var palette = this.getAttribute('data-palette');
+      fetch('/api/profile/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({theme_color: palette})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          document.querySelectorAll('.palette-option').forEach(function(b) {
+            b.style.borderColor = 'transparent';
+            b.style.boxShadow = 'none';
+          });
+          this.style.borderColor = paletteMap[palette]['--primary'];
+          this.style.boxShadow = '0 0 0 2px var(--bg-card), 0 0 0 4px ' + paletteMap[palette]['--primary'];
+          var colors = paletteMap[palette];
+          for (var key in colors) {
+            document.documentElement.style.setProperty(key, colors[key]);
+          }
+          showToast('Theme updated!', 'success');
+        }
+      }.bind(this))
+      .catch(function() { showToast('Error setting theme', 'info'); });
+    });
+  });
+  {% endif %}
+
+  // Message button — open chat drawer with this user
+  var msgBtn = document.getElementById('messageUserBtn');
+  if (msgBtn) {
+    msgBtn.addEventListener('click', function() {
+      var drawer = document.getElementById('chat-drawer');
+      var body = document.getElementById('chat-body');
+      if (drawer) drawer.classList.remove('minimized');
+      if (body) body.classList.remove('hidden');
+      if (typeof openChat === 'function') {
+        openChat(puserId, puserName, puserAvatar, puserAvatarUrl);
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  }
+
+  // Friend action button (for other users' profiles)
+  var friendBtn = document.getElementById('friendActionBtn');
+  if (friendBtn && !isOwn) {
+    friendBtn.addEventListener('click', function() {
+      var status = this.getAttribute('data-friend-status');
+      if (status === 'none') {
+        fetch('/api/friend/request', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({user_id: puserId})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) {
+            showToast('Friend request sent!', 'success');
+            friendBtn.innerHTML = 'Request Sent <i data-lucide="clock" style="width:14px;height:14px;"></i>';
+            friendBtn.setAttribute('data-friend-status', 'pending_sent');
+            lucide.createIcons();
+          } else { showToast(d.error || 'Error', 'info'); }
+        })
+        .catch(function() { showToast('Error sending request', 'info'); });
+      } else if (status === 'pending_sent') {
+        showToast('Request already sent', 'info');
+      } else if (status === 'pending_received') {
+        // Accept the incoming request - find the connection ID
+        fetch('/api/friend/requests')
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var found = d.requests.find(function(r) { return r.user_id === puserId; });
+            if (found) {
+              fetch('/api/friend/respond', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({request_id: found.id, action: 'accept'})
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(d2) {
+                if (d2.success) {
+                  showToast('Friend request accepted!', 'success');
+                  friendBtn.innerHTML = 'Friends <i data-lucide="check" style="width:14px;height:14px;"></i>';
+                  friendBtn.setAttribute('data-friend-status', 'friends');
+                  lucide.createIcons();
+                }
+              });
+            }
+          });
+      }
+    });
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  loadAchievements();
+  loadProjects();
+  loadProfile();
+  {% if is_own %}
+  loadFriendRequests();
+  loadFriends();
+  {% endif %}
+});
+</script>
+{% endblock %}
