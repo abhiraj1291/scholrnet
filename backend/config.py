@@ -9,7 +9,13 @@ class Config:
         raise RuntimeError("FLASK_SECRET_KEY environment variable is required. Copy .env.example to .env and set it.")
 
     _db_url = os.environ.get("DATABASE_URL")
-    SQLALCHEMY_DATABASE_URI = _db_url if _db_url else f"sqlite:///{os.path.join(BASE_DIR, 'backend', 'scholrnet.db')}"
+    if _db_url and _db_url.startswith("postgresql"):
+        # Ensure SSL for cloud PostgreSQL (Supabase)
+        if "sslmode" not in _db_url:
+            _db_url += "?sslmode=require"
+        SQLALCHEMY_DATABASE_URI = _db_url
+    else:
+        SQLALCHEMY_DATABASE_URI = _db_url or f"sqlite:///{os.path.join(BASE_DIR, 'backend', 'scholrnet.db')}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
@@ -33,3 +39,6 @@ class Config:
         "messagingSenderId": os.environ.get("FIREBASE_MESSAGING_SENDER_ID", ""),
         "appId": os.environ.get("FIREBASE_APP_ID", ""),
     }
+
+    SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+    SUPABASE_STORAGE_KEY = os.environ.get("SUPABASE_STORAGE_KEY", "")

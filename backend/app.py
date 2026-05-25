@@ -2,6 +2,7 @@ import os
 import json
 import random
 import re
+import uuid
 from datetime import datetime, timezone
 
 from flask import render_template, request, jsonify, redirect, url_for, session as flask_session, abort
@@ -45,6 +46,29 @@ def validate_file_type(f, allowed_extensions, allowed_mime_prefixes):
     return True, ''
 
 def register_routes(app, bcrypt, login_manager, limiter):
+    supabase_url = app.config.get("SUPABASE_URL", "")
+    supabase_key = app.config.get("SUPABASE_STORAGE_KEY", "")
+    supabase_bucket = "uploads"
+
+    def _save_to_supabase(file_data, bucket, path):
+        if not supabase_url or not supabase_key:
+            return None
+        import urllib.request
+        req = urllib.request.Request(
+            f"{supabase_url}/storage/v1/object/{bucket}/{path}",
+            data=file_data,
+            headers={
+                "Authorization": f"Bearer {supabase_key}",
+                "Content-Type": "application/octet-stream",
+            },
+            method="POST",
+        )
+        try:
+            urllib.request.urlopen(req)
+            return f"{supabase_url}/storage/v1/object/public/{bucket}/{path}"
+        except Exception:
+            return None
+
     @login_manager.user_loader
     def load_user(user_id):
         try:
@@ -957,10 +981,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({"success": False, "error": err}), 400
         ext = f.filename.rsplit('.', 1)[-1].lower()
         safe_name = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
-        upload_dir = os.path.join(app.static_folder, 'uploads', 'avatars')
-        os.makedirs(upload_dir, exist_ok=True)
-        f.save(os.path.join(upload_dir, safe_name))
-        url = f"/static/uploads/avatars/{safe_name}"
+        url = _save_to_supabase(f.read(), 'uploads', f"avatars/{safe_name}")
+        if not url:
+            return jsonify({"success": False, "error": "Failed to upload file"}), 500
         current_user.avatar_url = url
         db.session.commit()
         return jsonify({"success": True, "url": url})
@@ -1185,10 +1208,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
             except Exception:
                 return jsonify({"success": False, "error": "Invalid image file"}), 400
         safe_name = f"{uuid.uuid4().hex[:16]}_{current_user.id}.{ext}"
-        upload_dir = os.path.join(app.static_folder, 'uploads')
-        os.makedirs(upload_dir, exist_ok=True)
-        f.save(os.path.join(upload_dir, safe_name))
-        url = f"/static/uploads/{safe_name}"
+        url = _save_to_supabase(f.read(), 'uploads', safe_name)
+        if not url:
+            return jsonify({"success": False, "error": "Failed to upload file"}), 500
         return jsonify({"success": True, "url": url})
 
     @app.route('/api/seed')
