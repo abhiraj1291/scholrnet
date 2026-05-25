@@ -1253,4 +1253,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/health')
     def api_health():
-        return jsonify({"status": "healthy"})
+        return jsonify({
+            "status": "healthy",
+            "supabase_url_set": bool(supabase_url),
+            "supabase_key_set": bool(supabase_key)
+        })
