@@ -1258,3 +1258,27 @@ def register_routes(app, bcrypt, login_manager, limiter):
             "supabase_url_set": bool(supabase_url),
             "supabase_key_set": bool(supabase_key)
         })
+
+    @app.route('/api/diag-storage')
+    def api_diag_storage():
+        import urllib.request, urllib.error
+        test_path = f"test_{uuid.uuid4().hex[:8]}.txt"
+        req = urllib.request.Request(
+            f"{supabase_url}/storage/v1/object/uploads/{test_path}",
+            data=b"test",
+            headers={"Authorization": f"Bearer {supabase_key}", "Content-Type": "text/plain"},
+            method="POST",
+        )
+        try:
+            resp = urllib.request.urlopen(req, timeout=10)
+            return jsonify({
+                "success": True,
+                "upload_status": resp.status,
+                "public_url": f"{supabase_url}/storage/v1/object/public/uploads/{test_path}",
+                "supabase_url": supabase_url,
+                "key_prefix": supabase_key[:10] + "..." if supabase_key else "NOT SET",
+            })
+        except urllib.error.HTTPError as e:
+            return jsonify({"success": False, "error": f"HTTP {e.code}: {e.reason}", "body": e.read().decode() if e.fp else ""}), 500
+        except Exception as e:
+            return jsonify({"success": False, "error": str(type(e).__name__) + ": " + str(e)}), 500
