@@ -1271,23 +1271,34 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/diag-storage')
     def api_diag_storage():
         import urllib.request, urllib.error
-        test_path = f"test_{uuid.uuid4().hex[:8]}.txt"
+        import io, struct, zlib
+        # Create a real 1x1 red PNG pixel
+        def make_png():
+            def chunk(ctype, data):
+                c = ctype + data
+                return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+            sig = b'\x89PNG\r\n\x1a\n'
+            ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
+            raw = zlib.compress(b'\x00\xff\x00\x00\xff')
+            idat = chunk(b'IDAT', raw)
+            iend = chunk(b'IEND', b'')
+            return sig + ihdr + idat + iend
+        png_data = make_png()
+        test_path = f"test_img_{uuid.uuid4().hex[:8]}.png"
         req = urllib.request.Request(
             f"{supabase_url}/storage/v1/object/uploads/{test_path}",
-            data=b"test",
-            headers={"Authorization": f"Bearer {supabase_key}", "Content-Type": "text/plain"},
+            data=png_data,
+            headers={"Authorization": f"Bearer {supabase_key}", "Content-Type": "image/png"},
             method="POST",
         )
         try:
             resp = urllib.request.urlopen(req, timeout=10)
+            public_url = f"{supabase_url}/storage/v1/object/public/uploads/{test_path}"
             return jsonify({
                 "success": True,
                 "upload_status": resp.status,
-                "public_url": f"{supabase_url}/storage/v1/object/public/uploads/{test_path}",
-                "supabase_url": supabase_url,
-                "key_prefix": supabase_key[:10] + "..." if supabase_key else "NOT SET",
+                "public_url": public_url,
+                "html": f'<img src="{public_url}" alt="test image" style="width:200px;height:200px;border:2px solid red;">',
             })
         except urllib.error.HTTPError as e:
             return jsonify({"success": False, "error": f"HTTP {e.code}: {e.reason}", "body": e.read().decode() if e.fp else ""}), 500
-        except Exception as e:
-            return jsonify({"success": False, "error": str(type(e).__name__) + ": " + str(e)}), 500
