@@ -50,16 +50,25 @@ def register_routes(app, bcrypt, login_manager, limiter):
     supabase_key = app.config.get("SUPABASE_STORAGE_KEY", "")
     supabase_bucket = "uploads"
 
-    def _save_to_supabase(file_data, bucket, path):
+    MIME_TYPES = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+        'gif': 'image/gif', 'webp': 'image/webp', 'mp4': 'video/mp4',
+        'mov': 'video/quicktime', 'svg': 'image/svg+xml',
+    }
+
+    def _save_to_supabase(file_data, bucket, path, content_type=None):
         if not supabase_url or not supabase_key:
             return None
+        if not content_type:
+            ext = path.rsplit('.', 1)[-1].lower() if '.' in path else ''
+            content_type = MIME_TYPES.get(ext, 'application/octet-stream')
         import urllib.request
         req = urllib.request.Request(
             f"{supabase_url}/storage/v1/object/{bucket}/{path}",
             data=file_data,
             headers={
                 "Authorization": f"Bearer {supabase_key}",
-                "Content-Type": "application/octet-stream",
+                "Content-Type": content_type,
             },
             method="POST",
         )
@@ -1208,7 +1217,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             except Exception:
                 return jsonify({"success": False, "error": "Invalid image file"}), 400
         safe_name = f"{uuid.uuid4().hex[:16]}_{current_user.id}.{ext}"
-        url = _save_to_supabase(f.read(), 'uploads', safe_name)
+        url = _save_to_supabase(f.read(), 'uploads', safe_name, f'image/{ext}' if ext not in ('mp4', 'mov') else f'video/{ext}')
         if not url:
             return jsonify({"success": False, "error": "Failed to upload file"}), 500
         return jsonify({"success": True, "url": url})
