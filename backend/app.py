@@ -2,9 +2,6 @@ import os
 import json
 import random
 import re
-import time
-import uuid
-import requests
 from datetime import datetime, timezone
 
 from flask import render_template, request, jsonify, redirect, url_for, session as flask_session, abort
