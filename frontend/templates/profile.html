@@ -30,138 +30,69 @@
       <div class="stat-box"><div class="stat-num" id="pStatFriends">0</div><div class="stat-label">Friends</div></div>
     </div>
     <!-- Friend Action Button + Message (for other users) -->
-    {% if not is_own %}
-    <div class="mt-3 text-center flex items-center justify-center gap-2">
-      <button id="friendActionBtn" class="btn btn-primary" data-friend-status="{{ friend_status }}">
-        {% if friend_status == 'friends' %}Friends <i data-lucide="check" style="width:14px;height:14px;"></i>
-        {% elif friend_status == 'pending_sent' %}Request Sent <i data-lucide="clock" style="width:14px;height:14px;"></i>
-        {% elif friend_status == 'pending_received' %}Accept Request <i data-lucide="user-plus" style="width:14px;height:14px;"></i>
-        {% else %}Add Friend <i data-lucide="user-plus" style="width:14px;height:14px;"></i>{% endif %}
+  {% if not is_own %}
+  <div class="mt-3 text-center flex items-center justify-center gap-2">
+    <button id="friendActionBtn" class="btn btn-primary" data-friend-status="{{ friend_status }}">
+      {% if friend_status == 'friends' %}Friends <i data-lucide="check" style="width:14px;height:14px;"></i>
+      {% elif friend_status == 'pending_sent' %}Request Sent <i data-lucide="clock" style="width:14px;height:14px;"></i>
+      {% elif friend_status == 'pending_received' %}Accept Request <i data-lucide="user-plus" style="width:14px;height:14px;"></i>
+      {% else %}Add Friend <i data-lucide="user-plus" style="width:14px;height:14px;"></i>{% endif %}
+    </button>
+    <button id="messageUserBtn" class="btn btn-secondary"><i data-lucide="message-circle" style="width:16px;height:16px;"></i> Message</button>
+  </div>
+  {% endif %}
+  </div>
+
+  <!-- Experience Section -->
+  <div class="card mb-3">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="briefcase" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        <span class="font-bold text-sm">Experience</span>
+      </div>
+      {% if is_own %}
+      <button id="toggleExpFormBtn" class="btn btn-ghost btn-sm">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i> Add
       </button>
-      <button id="messageUserBtn" class="btn btn-secondary"><i data-lucide="message-circle" style="width:16px;height:16px;"></i> Message</button>
+      {% endif %}
     </div>
-    {% endif %}
-  </div>
-
-  {% if is_own %}
-  <!-- Edit Profile -->
-  <div class="card mb-3">
-    <button id="toggleEditProfile" class="w-full flex items-center justify-between text-left" style="background:none;border:none;color:var(--text);padding:0;">
-      <span class="font-bold text-sm"><i data-lucide="settings" style="width:1rem;height:1rem;display:inline;margin-right:0.375rem;"></i> Edit Profile</span>
-      <i data-lucide="chevron-down" id="editChevron" style="width:1.25rem;height:1.25rem;transition:transform 0.2s;"></i>
-    </button>
-    <form id="editProfileForm" class="hidden mt-3">
+    <div id="experienceList"></div>
+    {% if is_own %}
+    <form id="experienceForm" class="hidden mt-3" style="border-top:1px solid var(--border);padding-top:1rem;">
       <div class="mb-2">
-        <label class="text-xs font-bold text-muted block mb-1">Name</label>
-        <input type="text" id="editName" value="{{ user.name }}">
+        <label class="text-xs font-bold text-muted block mb-1">Company / Organization</label>
+        <input type="text" id="expCompany" placeholder="e.g. Google, NASA, Local Robotics Club" required>
       </div>
       <div class="mb-2">
-        <label class="text-xs font-bold text-muted block mb-1">School</label>
-        <input type="text" id="editSchool" value="{{ user.school }}">
-      </div>
-      <div class="mb-2">
-        <label class="text-xs font-bold text-muted block mb-1">Grade</label>
-        <input type="text" id="editGrade" value="{{ user.grade }}">
-      </div>
-      <div class="mb-2">
-        <label class="text-xs font-bold text-muted block mb-1">Bio</label>
-        <textarea id="editBio" rows="2">{{ user.bio }}</textarea>
-      </div>
-      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Save Profile</button>
-    </form>
-  </div>
-
-  <!-- Color Palette -->
-  <div class="card mb-3">
-    <div class="flex items-center gap-2 mb-3">
-      <i data-lucide="palette" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
-      <span class="font-bold text-sm">Theme Color</span>
-    </div>
-    {% set palettes = {
-      'navy': {'p':'#1a2744','ph':'#2d4a7a','a':'#c9a84c','as':'#e8d48b','bg':'#ebf4ff','bc':'#ffffff','bh':'#fdf0f0','bo':'#cbd5e1','tm':'#5a6a7a','d':'#e86565','label':'Navy Deep'},
-      'coral': {'p':'#e86565','ph':'#d45050','a':'#f4b84a','as':'#f8d48a','bg':'#fff5f5','bc':'#ffffff','bh':'#fef0f0','bo':'#f0d0d0','tm':'#8a6a6a','d':'#c0392b','label':'Coral'},
-      'blush': {'p':'#d48a8a','ph':'#c07070','a':'#c9a84c','as':'#e0c878','bg':'#fef7f7','bc':'#ffffff','bh':'#faecec','bo':'#e8d0d0','tm':'#8a7a7a','d':'#e86565','label':'Blush'},
-      'gold': {'p':'#b8942e','ph':'#9a7a20','a':'#1a2744','as':'#4a6a8a','bg':'#fefcf0','bc':'#ffffff','bh':'#f8f4e0','bo':'#e0d8b8','tm':'#7a7260','d':'#c0392b','label':'Gold'},
-      'slate': {'p':'#4a5568','ph':'#5a6a7a','a':'#c9a84c','as':'#e0c878','bg':'#f8fafc','bc':'#ffffff','bh':'#eef2f6','bo':'#cbd5e1','tm':'#64748b','d':'#e86565','label':'Slate'},
-      'ice-blue': {'p':'#5a9fd4','ph':'#4a8ac0','a':'#c9a84c','as':'#e0c878','bg':'#f0f8ff','bc':'#ffffff','bh':'#e6f0fa','bo':'#c8dce8','tm':'#5a7a8a','d':'#e86565','label':'Ice Blue'}
-    } %}
-    <div class="flex gap-3 flex-wrap">
-      {% for key, p in palettes.items() %}
-      <button class="palette-option" data-palette="{{ key }}" title="{{ p.label }}" style="width:2.5rem;height:2.5rem;border-radius:50%;border:3px solid transparent;cursor:pointer;background:linear-gradient(135deg, {{ p.p }}, {{ p.a }});{% if user.theme_color == key %}border-color:var(--primary);box-shadow:0 0 0 2px var(--bg-card), 0 0 0 4px {{ p.p }};{% endif %}"></button>
-      {% endfor %}
-    </div>
-    <p class="text-xs text-muted mt-2">Pick a color theme for your ScholrNet experience</p>
-  </div>
-
-  <!-- Friend Requests -->
-  <div class="card mb-3">
-    <div class="flex items-center gap-2 mb-3">
-      <i data-lucide="user-plus" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
-      <span class="font-bold text-sm">Friend Requests</span>
-      <span id="friendReqBadge" class="badge badge-primary hidden" style="margin-left:auto;">0</span>
-    </div>
-    <div id="friendRequestsList">
-      <p class="text-xs text-muted text-center py-2">No pending requests</p>
-    </div>
-  </div>
-
-  <!-- Friends List -->
-  <div class="card mb-3">
-    <div class="flex items-center gap-2 mb-3">
-      <i data-lucide="users" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
-      <span class="font-bold text-sm">Friends</span>
-      <span class="text-xs text-muted" id="friendsCount" style="margin-left:auto;">0</span>
-    </div>
-    <div id="friendsList">
-      <p class="text-xs text-muted text-center py-2">No friends yet</p>
-    </div>
-  </div>
-
-  <!-- Add Achievement -->
-  <div class="card mb-3">
-    <button id="toggleAchievementForm" class="w-full flex items-center justify-between text-left" style="background:none;border:none;color:var(--text);padding:0;">
-      <span class="font-bold text-sm"><i data-lucide="award" style="width:1rem;height:1rem;display:inline;margin-right:0.375rem;"></i> Add Achievement</span>
-      <i data-lucide="chevron-down" id="achChevron" style="width:1.25rem;height:1.25rem;transition:transform 0.2s;"></i>
-    </button>
-    <form id="achievementForm" class="hidden mt-3">
-      <div class="mb-2">
-        <label class="text-xs font-bold text-muted block mb-1">Title</label>
-        <input type="text" id="achTitle" placeholder="e.g. National Science Olympiad Winner" required>
+        <label class="text-xs font-bold text-muted block mb-1">Role</label>
+        <input type="text" id="expRole" placeholder="e.g. Intern, Team Lead, Volunteer" required>
       </div>
       <div class="mb-2">
         <label class="text-xs font-bold text-muted block mb-1">Description</label>
-        <textarea id="achDesc" rows="2" placeholder="Describe your achievement"></textarea>
-      </div>
-      <div class="grid gap-2 profile-form-grid" style="grid-template-columns:1fr 1fr;">
-        <div class="mb-2">
-          <label class="text-xs font-bold text-muted block mb-1">Category</label>
-          <select id="achCategory">
-            <option value="academic">Academic</option>
-            <option value="sports">Sports</option>
-            <option value="arts">Arts</option>
-            <option value="research">Research</option>
-            <option value="community">Community Service</option>
-            <option value="leadership">Leadership</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        <div class="mb-2">
-          <label class="text-xs font-bold text-muted block mb-1">Institution</label>
-          <input type="text" id="achInstitution" placeholder="e.g. NCERT">
-        </div>
+        <textarea id="expDesc" rows="2" placeholder="What did you do?"></textarea>
       </div>
       <div class="mb-2">
-        <label class="text-xs font-bold text-muted block mb-1">Year</label>
-        <input type="number" id="achYear" placeholder="e.g. 2026" min="1900" max="2100">
+        <label class="text-xs font-bold text-muted block mb-1">Skills (comma-separated)</label>
+        <input type="text" id="expSkills" placeholder="e.g. Python, Leadership, Public Speaking">
       </div>
-      <div class="mb-3">
-        <label class="text-xs font-bold text-muted block mb-1">Certificate File Name</label>
-        <input type="text" id="achCertificate" placeholder="filename.pdf">
+      <div class="flex items-center gap-2 mb-2">
+        <div style="flex:1;">
+          <label class="text-xs font-bold text-muted block mb-1">Start</label>
+          <input type="text" id="expStart" placeholder="e.g. Jun 2025">
+        </div>
+        <div style="flex:1;">
+          <label class="text-xs font-bold text-muted block mb-1">End</label>
+          <input type="text" id="expEnd" placeholder="e.g. Aug 2025">
+        </div>
       </div>
-      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Add Achievement</button>
+      <div class="flex items-center gap-2 mb-2">
+        <input type="checkbox" id="expCurrent" style="width:auto;">
+        <label for="expCurrent" class="text-xs">I currently work here</label>
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Add Experience</button>
     </form>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- Achievements List -->
   <div class="card mb-3">
@@ -370,6 +301,50 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(function() {});
   }
 
+  // Load experiences
+  function loadExperiences() {
+    fetch('/api/user/' + puserId + '/experiences')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('experienceList');
+        list.innerHTML = '';
+        if (data.experiences && data.experiences.length > 0) {
+          data.experiences.forEach(function(e) {
+            var el = document.createElement('div');
+            el.className = 'p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            var skillsHtml = '';
+            if (e.skills) {
+              var skills = e.skills.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+              if (skills.length > 0) {
+                skillsHtml = '<div class="skills mt-1">' + skills.map(function(s) { return '<span class="skill">' + escapeHtml(s) + '</span>'; }).join('') + '</div>';
+              }
+            }
+            var dateRange = '';
+            if (e.start_date || e.end_date) {
+              dateRange = '<div class="text-xs text-muted">' + (e.start_date || '') + (e.is_current ? ' - Present' : e.end_date ? ' - ' + e.end_date : '') + '</div>';
+            }
+            el.innerHTML =
+              '<div class="flex items-start gap-3">' +
+                '<i data-lucide="briefcase" style="width:1.25rem;height:1.25rem;color:var(--primary);flex-shrink:0;margin-top:0.25rem;"></i>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div class="font-bold text-sm">' + escapeHtml(e.role) + '</div>' +
+                  '<div class="text-xs font-bold" style="color:var(--primary);">' + escapeHtml(e.company) + '</div>' +
+                  dateRange +
+                  (e.description ? '<div class="text-xs text-muted mt-1">' + escapeHtml(e.description) + '</div>' : '') +
+                  skillsHtml +
+                '</div>' +
+              '</div>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No experience listed yet.</div>';
+        }
+      })
+      .catch(function() {});
+  }
+
   // Load profile skills & stats
   function loadProfile() {
     var url = isOwn ? '/api/user/stats' : '/api/user/' + puserId + '/profile';
@@ -454,6 +429,43 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(function() { showToast('Error adding project', 'info'); });
   });
+
+  // Experience form toggle + submit
+  var toggleExpBtn = document.getElementById('toggleExpFormBtn');
+  var expForm = document.getElementById('experienceForm');
+  if (toggleExpBtn && expForm) {
+    toggleExpBtn.addEventListener('click', function() { expForm.classList.toggle('hidden'); });
+    expForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var body = {
+        company: document.getElementById('expCompany').value,
+        role: document.getElementById('expRole').value,
+        description: document.getElementById('expDesc').value,
+        skills: document.getElementById('expSkills').value,
+        start_date: document.getElementById('expStart').value,
+        end_date: document.getElementById('expEnd').value,
+        is_current: document.getElementById('expCurrent').checked
+      };
+      if (!body.company || !body.role) { showToast('Company and role are required', 'info'); return; }
+      fetch('/api/experience/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          expForm.reset();
+          expForm.classList.add('hidden');
+          showToast('Experience added!', 'success');
+          loadExperiences();
+        } else {
+          showToast(data.error || 'Error adding experience', 'info');
+        }
+      })
+      .catch(function() { showToast('Error adding experience', 'info'); });
+    });
+  }
 
   // Avatar upload
   var avatarWrap = document.getElementById('profileAvatarWrap');
@@ -694,6 +706,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   loadAchievements();
   loadProjects();
+  loadExperiences();
   loadProfile();
   {% if is_own %}
   loadFriendRequests();

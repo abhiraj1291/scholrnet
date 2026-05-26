@@ -12,7 +12,7 @@ from markupsafe import escape as escape_html
 from config import Config
 from models import db, User, Achievement, Project, Post, Comment, Ad, Opportunity, TeamRequest
 from models import TeamApplicant, VerificationRequest, Mentor, MentorshipRequest, MentorInteraction
-from models import Notification, ChatMessage, School, SchoolAnnouncement, Connection, UserLike, EventRegistration
+from models import Notification, ChatMessage, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience
 
 MAX_STRING_LEN = 5000
 MAX_CONTENT_LEN = 50000
@@ -654,6 +654,63 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if proj.user_id != current_user.id and current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
         db.session.delete(proj)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/user/<int:user_id>/experiences', methods=['GET'])
+    def api_get_experiences(user_id):
+        exps = Experience.query.filter_by(user_id=user_id).order_by(Experience.is_current.desc(), Experience.id.desc()).all()
+        return jsonify({'experiences': [{
+            'id': e.id, 'company': e.company, 'role': e.role, 'description': e.description,
+            'skills': e.skills, 'start_date': e.start_date, 'end_date': e.end_date,
+            'is_current': e.is_current, 'created_at': e.created_at.isoformat() if e.created_at else ''
+        } for e in exps]})
+
+    @app.route('/api/experience/create', methods=['POST'])
+    @login_required
+    @limiter.limit("20 per minute")
+    def api_create_experience():
+        data = request.json or {}
+        exp = Experience(
+            user_id=current_user.id,
+            company=sanitize_text(data.get('company', ''), 200),
+            role=sanitize_text(data.get('role', ''), 200),
+            description=sanitize_text(data.get('description', ''), 5000),
+            skills=sanitize_text(data.get('skills', ''), 500),
+            start_date=sanitize_text(data.get('start_date', ''), 20),
+            end_date=sanitize_text(data.get('end_date', ''), 20),
+            is_current=bool(data.get('is_current', False))
+        )
+        db.session.add(exp)
+        db.session.commit()
+        return jsonify({'success': True, 'experience': {
+            'id': exp.id, 'company': exp.company, 'role': exp.role
+        }})
+
+    @app.route('/api/experience/<int:exp_id>/edit', methods=['POST'])
+    @login_required
+    def api_edit_experience(exp_id):
+        exp = Experience.query.get_or_404(exp_id)
+        if exp.user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        data = request.json or {}
+        exp.company = sanitize_text(data.get('company', exp.company), 200)
+        exp.role = sanitize_text(data.get('role', exp.role), 200)
+        exp.description = sanitize_text(data.get('description', exp.description), 5000)
+        exp.skills = sanitize_text(data.get('skills', exp.skills), 500)
+        exp.start_date = sanitize_text(data.get('start_date', exp.start_date), 20)
+        exp.end_date = sanitize_text(data.get('end_date', exp.end_date), 20)
+        exp.is_current = bool(data.get('is_current', exp.is_current))
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/experience/<int:exp_id>/delete', methods=['POST'])
+    @login_required
+    def api_delete_experience(exp_id):
+        exp = Experience.query.get_or_404(exp_id)
+        if exp.user_id != current_user.id and current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        db.session.delete(exp)
         db.session.commit()
         return jsonify({'success': True})
 
@@ -1518,6 +1575,26 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     conn.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(30) UNIQUE DEFAULT NULL"))
                     conn.commit()
                 mig.append("added users.username")
+            exp_cols = [c['name'] for c in inspector.get_columns('experiences')] if 'experiences' in [t for t, in db.engine.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='experiences'").fetchall()] else []
+            if not exp_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS experiences (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL,
+                            company VARCHAR(200) NOT NULL,
+                            role VARCHAR(200) NOT NULL,
+                            description TEXT DEFAULT '',
+                            skills VARCHAR(500) DEFAULT '',
+                            start_date VARCHAR(20) DEFAULT '',
+                            end_date VARCHAR(20) DEFAULT '',
+                            is_current BOOLEAN DEFAULT 0,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id)
+                        )
+                    """))
+                    conn.commit()
+                mig.append("created experiences table")
         except Exception as e:
             return jsonify({"error": str(e), "ran": mig}), 500
         return jsonify({"message": "Migration complete", "changes": mig})

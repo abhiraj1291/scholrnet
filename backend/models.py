@@ -239,3 +239,16 @@ class EventRegistration(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False, index=True)
     announce_id = db.Column(db.String(100), nullable=False, index=True)
+
+class Experience(db.Model):
+    __tablename__ = 'experiences'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    company = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default="")
+    skills = db.Column(db.String(500), default="")
+    start_date = db.Column(db.String(20), default="")
+    end_date = db.Column(db.String(20), default="")
+    is_current = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
