@@ -1279,6 +1279,27 @@ def register_routes(app, bcrypt, login_manager, limiter):
         users = User.query.filter(User.id.in_(ids)).all() if ids else []
         return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar_url or u.avatar or u.name[:2].upper(), 'school': u.school} for u in users]})
 
+    @app.route('/api/user/<int:user_id>/connections')
+    @login_required
+    def api_user_connections(user_id):
+        sent = Connection.query.filter_by(user_id=user_id, status='accepted').all()
+        received = Connection.query.filter_by(connected_user_id=user_id, status='accepted').all()
+        ids = set()
+        for c in sent: ids.add(c.connected_user_id)
+        for c in received: ids.add(c.user_id)
+        # Calculate mutual connections with current user
+        my_sent = Connection.query.filter_by(user_id=current_user.id, status='accepted').all()
+        my_received = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all()
+        my_ids = set()
+        for c in my_sent: my_ids.add(c.connected_user_id)
+        for c in my_received: my_ids.add(c.user_id)
+        users = User.query.filter(User.id.in_(ids)).all() if ids else []
+        return jsonify({'connections': [{
+            'id': u.id, 'name': u.name, 'avatar': u.avatar_url or u.avatar or u.name[:2].upper(),
+            'school': u.school, 'username': u.username,
+            'mutual': len(my_ids & {u.id})
+        } for u in users]})
+
     @app.route('/api/connection/toggle', methods=['POST'])
     @login_required
     def api_toggle_connection():

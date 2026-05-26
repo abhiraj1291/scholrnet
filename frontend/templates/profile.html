@@ -144,6 +144,16 @@
     </div>
     <div id="projectsList"></div>
   </div>
+
+  <!-- Connections -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="users" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">Connections</span>
+      <span id="friendsCount" class="text-xs text-muted">0</span>
+    </div>
+    <div id="friendsList"></div>
+  </div>
 </div>
 
 <script>
@@ -534,26 +544,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Friend list
   function loadFriends() {
-    fetch('/api/friend/list')
+    var url = isOwn ? '/api/friend/list' : '/api/user/' + puserId + '/connections';
+    fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(d) {
         var list = document.getElementById('friendsList');
         var count = document.getElementById('friendsCount');
         if (!list) return;
         list.innerHTML = '';
-        if (d.friends && d.friends.length > 0) {
-          if (count) count.textContent = d.friends.length;
-          d.friends.forEach(function(f) {
+        var items = d.friends || d.connections || [];
+        if (items.length > 0) {
+          if (count) count.textContent = items.length;
+          items.forEach(function(f) {
+            var mutualText = (f.mutual > 0) ? '<span class="text-xs text-muted">' + f.mutual + ' mutual</span>' : '';
+            var nameLink = f.username ? '/u/' + f.username : '/profile/' + f.id;
             var el = document.createElement('div');
             el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
             el.style.background = 'var(--bg-hover)';
             el.innerHTML =
               '<div class="avatar avatar-sm">' + (f.avatar || '?') + '</div>' +
-              '<div><a href="/profile/' + f.id + '" class="font-bold text-xs hover:underline">' + escapeHtml(f.name) + '</a><div class="text-xs text-muted">' + escapeHtml(f.school || '') + '</div></div>';
+              '<div><a href="' + nameLink + '" class="font-bold text-xs hover:underline">' + escapeHtml(f.name) + '</a><div class="text-xs text-muted">' + escapeHtml(f.school || '') + ' ' + mutualText + '</div></div>';
             list.appendChild(el);
           });
         } else {
-          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No friends yet</p>';
+          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No connections yet</p>';
           if (count) count.textContent = '0';
         }
       });
@@ -707,11 +721,8 @@ document.addEventListener('DOMContentLoaded', function() {
   loadAchievements();
   loadProjects();
   loadExperiences();
-  loadProfile();
-  {% if is_own %}
-  loadFriendRequests();
   loadFriends();
-  {% endif %}
+  loadProfile();
 });
 </script>
 {% endblock %}
