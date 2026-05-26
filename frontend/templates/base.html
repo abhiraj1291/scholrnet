@@ -86,37 +86,51 @@
         </div>
       </div>
     </div>
-  </header>
 
-  <!-- Tab Navigation -->
-  <nav class="tab-nav" id="mainTabs">
-    {% set tabs = [
-      ('dashboard', 'home', 'Home Feed'),
-      ('profile_page', 'book-open', 'My Portfolio'),
-      ('opportunities_page', 'sparkles', 'Opportunities'),
-      ('teams_page', 'users', 'Teams'),
-      ('mentors_page', 'graduation-cap', 'Mentors'),
-      ('advisor_page', 'bot', 'Advisor'),
-      ('analytics_page', 'bar-chart-3', 'Analytics'),
-      ('search_page', 'search', 'Search'),
-      ('chat_page', 'message-circle', 'Chat'),
-    ] %}
-    {% for endpoint, icon, label in tabs %}
-    <a href="{{ url_for(endpoint) }}" class="tab-btn {{ 'active' if request.endpoint == endpoint else '' }}">
-      <i data-lucide="{{ icon }}" style="width:16px;height:16px;"></i> {{ label }}
-    </a>
-    {% endfor %}
-    {% if user.role in ('admin','super_admin') %}
-    <a href="{{ url_for('school_desk') }}" class="tab-btn {{ 'active' if request.endpoint == 'school_desk' else '' }}">
-      <i data-lucide="building-2" style="width:16px;height:16px;"></i> School Desk
-    </a>
-    {% endif %}
-    {% if user.role == 'super_admin' %}
-    <a href="{{ url_for('admin_panel') }}" class="tab-btn {{ 'active' if request.endpoint == 'admin_panel' else '' }}">
-      <i data-lucide="shield" style="width:16px;height:16px;"></i> Admin Panel
-    </a>
-    {% endif %}
-  </nav>
+    <!-- Tab Navigation (inside header, below header-inner) -->
+    <nav class="tab-nav" id="mainTabs">
+      {% set primary_tabs = [
+        ('dashboard', 'home', 'Feed'),
+        ('profile_page', 'book-open', 'Portfolio'),
+        ('search_page', 'search', 'Search'),
+        ('chat_page', 'message-circle', 'Chat'),
+      ] %}
+      {% set more_tabs = [
+        ('opportunities_page', 'sparkles', 'Opportunities'),
+        ('teams_page', 'users', 'Teams'),
+        ('mentors_page', 'graduation-cap', 'Mentors'),
+        ('advisor_page', 'bot', 'Advisor'),
+        ('analytics_page', 'bar-chart-3', 'Analytics'),
+      ] %}
+      {% for endpoint, icon, label in primary_tabs %}
+      <a href="{{ url_for(endpoint) }}" class="tab-btn {{ 'active' if request.endpoint == endpoint else '' }}">
+        <i data-lucide="{{ icon }}" style="width:16px;height:16px;"></i>{{ label }}
+      </a>
+      {% endfor %}
+      {% if user.role in ('admin','super_admin') %}
+      <a href="{{ url_for('school_desk') }}" class="tab-btn {{ 'active' if request.endpoint == 'school_desk' else '' }}">
+        <i data-lucide="building-2" style="width:16px;height:16px;"></i>School
+      </a>
+      {% endif %}
+      {% if user.role == 'super_admin' %}
+      <a href="{{ url_for('admin_panel') }}" class="tab-btn {{ 'active' if request.endpoint == 'admin_panel' else '' }}">
+        <i data-lucide="shield" style="width:16px;height:16px;"></i>Admin
+      </a>
+      {% endif %}
+      <div class="relative" style="margin-left:auto;">
+        <button id="tab-more-btn" class="tab-btn" style="gap:0;">
+          <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+        </button>
+        <div id="tab-more-dropdown" class="hidden" style="position:absolute;right:0;top:100%;margin-top:4px;width:180px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:200;overflow:hidden;">
+          {% for endpoint, icon, label in more_tabs %}
+          <a href="{{ url_for(endpoint) }}" class="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-hover" style="text-decoration:none;color:var(--text);border-bottom:1px solid var(--border);">
+            <i data-lucide="{{ icon }}" style="width:16px;height:16px;color:var(--text-muted);"></i> {{ label }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </nav>
+  </header>
 
   <!-- Page Content -->
   <main class="page">

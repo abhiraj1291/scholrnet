@@ -47,9 +47,6 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.querySelectorAll(`.tab-btn[data-tab="${tabId}"]`).forEach(el => el.classList.add('active'));
 
-  document.querySelectorAll('.bottom-nav-btn').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll(`.bottom-nav-btn[data-tab="${tabId}"]`).forEach(el => el.classList.add('active'));
-
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -88,16 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // More menu (mobile)
-  const moreBtn = document.getElementById('more-btn');
-  const moreOverlay = document.getElementById('more-overlay');
-  if (moreBtn && moreOverlay) {
-    moreBtn.addEventListener('click', () => moreOverlay.classList.remove('hidden'));
-    moreOverlay.addEventListener('click', (e) => {
-      if (e.target === moreOverlay) moreOverlay.classList.add('hidden');
-    });
-  }
-
   // Notifications dropdown
   const notifBtn = document.getElementById('notif-btn');
   const notifPanel = document.getElementById('notif-panel');
@@ -122,6 +109,21 @@ document.addEventListener('DOMContentLoaded', function() {
       chatDrawer.classList.toggle('minimized');
       if (chatBody) chatBody.classList.toggle('hidden');
       if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  }
+
+  // Tab more dropdown
+  const tabMoreBtn = document.getElementById('tab-more-btn');
+  const tabMoreDropdown = document.getElementById('tab-more-dropdown');
+  if (tabMoreBtn && tabMoreDropdown) {
+    tabMoreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tabMoreDropdown.classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e) => {
+      if (!tabMoreDropdown.contains(e.target) && e.target !== tabMoreBtn) {
+        tabMoreDropdown.classList.add('hidden');
+      }
     });
   }
 
