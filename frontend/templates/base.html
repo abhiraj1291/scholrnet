@@ -73,7 +73,7 @@
     <span class="text-xs hidden sm:inline" style="color:{{ role_colors.get(user.role, '#6b7280') }};font-weight:600;">{{ user.role.replace('_',' ').upper() if user.role else 'STUDENT' }}</span>
     <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
           </button>
-          <div id="account-dropdown" class="hidden" style="position:absolute;right:0;top:100%;margin-top:8px;width:220px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:200;">
+          <div id="account-dropdown" class="hidden" style="position:absolute;right:0;top:100%;margin-top:8px;width:220px;max-width:calc(100vw - 2rem);background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:200;">
             <div class="p-3 border-b" style="border-color:var(--border);">
               <div class="font-bold text-sm">{{ user.name }}{% if user.role in ('admin', 'super_admin') or user.email == 'abhiraj29in@gmail.com' %} <i data-lucide="badge-check" style="width:0.875rem;height:0.875rem;color:var(--primary);display:inline;"></i>{% endif %}</div>
               <div class="text-xs text-muted">{{ user.email }}</div>
@@ -141,13 +141,13 @@
   </nav>
 
   <!-- More Menu Overlay (Mobile) -->
-  <div id="more-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:80;"></div>
-  <div id="more-panel" class="hidden" style="position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border-radius:24px 24px 0 0;padding:24px;z-index:81;animation:slideUp 0.2s ease;">
+  <div id="more-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:90;"></div>
+  <div id="more-panel" class="hidden menu-panel" style="animation:slideUp 0.25s ease;">
     <div class="flex items-center justify-between mb-4">
       <span class="font-bold">All Sections</span>
       <button id="close-more-btn" class="btn btn-ghost btn-sm"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       {% for endpoint, icon, label in tabs %}
       <a href="{{ url_for(endpoint) }}" class="card text-center py-4 flex flex-col items-center gap-2" style="text-decoration:none;color:var(--text);">
         <i data-lucide="{{ icon }}" style="width:24px;height:24px;color:var(--primary);"></i>
