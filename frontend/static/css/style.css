@@ -176,7 +176,6 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   gap: 0.125rem;
   overflow-x: auto;
-  overflow-y: visible;
   padding: 0.25rem 0.75rem;
   border-top: 1px solid var(--border);
   background: var(--bg-card);
