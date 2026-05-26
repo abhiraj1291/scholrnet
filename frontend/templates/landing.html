@@ -17,98 +17,57 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
 </head>
 <body>
-  <!-- Hero -->
+  <div class="hero-glow" id="heroGlow"></div>
+
   <section class="hero">
-    <div class="hero-bg"></div>
     <div class="particles" id="particles"></div>
     <div class="hero-content">
-      <div class="logo-3d" id="logo3d">
-        <div class="logo-cube">
-          <div class="cube-face front">S</div>
-          <div class="cube-face back">N</div>
-          <div class="cube-face right">S</div>
-          <div class="cube-face left">N</div>
-          <div class="cube-face top">S</div>
-          <div class="cube-face bottom">N</div>
-        </div>
+      <div class="hero-logo-group">
+        <div class="minimal-globe"><div class="globe-grid"></div></div>
+        <div class="floating-cap"><i data-lucide="graduation-cap"></i></div>
       </div>
       <h1 class="hero-title">Where Your Achievements<br><span>Build Your Future</span></h1>
       <p class="hero-sub">The verified academic network for students, teachers, and schools.<br>Showcase achievements, connect with mentors, find opportunities.</p>
       <div class="hero-cta">
-        <a href="{{ url_for('register') }}" class="btn-primary">Join Now</a>
-        <a href="{{ url_for('login') }}" class="btn-outline">Sign In</a>
+        <a href="{{ url_for('register') }}" class="btn-primary ripple">Join Now</a>
+        <a href="{{ url_for('login') }}" class="btn-outline ripple">Sign In</a>
       </div>
     </div>
   </section>
 
-  <!-- Features -->
   <section class="features" id="features">
-    <h2 class="section-title">Everything You Need</h2>
-    <p class="section-sub">Build your academic identity with tools designed for students and educators.</p>
-    <div class="features-grid" id="featuresGrid">
-      <div class="feature-card">
+    <h2 class="section-title reveal">Everything You Need</h2>
+    <p class="section-sub reveal">Build your academic identity with tools designed for students and educators.</p>
+    <div class="features-grid">
+      <div class="feature-card reveal">
         <div class="feature-icon"><i data-lucide="badge-check"></i></div>
         <h3>Achievement Verification</h3>
         <p>Get your awards and certifications verified by your school. Build a trusted academic record.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card reveal">
         <div class="feature-icon"><i data-lucide="users"></i></div>
         <h3>Academic Network</h3>
         <p>Connect with classmates, teachers, and mentors. Grow your academic community.</p>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="bot"></i></div>
-        <h3>AI Advisor</h3>
-        <p>Get personalized guidance on courses, careers, and opportunities powered by AI.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="sparkles"></i></div>
-        <h3>Opportunities</h3>
-        <p>Discover scholarships, internships, competitions, and events tailored to you.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon"><i data-lucide="graduation-cap"></i></div>
-        <h3>Mentorship</h3>
-        <p>Find mentors who guide your academic and career journey with personalized advice.</p>
-      </div>
-      <div class="feature-card">
+      <div class="feature-card reveal">
         <div class="feature-icon"><i data-lucide="book-open"></i></div>
         <h3>Trust Portfolio</h3>
         <p>A complete, verified portfolio of your achievements, projects, and experience.</p>
       </div>
-    </div>
-  </section>
-
-  <!-- Trust Stats -->
-  <section class="trust" id="trust">
-    <h2 class="section-title">Trusted By</h2>
-    <div class="stats-grid" id="statsGrid">
-      <div class="stat-card">
-        <div class="stat-num" data-target="500">0</div>
-        <div class="stat-label">Students</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num" data-target="50">0</div>
-        <div class="stat-label">Schools</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num" data-target="1000">0</div>
-        <div class="stat-label">Achievements Verified</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num" data-target="200">0</div>
-        <div class="stat-label">Mentors</div>
+      <div class="feature-card reveal">
+        <div class="feature-icon"><i data-lucide="sparkles"></i></div>
+        <h3>Opportunities</h3>
+        <p>Discover scholarships, internships, competitions, and events tailored to you.</p>
       </div>
     </div>
   </section>
 
-  <!-- CTA -->
   <section class="cta-section">
-    <h2>Ready to build your academic future?</h2>
-    <p>Join thousands of students and educators already on ScholrNet.</p>
-    <a href="{{ url_for('register') }}" class="btn-primary">Get Started Free</a>
+    <h2 class="reveal">Ready to build your academic future?</h2>
+    <p class="reveal">Join students and educators already on ScholrNet.</p>
+    <a href="{{ url_for('register') }}" class="btn-primary ripple reveal">Get Started Free</a>
     <div class="footer-bar">
-      &copy; 2026 ScholrNet &middot; Built for the academic community &middot; <a href="mailto:scolrnetsupport@gmail.com">Contact</a>
+      &copy; 2026 ScholrNet &middot; <a href="mailto:scolrnetsupport@gmail.com">Contact</a>
     </div>
   </section>
 

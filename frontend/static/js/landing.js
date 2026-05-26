@@ -1,63 +1,67 @@
 (function(){
-  // Lucide icons
   if(typeof lucide !== 'undefined') lucide.createIcons();
 
-  // Particles
   var container = document.getElementById('particles');
   if(container){
-    var count = Math.min(50, Math.floor(window.innerWidth / 20));
+    var count = Math.min(30, Math.floor(window.innerWidth / 30));
     for(var i=0; i<count; i++){
       var p = document.createElement('div');
       p.className = 'particle';
       p.style.left = Math.random() * 100 + '%';
-      p.style.animationDuration = (10 + Math.random() * 20) + 's';
-      p.style.animationDelay = (Math.random() * 15) + 's';
-      p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+      p.style.animationDuration = (12 + Math.random() * 25) + 's';
+      p.style.animationDelay = (Math.random() * 20) + 's';
+      p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
       container.appendChild(p);
     }
   }
 
-  // Counter animation via IntersectionObserver
-  var stats = document.querySelectorAll('.stat-num');
-  if(stats.length && 'IntersectionObserver' in window){
-    var observed = false;
-    var obs = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting && !observed){
-          observed = true;
-          stats.forEach(function(el){
-            var target = parseInt(el.getAttribute('data-target'), 10);
-            if(isNaN(target)) return;
-            var current = 0;
-            var step = Math.max(1, Math.floor(target / 40));
-            var interval = setInterval(function(){
-              current += step;
-              if(current >= target){ current = target; clearInterval(interval); }
-              el.textContent = current.toLocaleString();
-            }, 30);
-          });
-          obs.disconnect();
-        }
-      });
-    }, { threshold: 0.3 });
-    obs.observe(document.getElementById('statsGrid'));
+  var hero = document.querySelector('.hero');
+  var glow = document.getElementById('heroGlow');
+  if(hero && glow){
+    hero.addEventListener('mousemove', function(e){
+      var rect = hero.getBoundingClientRect();
+      glow.style.left = e.clientX + 'px';
+      glow.style.top = e.clientY + 'px';
+    });
+    hero.addEventListener('mouseenter', function(){ glow.style.opacity = '1'; });
+    hero.addEventListener('mouseleave', function(){ glow.style.opacity = '0'; });
   }
 
-  // Feature card tilt on mouse move (desktop)
   var cards = document.querySelectorAll('.feature-card');
   cards.forEach(function(card){
     card.addEventListener('mousemove', function(e){
       var rect = card.getBoundingClientRect();
-      var x = e.clientX - rect.left;
-      var y = e.clientY - rect.top;
-      var centerX = rect.width / 2;
-      var centerY = rect.height / 2;
-      var rotateX = ((y - centerY) / centerY) * -6;
-      var rotateY = ((x - centerX) / centerX) * 6;
-      card.style.transform = 'perspective(800px) rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg) translateY(-4px)';
+      var x = e.clientX - rect.left, y = e.clientY - rect.top;
+      var cx = rect.width / 2, cy = rect.height / 2;
+      var rx = ((y - cy) / cy) * -5, ry = ((x - cx) / cx) * 5;
+      card.style.transform = 'perspective(800px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg) translateY(-3px)';
     });
     card.addEventListener('mouseleave', function(){
       card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg)';
+    });
+  });
+
+  var revealEls = document.querySelectorAll('.reveal');
+  if(revealEls.length && 'IntersectionObserver' in window){
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); }
+      });
+    }, { threshold: 0.1 });
+    revealEls.forEach(function(el){ obs.observe(el); });
+  }
+
+  document.querySelectorAll('.ripple').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      var rect = btn.getBoundingClientRect();
+      var ripple = document.createElement('span');
+      ripple.className = 'ripple-effect';
+      var size = Math.max(rect.width, rect.height);
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+      btn.appendChild(ripple);
+      setTimeout(function(){ ripple.remove(); }, 500);
     });
   });
 })();
