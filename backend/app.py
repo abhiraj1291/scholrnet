@@ -180,7 +180,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def index():
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
-        return redirect(url_for('login'))
+        return render_template('landing.html')
 
     @app.route('/login', methods=['GET', 'POST'])
     @limiter.limit("30 per 15 minutes", methods=['POST'])
