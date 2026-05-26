@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ puser.name }} on ScholrNet</title>
+  <meta name="description" content="{{ puser.name }} &middot; {{ puser.school or 'Student' }} &middot; {{ achievements|length }} achievements">
+  <meta property="og:title" content="{{ puser.name }} on ScholrNet">
+  <meta property="og:description" content="View {{ puser.name }}'s verified achievements, projects, and academic profile on ScholrNet.">
+  <meta property="og:type" content="profile">
+  <meta property="og:url" content="https://scholrnet.in/share/{{ puser.username }}">
+  {% if puser.avatar_url %}<meta property="og:image" content="{{ puser.avatar_url }}">{% endif %}
+  <meta name="twitter:card" content="summary">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',-apple-system,sans-serif;background:#f5f7fa;color:#1a1a2e;line-height:1.6;-webkit-font-smoothing:antialiased;padding:2rem 1rem}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:600px;margin:0 auto}
+
+    .card{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:16px;padding:1.5rem;margin-bottom:1rem}
+
+    .profile{text-align:center;padding:2rem 1.5rem}
+    .avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;margin:0 auto 1rem;overflow:hidden}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .name{font-size:1.3rem;font-weight:700;margin-bottom:0.15rem}
+    .username{font-size:0.85rem;color:rgba(26,26,46,0.4);margin-bottom:0.25rem}
+    .school{font-size:0.85rem;color:rgba(26,26,46,0.5);margin-bottom:0.5rem}
+    .role-badge{display:inline-block;font-size:0.65rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:4px;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.75rem}
+    .bio{font-size:0.85rem;color:rgba(26,26,46,0.5);max-width:400px;margin:0 auto}
+
+    .section-title{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(26,26,46,0.3);margin-bottom:0.75rem}
+
+    .ach-item,.proj-item,.exp-item{padding:0.75rem 0;border-bottom:1px solid rgba(0,0,0,0.04)}
+    .ach-item:last-child,.proj-item:last-child,.exp-item:last-child{border-bottom:none;padding-bottom:0}
+    .ach-title,.proj-title,.exp-role{font-size:0.9rem;font-weight:600;margin-bottom:0.15rem}
+    .ach-desc,.proj-desc,.exp-company{font-size:0.8rem;color:rgba(26,26,46,0.45);line-height:1.5}
+    .ach-meta{font-size:0.7rem;color:rgba(26,26,46,0.3);margin-top:0.2rem}
+    .exp-dates{font-size:0.7rem;color:rgba(26,26,46,0.3);margin-top:0.15rem}
+
+    .cta-bar{text-align:center;padding:1.5rem;margin-top:0.5rem}
+    .cta-bar p{font-size:0.85rem;color:rgba(26,26,46,0.4);margin-bottom:0.75rem}
+    .btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.65rem 1.4rem;border-radius:8px;font-weight:600;font-size:0.85rem;background:#2563eb;color:#fff;transition:background 0.2s}
+    .btn:hover{background:#1d4ed8}
+    .footer{text-align:center;font-size:0.7rem;color:rgba(26,26,46,0.2);margin-top:1rem;padding-bottom:1rem}
+
+    .empty{font-size:0.8rem;color:rgba(26,26,46,0.25);text-align:center;padding:0.5rem 0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card profile">
+      <div class="avatar">{% if puser.avatar_url %}<img src="{{ puser.avatar_url }}" alt="">{% else %}{{ puser.name[:2]|upper }}{% endif %}</div>
+      <div class="name">{{ puser.name }}{% if is_verified %} <i data-lucide="badge-check" style="width:16px;height:16px;color:#2563eb;display:inline;vertical-align:middle;"></i>{% endif %}</div>
+      {% if puser.username %}<div class="username">@{{ puser.username }}</div>{% endif %}
+      {% if puser.school %}<div class="school">{{ puser.school }}{% if puser.grade %} &middot; Grade {{ puser.grade }}{% endif %}</div>{% endif %}
+      <span class="role-badge" style="color:{{ {'student':'#2563eb','teacher':'#7c3aed','mentor':'#d97706','admin':'#059669','super_admin':'#dc2626'}.get(puser.role,'#6b7280') }};">{{ puser.role.replace('_',' ').upper() if puser.role else 'STUDENT' }}</span>
+      {% if puser.bio %}<div class="bio">{{ puser.bio }}</div>{% endif %}
+    </div>
+
+    {% if achievements %}
+    <div class="card">
+      <div class="section-title"><i data-lucide="award" style="width:12px;height:12px;display:inline;margin-right:4px;"></i> Achievements</div>
+      {% for a in achievements %}
+      <div class="ach-item">
+        <div class="ach-title">{{ a.title }}</div>
+        {% if a.description %}<div class="ach-desc">{{ a.description }}</div>{% endif %}
+        <div class="ach-meta">{% if a.category %}{{ a.category }}{% endif %}{% if a.institution %} &middot; {{ a.institution }}{% endif %}{% if a.year %} &middot; {{ a.year }}{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if projects %}
+    <div class="card">
+      <div class="section-title"><i data-lucide="folder" style="width:12px;height:12px;display:inline;margin-right:4px;"></i> Projects</div>
+      {% for p in projects %}
+      <div class="proj-item">
+        <div class="proj-title">{{ p.title }}</div>
+        {% if p.description %}<div class="proj-desc">{{ p.description[:200] }}{% if p.description|length > 200 %}...{% endif %}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if experiences %}
+    <div class="card">
+      <div class="section-title"><i data-lucide="briefcase" style="width:12px;height:12px;display:inline;margin-right:4px;"></i> Experience</div>
+      {% for e in experiences %}
+      <div class="exp-item">
+        <div class="exp-role">{{ e.role }}</div>
+        <div class="exp-company">{{ e.company }}</div>
+        {% if e.start_date %}<div class="exp-dates">{{ e.start_date }}{% if e.end_date %} &mdash; {{ e.end_date }}{% endif %}{% if e.current %} (Current){% endif %}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="cta-bar">
+      <p>Join ScholrNet to build your verified academic profile.</p>
+      <a href="{{ url_for('register') }}" class="btn"><i data-lucide="graduation-cap" style="width:14px;height:14px;"></i> Get Started</a>
+    </div>
+    <div class="footer">&copy; 2026 ScholrNet &middot; <a href="{{ url_for('index') }}">Home</a></div>
+  </div>
+  <script>if(typeof lucide!=='undefined') lucide.createIcons()</script>
+</body>
+</html>

@@ -394,6 +394,42 @@ def register_routes(app, bcrypt, login_manager, limiter):
             abort(404)
         return redirect(url_for('profile_by_id', user_id=puser.id))
 
+    @app.route('/share/<username>')
+    def share_profile(username):
+        puser = User.query.filter_by(username=username).first()
+        if not puser:
+            abort(404)
+        achievements = Achievement.query.filter_by(user_id=puser.id).order_by(Achievement.id.desc()).all()
+        projects = Project.query.filter_by(user_id=puser.id).order_by(Project.id.desc()).all()
+        experiences = Experience.query.filter_by(user_id=puser.id).order_by(Experience.id.desc()).all()
+        return render_template('share.html',
+            puser=puser,
+            achievements=achievements,
+            projects=projects,
+            experiences=experiences,
+            is_verified=_is_verified(puser)
+        )
+
+    @app.route('/public')
+    def public_timeline():
+        posts = Post.query.order_by(Post.id.desc()).limit(50).all()
+        enriched = []
+        for p in posts:
+            author = User.query.get(p.author_id) if p.author_id else None
+            enriched.append({
+                'id': p.id,
+                'title': p.title,
+                'content': p.content,
+                'image_url': p.image_url,
+                'timestamp': p.timestamp,
+                'author_name': p.author_name,
+                'author_school': p.author_school,
+                'author_username': author.username if author else None,
+                'author_avatar_url': author.avatar_url if author else '',
+                'author_verified': _is_verified(author) if author else False
+            })
+        return render_template('public.html', posts=enriched)
+
     @app.route('/choose-username')
     @login_required
     def choose_username():

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScholrNet — Public Timeline</title>
+  <meta name="description" content="Recent achievements and posts from the ScholrNet academic community.">
+  <meta property="og:title" content="ScholrNet — Public Timeline">
+  <meta property="og:description" content="Recent achievements and posts from the ScholrNet academic community.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://scholrnet.in/public">
+  <meta name="twitter:card" content="summary">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',-apple-system,sans-serif;background:#f5f7fa;color:#1a1a2e;line-height:1.6;-webkit-font-smoothing:antialiased;padding:2rem 1rem}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:560px;margin:0 auto}
+
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
+    .brand{display:flex;align-items:center;gap:0.4rem;font-size:1.1rem;font-weight:700}
+    .brand svg{width:20px;height:20px;color:#2563eb}
+    .header-cta{display:flex;gap:0.5rem}
+    .btn-sm{display:inline-flex;align-items:center;gap:0.3rem;padding:0.45rem 1rem;border-radius:6px;font-weight:600;font-size:0.8rem;transition:background 0.2s}
+    .btn-primary{background:#2563eb;color:#fff}
+    .btn-primary:hover{background:#1d4ed8}
+    .btn-outline{border:1px solid rgba(26,26,46,0.1);color:rgba(26,26,46,0.5)}
+    .btn-outline:hover{background:rgba(26,26,46,0.03);border-color:rgba(26,26,46,0.2)}
+
+    .card{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:14px;padding:1.25rem;margin-bottom:0.75rem}
+    .post-header{display:flex;align-items:flex-start;gap:0.6rem}
+    .post-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;flex-shrink:0;overflow:hidden}
+    .post-avatar img{width:100%;height:100%;object-fit:cover}
+    .post-author{font-size:0.85rem;font-weight:600}
+    .post-author a:hover{color:#2563eb}
+    .post-meta{font-size:0.7rem;color:rgba(26,26,46,0.3);margin-top:0.05rem}
+    .post-title{font-size:0.95rem;font-weight:700;margin-top:0.5rem}
+    .post-content{font-size:0.82rem;color:rgba(26,26,46,0.5);margin-top:0.3rem;line-height:1.6}
+    .post-image{margin-top:0.6rem;border-radius:10px;overflow:hidden;max-height:400px}
+    .post-image img{width:100%;height:auto;object-fit:cover;display:block}
+
+    .hero-cta{text-align:center;padding:2.5rem 0 1rem}
+    .hero-cta h1{font-size:1.3rem;font-weight:700;margin-bottom:0.3rem}
+    .hero-cta p{font-size:0.85rem;color:rgba(26,26,46,0.4);margin-bottom:1rem}
+    .btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.65rem 1.4rem;border-radius:8px;font-weight:600;font-size:0.85rem;background:#2563eb;color:#fff;transition:background 0.2s}
+    .btn:hover{background:#1d4ed8}
+    .btn-large{padding:0.75rem 2rem;font-size:0.95rem}
+
+    .footer{text-align:center;font-size:0.7rem;color:rgba(26,26,46,0.2);margin-top:1.5rem;padding-bottom:1rem}
+    .empty{text-align:center;padding:2rem 0;font-size:0.85rem;color:rgba(26,26,46,0.25)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand"><i data-lucide="graduation-cap"></i> ScholrNet</div>
+      <div class="header-cta">
+        <a href="{{ url_for('login') }}" class="btn-sm btn-outline">Sign In</a>
+        <a href="{{ url_for('register') }}" class="btn-sm btn-primary">Join</a>
+      </div>
+    </div>
+
+    <div class="hero-cta">
+      <h1>Academic Community Timeline</h1>
+      <p>Recent achievements, projects, and updates from students and educators.</p>
+      <a href="{{ url_for('register') }}" class="btn btn-large"><i data-lucide="graduation-cap" style="width:16px;height:16px;"></i> Join ScholrNet</a>
+    </div>
+
+    {% if posts %}
+      {% for p in posts %}
+      <div class="card">
+        <div class="post-header">
+          <div class="post-avatar">{% if p.author_avatar_url %}<img src="{{ p.author_avatar_url }}" alt="">{% else %}{{ p.author_name[:2]|upper }}{% endif %}</div>
+          <div>
+            <div class="post-author">
+              {% if p.author_username %}
+              <a href="{{ url_for('share_profile', username=p.author_username) }}">{{ p.author_name }}</a>
+              {% else %}
+              {{ p.author_name }}
+              {% endif %}
+              {% if p.author_verified %}<i data-lucide="badge-check" style="width:12px;height:12px;color:#2563eb;display:inline;"></i>{% endif %}
+            </div>
+            <div class="post-meta">{{ p.author_school or 'ScholrNet' }} &middot; {{ p.timestamp or '' }}</div>
+          </div>
+        </div>
+        {% if p.title %}<div class="post-title">{{ p.title }}</div>{% endif %}
+        {% if p.content %}<div class="post-content">{{ p.content }}</div>{% endif %}
+        {% if p.image_url %}
+        <div class="post-image">
+          <img src="{{ p.image_url }}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'">
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">No posts yet. Be the first to share your achievement!</div>
+    {% endif %}
+
+    <div class="footer">
+      &copy; 2026 ScholrNet &middot; <a href="{{ url_for('index') }}">Home</a>
+    </div>
+  </div>
+  <script>if(typeof lucide!=='undefined') lucide.createIcons()</script>
+</body>
+</html>
