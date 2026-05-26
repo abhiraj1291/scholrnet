@@ -124,50 +124,10 @@
   </main>
 
   <!-- Mobile Bottom Nav -->
-  <nav class="bottom-nav" id="bottomNav">
-    {% set bnav = [
-      ('dashboard', 'home', 'Home'),
-      ('profile_page', 'book-open', 'Portfolio'),
-      ('opportunities_page', 'sparkles', 'Opps'),
-    ] %}
-    {% for endpoint, icon, label in bnav %}
-    <a href="{{ url_for(endpoint) }}" class="bottom-nav-btn {{ 'active' if request.endpoint == endpoint else '' }}">
-      <i data-lucide="{{ icon }}"></i><span>{{ label }}</span>
-    </a>
-    {% endfor %}
-    <button id="more-btn" class="bottom-nav-btn">
-      <i data-lucide="grid-3x3"></i><span>More</span>
-    </button>
-  </nav>
+  <!-- REMOVED: bottom-nav replaced by top tab-nav on all screen sizes -->
 
   <!-- More Menu Overlay (Mobile) -->
-  <div id="more-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:90;"></div>
-  <div id="more-panel" class="hidden menu-panel" style="animation:slideUp 0.25s ease;">
-    <div class="flex items-center justify-between mb-4">
-      <span class="font-bold">All Sections</span>
-      <button id="close-more-btn" class="btn btn-ghost btn-sm"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      {% for endpoint, icon, label in tabs %}
-      <a href="{{ url_for(endpoint) }}" class="card text-center py-4 flex flex-col items-center gap-2" style="text-decoration:none;color:var(--text);">
-        <i data-lucide="{{ icon }}" style="width:24px;height:24px;color:var(--primary);"></i>
-        <span class="text-xs font-bold">{{ label }}</span>
-      </a>
-      {% endfor %}
-      {% if user.role in ('admin','super_admin') %}
-      <a href="{{ url_for('school_desk') }}" class="card text-center py-4 flex flex-col items-center gap-2" style="text-decoration:none;color:var(--text);">
-        <i data-lucide="building-2" style="width:24px;height:24px;color:var(--primary);"></i>
-        <span class="text-xs font-bold">School Desk</span>
-      </a>
-      {% endif %}
-      {% if user.role == 'super_admin' %}
-      <a href="{{ url_for('admin_panel') }}" class="card text-center py-4 flex flex-col items-center gap-2" style="text-decoration:none;color:var(--text);">
-        <i data-lucide="shield" style="width:24px;height:24px;color:var(--primary);"></i>
-        <span class="text-xs font-bold">Admin Panel</span>
-      </a>
-      {% endif %}
-    </div>
-  </div>
+  <!-- REMOVED: more menu replaced by full top tab-nav -->
 
   <!-- Chat Drawer -->
   <div id="chat-drawer" class="chat-drawer minimized">
@@ -201,7 +161,7 @@
   </div>
 
   <!-- Toast Container -->
-  <div id="toastContainer" style="position:fixed;bottom:5rem;right:1rem;z-index:1000;display:flex;flex-direction:column;gap:8px;"></div>
+  <div id="toastContainer" style="position:fixed;bottom:1rem;right:1rem;z-index:1000;display:flex;flex-direction:column;gap:8px;"></div>
 
   <!-- Settings Modal -->
   <div id="settings-modal" class="modal-overlay hidden">
@@ -226,7 +186,7 @@
   </div>
 
   <!-- Footer -->
-  <footer class="text-center text-xs text-muted py-6 px-4" style="padding-bottom:5rem;">
+  <footer class="text-center text-xs text-muted py-6 px-4">
     &copy; 2026 ScholrNet. Built for the academic community.<br>
     Support: <a href="mailto:scolrnetsupport@gmail.com" style="color:var(--primary);text-decoration:underline;">scolrnetsupport@gmail.com</a>
   </footer>
