@@ -269,7 +269,7 @@ body { padding-top: 5.75rem; }
 
 /* ===== Sidebar ===== */
 .sidebar { display: flex; flex-direction: column; gap: 1rem; }
-.ad-card { border-radius: 1rem; padding: 1.25rem; color: #fff; position: relative; overflow: hidden; min-height: 12rem; display: flex; flex-direction: column; justify-content: space-between; }
+.ad-card { border-radius: 0.75rem; background: var(--card); border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; min-height: 10rem; }
 .ad-company { font-size: 0.5rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.1em; background: rgba(255,255,255,0.15); display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px; }
 .ad-title { font-size: 0.875rem; font-weight: 800; margin-top: 0.5rem; }
 .ad-content { font-size: 0.6875rem; opacity: 0.85; margin-top: 0.25rem; }
@@ -436,9 +436,11 @@ body { padding-top: 5.75rem; }
 /* Admin form responsive grids */
 .ad-form-grid { grid-template-columns: 1fr; }
 .ad-form-grid-3 { grid-template-columns: 1fr; }
+.ad-form-grid-2 { grid-template-columns: 1fr; }
 @media (min-width: 480px) {
   .ad-form-grid { grid-template-columns: 1fr 1fr; }
   .ad-form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .ad-form-grid-2 { grid-template-columns: 1fr 1fr; }
 }
 
 /* Palette picker hover effect */

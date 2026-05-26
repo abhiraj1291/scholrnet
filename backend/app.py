@@ -58,6 +58,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         inspector = inspect(db.engine)
         users_cols = [c['name'] for c in inspector.get_columns('users')]
         schools_cols = [c['name'] for c in inspector.get_columns('schools')]
+        ads_cols = [c['name'] for c in inspector.get_columns('ads')]
         with db.engine.connect() as conn:
             if 'school_verified' not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE"))
@@ -67,6 +68,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''"))
             if 'verified_by_email' not in schools_cols:
                 conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''"))
+            if 'active' not in ads_cols:
+                conn.execute(text("ALTER TABLE ads ADD COLUMN active BOOLEAN DEFAULT TRUE"))
+            if 'target_role' not in ads_cols:
+                conn.execute(text("ALTER TABLE ads ADD COLUMN target_role VARCHAR(30) DEFAULT ''"))
+            if 'created_at' not in ads_cols:
+                conn.execute(text("ALTER TABLE ads ADD COLUMN created_at TIMESTAMP DEFAULT NOW()"))
             conn.commit()
     except Exception:
         print("AUTO-MIGRATE: columns may already exist, continuing")
@@ -155,7 +162,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return "Just now"
 
     def active_ads():
-        return Ad.query.limit(20).all()
+        q = Ad.query.filter_by(active=True)
+        if current_user.is_authenticated and current_user.role:
+            q = q.filter((Ad.target_role == '') | (Ad.target_role == current_user.role))
+        return q.order_by(Ad.id.desc()).limit(20).all()
 
     def get_all_posts():
         return Post.query.order_by(Post.id.desc()).limit(50).all()
@@ -904,7 +914,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
         ads = Ad.query.order_by(Ad.id.desc()).all()
-        return jsonify({'ads': [{'id': a.id, 'title': a.title, 'company': a.company, 'content': a.content, 'placement': a.placement} for a in ads]})
+        return jsonify({'ads': [{'id': a.id, 'title': a.title, 'company': a.company, 'content': a.content, 'image': a.image, 'placement': a.placement, 'cta_url': a.cta_url, 'cta_text': a.cta_text, 'active': a.active, 'target_role': a.target_role, 'clicks': a.clicks, 'impressions': a.impressions, 'created_at': a.created_at.isoformat() if a.created_at else ''} for a in ads]})
 
     @app.route('/api/admin/ad/create', methods=['POST'])
     @login_required
@@ -912,10 +922,30 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
         data = request.json or {}
-        ad = Ad(title=sanitize_text(data.get('title', ''), 200), company=sanitize_text(data.get('company', ''), 200), content=sanitize_text(data.get('content', ''), 5000), cta_url=sanitize_text(data.get('cta_url', ''), 500), cta_text=sanitize_text(data.get('cta_text', ''), 100), placement=sanitize_text(data.get('placement', 'sidebar'), 30))
+        ad = Ad(
+            title=sanitize_text(data.get('title', ''), 200),
+            company=sanitize_text(data.get('company', ''), 200),
+            content=sanitize_text(data.get('content', ''), 5000),
+            image=sanitize_text(data.get('image', ''), 300),
+            cta_url=sanitize_text(data.get('cta_url', ''), 500),
+            cta_text=sanitize_text(data.get('cta_text', ''), 100),
+            placement=sanitize_text(data.get('placement', 'sidebar'), 30),
+            target_role=sanitize_text(data.get('target_role', ''), 30),
+            active=data.get('active', True)
+        )
         db.session.add(ad)
         db.session.commit()
         return jsonify({'success': True})
+
+    @app.route('/api/admin/ad/<int:ad_id>/toggle', methods=['POST'])
+    @login_required
+    def api_admin_ad_toggle(ad_id):
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        ad = Ad.query.get_or_404(ad_id)
+        ad.active = not ad.active
+        db.session.commit()
+        return jsonify({'success': True, 'active': ad.active})
 
     @app.route('/api/admin/ad/<int:ad_id>/delete', methods=['DELETE'])
     @login_required
@@ -924,6 +954,20 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({'error': 'Unauthorized'}), 403
         ad = Ad.query.get_or_404(ad_id)
         db.session.delete(ad)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/ad/<int:ad_id>/click', methods=['POST'])
+    def api_ad_click(ad_id):
+        ad = Ad.query.get_or_404(ad_id)
+        ad.clicks = Ad.clicks + 1
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/ad/<int:ad_id>/impression', methods=['POST'])
+    def api_ad_impression(ad_id):
+        ad = Ad.query.get_or_404(ad_id)
+        ad.impressions = Ad.impressions + 1
         db.session.commit()
         return jsonify({'success': True})
 
@@ -1206,8 +1250,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/ads')
     def api_list_ads():
-        ads_list = Ad.query.limit(20).all()
-        return jsonify({'ads': [{'id': a.id, 'title': a.title, 'company': a.company, 'content': a.content, 'cta_text': a.cta_text, 'cta_url': a.cta_url, 'placement': a.placement, 'clicks': a.clicks, 'impressions': a.impressions} for a in ads_list]})
+        ads_list = active_ads()
+        return jsonify({'ads': [{'id': a.id, 'title': a.title, 'company': a.company, 'content': a.content, 'image': a.image, 'cta_text': a.cta_text, 'cta_url': a.cta_url, 'placement': a.placement, 'clicks': a.clicks, 'impressions': a.impressions} for a in ads_list]})
 
     @app.route('/api/switch-role', methods=['POST'])
     @login_required
@@ -1639,7 +1683,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
         schools = School.query.order_by(School.id.desc()).all()
-        return jsonify({'schools': [{'id': s.id, 'name': s.name, 'location': s.location or '', 'tagline': s.tagline or ''} for s in schools]})
+        return jsonify({'schools': [{'id': s.id, 'name': s.name, 'location': s.location or '', 'tagline': s.tagline or '', 'about': s.about or '', 'established': s.established or '', 'verification_code': s.verification_code or ''} for s in schools]})
 
     @app.route('/api/admin/school/create', methods=['POST'])
     @login_required
@@ -1671,6 +1715,40 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.add(user)
         db.session.commit()
         return jsonify({'success': True, 'email': email, 'password': pwd, 'verification_code': school.verification_code})
+
+    @app.route('/api/admin/school/<int:school_id>/edit', methods=['POST'])
+    @login_required
+    def api_admin_edit_school(school_id):
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        school = School.query.get_or_404(school_id)
+        data = request.json or {}
+        if 'name' in data:
+            school.name = sanitize_text(data['name'], 200)
+        if 'location' in data:
+            school.location = sanitize_text(data['location'], 200)
+        if 'tagline' in data:
+            school.tagline = sanitize_text(data['tagline'], 200)
+        if 'about' in data:
+            school.about = sanitize_text(data['about'], 1000)
+        if 'established' in data:
+            school.established = sanitize_text(data['established'], 20)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/admin/school/<int:school_id>/delete', methods=['DELETE'])
+    @login_required
+    def api_admin_delete_school(school_id):
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        school = School.query.get_or_404(school_id)
+        # Remove school reference from users
+        User.query.filter_by(verified_school_id=school_id).update({'verified_school_id': None, 'school_verified': False})
+        User.query.filter_by(school=school.name).update({User.school: ''})
+        SchoolAnnouncement.query.filter_by(school_id=school_id).delete()
+        db.session.delete(school)
+        db.session.commit()
+        return jsonify({'success': True})
 
     @app.route('/api/schools/list')
     @login_required

@@ -61,6 +61,10 @@
           <label class="text-xs font-bold text-muted block mb-1">Content</label>
           <textarea id="adContent" rows="2" placeholder="Ad description" required></textarea>
         </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Image URL (optional)</label>
+          <input type="url" id="adImage" placeholder="https://...supabase.co/...">
+        </div>
         <div class="grid gap-2 ad-form-grid-3">
           <div class="mb-2">
             <label class="text-xs font-bold text-muted block mb-1">CTA Text</label>
@@ -75,6 +79,24 @@
             <select id="adPlacement">
               <option value="sidebar">Sidebar</option>
               <option value="in-feed">In-feed</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid gap-2 ad-form-grid-2">
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Target Role</label>
+            <select id="adTargetRole">
+              <option value="">All Roles</option>
+              <option value="student">Students</option>
+              <option value="teacher">Teachers</option>
+              <option value="mentor">Mentors</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Active</label>
+            <select id="adActive">
+              <option value="true">Active</option>
+              <option value="false">Paused</option>
             </select>
           </div>
         </div>
@@ -150,17 +172,121 @@ document.addEventListener('DOMContentLoaded', function() {
             var el = document.createElement('div');
             el.className = 'p-3 rounded-xl mb-2';
             el.style.background = 'var(--bg-hover)';
+            el.id = 'school-' + s.id;
             el.innerHTML =
-              '<div class="flex items-center gap-3">' +
-                '<i data-lucide="building-2" style="width:1.5rem;height:1.5rem;color:var(--primary);"></i>' +
-                '<div>' +
-                  '<div class="font-bold text-sm">' + escapeHtml(s.name) + '</div>' +
-                  '<div class="text-xs text-muted">' + escapeHtml(s.location || '') + (s.tagline ? ' &middot; ' + escapeHtml(s.tagline) : '') + '</div>' +
+              '<div class="flex items-start gap-3">' +
+                '<i data-lucide="building-2" style="width:1.5rem;height:1.5rem;color:var(--primary);flex-shrink:0;margin-top:0.15rem;"></i>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div class="text-sm font-bold">' + escapeHtml(s.name) + '</div>' +
+                  '<div class="text-xs text-muted">ID: ' + s.id + (s.location ? ' &middot; ' + escapeHtml(s.location) : '') + (s.tagline ? ' &middot; ' + escapeHtml(s.tagline) : '') + '</div>' +
+                  (s.verification_code ? '<div class="text-xs mt-1" style="color:var(--text-muted);">Code: <code style="background:var(--bg);padding:0.1rem 0.35rem;border-radius:0.25rem;font-size:0.65rem;">' + escapeHtml(s.verification_code) + '</code></div>' : '') +
                 '</div>' +
-              '</div>';
+                '<div class="flex items-center gap-1 flex-shrink-0">' +
+                  '<button class="btn btn-sm edit-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '" data-location="' + escapeHtml(s.location) + '" data-tagline="' + escapeHtml(s.tagline) + '" data-about="' + escapeHtml(s.about) + '" data-established="' + escapeHtml(s.established) + '"><i data-lucide="pencil" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                  '<button class="btn btn-danger btn-sm delete-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                '</div>' +
+              '</div>' +
+              '<div id="edit-school-' + s.id + '" class="hidden mt-3 p-3 rounded-xl" style="background:var(--card);border:1px solid var(--border);"></div>';
             list.appendChild(el);
           });
           lucide.createIcons();
+
+          // Edit school
+          document.querySelectorAll('.edit-school').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var editContainer = document.getElementById('edit-school-' + this.getAttribute('data-id'));
+              var isHidden = editContainer.classList.contains('hidden');
+              // Hide all other edit forms
+              document.querySelectorAll('[id^="edit-school-"]').forEach(function(c) { c.classList.add('hidden'); });
+              if (isHidden) {
+                editContainer.classList.remove('hidden');
+                editContainer.innerHTML =
+                  '<form class="edit-school-form" data-id="' + this.getAttribute('data-id') + '">' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">School Name</label>' +
+                      '<input type="text" class="edit-school-name w-full" value="' + this.getAttribute('data-name') + '" required>' +
+                    '</div>' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">Location</label>' +
+                      '<input type="text" class="edit-school-location w-full" value="' + this.getAttribute('data-location') + '">' +
+                    '</div>' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">Tagline</label>' +
+                      '<input type="text" class="edit-school-tagline w-full" value="' + this.getAttribute('data-tagline') + '">' +
+                    '</div>' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">About</label>' +
+                      '<textarea class="edit-school-about w-full" rows="2">' + this.getAttribute('data-about') + '</textarea>' +
+                    '</div>' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">Established</label>' +
+                      '<input type="text" class="edit-school-established w-full" value="' + this.getAttribute('data-established') + '" placeholder="e.g. 1995">' +
+                    '</div>' +
+                    '<div class="flex gap-2">' +
+                      '<button type="submit" class="btn btn-primary btn-sm" style="flex:1;">Save</button>' +
+                      '<button type="button" class="btn btn-sm cancel-edit-school" style="flex:1;">Cancel</button>' +
+                    '</div>' +
+                  '</form>';
+                lucide.createIcons();
+              }
+            });
+          });
+
+          // Handle edit form submit + cancel via delegation
+          document.addEventListener('submit', function(e) {
+            if (e.target.classList.contains('edit-school-form')) {
+              e.preventDefault();
+              var form = e.target;
+              var id = form.getAttribute('data-id');
+              fetch('/api/admin/school/' + id + '/edit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                  name: form.querySelector('.edit-school-name').value,
+                  location: form.querySelector('.edit-school-location').value,
+                  tagline: form.querySelector('.edit-school-tagline').value,
+                  about: form.querySelector('.edit-school-about').value,
+                  established: form.querySelector('.edit-school-established').value
+                })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(d) {
+                if (d.success) {
+                  showToast('School updated', 'success');
+                  loadSchools();
+                } else {
+                  showToast(d.error || 'Error', 'info');
+                }
+              })
+              .catch(function() { showToast('Error updating school', 'info'); });
+            }
+          });
+
+          document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('cancel-edit-school')) {
+              var form = e.target.closest('form');
+              if (form) {
+                var id = form.getAttribute('data-id');
+                document.getElementById('edit-school-' + id).classList.add('hidden');
+              }
+            }
+          });
+
+          // Delete school
+          document.querySelectorAll('.delete-school').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              var name = this.getAttribute('data-name');
+              if (!confirm('Delete school "' + name + '" (ID: ' + id + ')? This will unlink all verified students.')) return;
+              fetch('/api/admin/school/' + id + '/delete', { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) { showToast('School deleted', 'success'); loadSchools(); }
+                  else { showToast(d.error || 'Error', 'info'); }
+                })
+                .catch(function() {});
+            });
+          });
         } else {
           list.innerHTML = '<div class="text-center text-muted text-sm py-4">No schools registered</div>';
         }
@@ -184,15 +310,27 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.ads && data.ads.length > 0) {
           data.ads.forEach(function(ad) {
             var el = document.createElement('div');
-            el.className = 'flex items-center justify-between p-3 rounded-xl mb-2';
+            el.className = 'p-3 rounded-xl mb-2';
             el.style.background = 'var(--bg-hover)';
+            var statusLabel = ad.active ? 'Active' : 'Paused';
+            var imgHtml = ad.image ? '<img src="' + ad.image + '" alt="" style="width:60px;height:40px;object-fit:cover;border-radius:0.375rem;flex-shrink:0;" onerror="this.style.display=\'none\'">' : '';
             el.innerHTML =
-              '<div style="flex:1;min-width:0;">' +
-                '<div class="text-sm font-bold">' + escapeHtml(ad.title) + '</div>' +
-                '<div class="text-xs text-muted">' + escapeHtml(ad.company) + ' &middot; ' + escapeHtml(ad.placement || 'sidebar') + '</div>' +
-                (ad.content ? '<div class="text-xs text-muted mt-1">' + escapeHtml(ad.content) + '</div>' : '') +
-              '</div>' +
-              '<button class="btn btn-danger btn-sm delete-ad" data-id="' + ad.id + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>';
+              '<div class="flex items-start gap-3">' +
+                imgHtml +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div class="flex items-center gap-2">' +
+                    '<span class="text-sm font-bold">' + escapeHtml(ad.title) + '</span>' +
+                    '<span class="text-xs px-1.5 py-0.5 rounded" style="background:' + (ad.active ? 'rgba(16,185,129,0.15)' : 'rgba(156,163,175,0.15)') + ';color:' + (ad.active ? '#10b981' : '#9ca3af') + ';">' + statusLabel + '</span>' +
+                  '</div>' +
+                  '<div class="text-xs text-muted">' + escapeHtml(ad.company) + ' &middot; ' + escapeHtml(ad.placement || 'sidebar') + (ad.target_role ? ' &middot; Target: ' + ad.target_role : '') + '</div>' +
+                  (ad.content ? '<div class="text-xs text-muted mt-1 truncate">' + escapeHtml(ad.content) + '</div>' : '') +
+                  '<div class="text-xs mt-1" style="color:var(--text-muted);">Clicks: ' + (ad.clicks || 0) + ' &middot; Impressions: ' + (ad.impressions || 0) + '</div>' +
+                '</div>' +
+                '<div class="flex items-center gap-1 flex-shrink-0">' +
+                  '<button class="btn btn-sm toggle-ad' + (ad.active ? '' : ' btn-primary') + '" data-id="' + ad.id + '" style="' + (ad.active ? 'background:rgba(234,179,8,0.15);color:#eab308;' : '') + '">' + (ad.active ? 'Pause' : 'Activate') + '</button>' +
+                  '<button class="btn btn-danger btn-sm delete-ad" data-id="' + ad.id + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                '</div>' +
+              '</div>';
             list.appendChild(el);
           });
           lucide.createIcons();
@@ -203,6 +341,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(function(r) { return r.json(); })
                 .then(function(d) {
                   if (d.success) { showToast('Ad deleted', 'success'); loadAds(); }
+                  else { showToast(d.error || 'Error', 'info'); }
+                })
+                .catch(function() {});
+            });
+          });
+          document.querySelectorAll('.toggle-ad').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              fetch('/api/admin/ad/' + this.getAttribute('data-id') + '/toggle', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) { showToast('Ad ' + (d.active ? 'activated' : 'paused'), 'success'); loadAds(); }
                   else { showToast(d.error || 'Error', 'info'); }
                 })
                 .catch(function() {});
@@ -271,9 +420,12 @@ document.addEventListener('DOMContentLoaded', function() {
         title: document.getElementById('adTitle').value,
         company: document.getElementById('adCompany').value,
         content: document.getElementById('adContent').value,
+        image: document.getElementById('adImage').value,
         cta_text: document.getElementById('adCtaText').value,
         cta_url: document.getElementById('adCtaUrl').value,
-        placement: document.getElementById('adPlacement').value
+        placement: document.getElementById('adPlacement').value,
+        target_role: document.getElementById('adTargetRole').value,
+        active: document.getElementById('adActive').value === 'true'
       })
     })
     .then(function(r) { return r.json(); })

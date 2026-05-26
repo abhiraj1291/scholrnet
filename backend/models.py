@@ -92,6 +92,9 @@ class Ad(db.Model):
     placement = db.Column(db.String(30), default="left_sidebar")
     clicks = db.Column(db.Integer, default=0)
     impressions = db.Column(db.Integer, default=0)
+    active = db.Column(db.Boolean, default=True)
+    target_role = db.Column(db.String(30), default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Opportunity(db.Model):
     __tablename__ = 'opportunities'

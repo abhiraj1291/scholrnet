@@ -440,23 +440,36 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.ads && data.ads.length > 0) {
           var leftContainer = document.getElementById('sidebarAds');
           var rightContainer = document.getElementById('sidebarRightAds');
+          if (leftContainer) leftContainer.innerHTML = '';
+          if (rightContainer) rightContainer.innerHTML = '';
           data.ads.forEach(function(ad, i) {
             var adEl = document.createElement('div');
             adEl.className = 'ad-card';
-            var colors = ['linear-gradient(135deg,#0a66c2,#004b8d)', 'linear-gradient(135deg,#f97316,#ea580c)', 'linear-gradient(135deg,#10b981,#059669)', 'linear-gradient(135deg,#8b5cf6,#7c3aed)'];
-            adEl.style.background = colors[i % colors.length];
+            var adImage = ad.image ? '<img src="' + ad.image + '" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:0.5rem 0.5rem 0 0;display:block;" onerror="this.style.display=\'none\'">' : '';
             adEl.innerHTML =
-              '<div>' +
-                '<span class="ad-company">' + escapeHtml(ad.company) + '</span>' +
+              '<div style="position:relative;">' +
+              adImage +
+              '<div style="padding:' + (ad.image ? '0.5rem' : '0.75rem') + '">' +
+                '<span class="ad-company" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Sponsored</span>' +
+                '<span class="ad-company" style="display:block;font-size:0.7rem;color:var(--text-muted);margin-top:0.15rem;">' + escapeHtml(ad.company) + '</span>' +
                 '<div class="ad-title">' + escapeHtml(ad.title) + '</div>' +
                 '<div class="ad-content">' + escapeHtml(ad.content) + '</div>' +
-              '</div>' +
-              (ad.cta_text && ad.cta_url ? '<a href="' + ad.cta_url + '" target="_blank" rel="noopener noreferrer" class="btn" style="background:rgba(255,255,255,0.2);color:#fff;align-self:flex-start;">' + escapeHtml(ad.cta_text) + '</a>' : '');
-            if (i % 2 === 0) {
+                (ad.cta_text && ad.cta_url ? '<a href="' + ad.cta_url + '" target="_blank" rel="noopener noreferrer" class="btn btn-sm ad-cta" data-ad-id="' + ad.id + '" style="margin-top:0.5rem;">' + escapeHtml(ad.cta_text) + '</a>' : '') +
+              '</div></div>';
+            adEl.setAttribute('data-ad-id', ad.id);
+            if (i % 2 === 0 && leftContainer) {
               leftContainer.appendChild(adEl);
-            } else {
+            } else if (rightContainer) {
               rightContainer.appendChild(adEl);
             }
+            // Track impression
+            fetch('/api/ad/' + ad.id + '/impression', {method:'POST'});
+          });
+          // Track clicks via event delegation
+          document.querySelectorAll('.ad-cta').forEach(function(link) {
+            link.addEventListener('click', function() {
+              fetch('/api/ad/' + this.getAttribute('data-ad-id') + '/click', {method:'POST'});
+            });
           });
         }
       })
