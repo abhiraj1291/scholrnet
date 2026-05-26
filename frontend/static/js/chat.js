@@ -2,6 +2,7 @@
 
 let chatContacts = [];
 let activeChatId = null;
+let chatPollInterval = null;
 
 // ===== Shared helpers =====
 
@@ -24,6 +25,33 @@ function sendMessage() {
     input.value = '';
     refreshMessages(activeChatId);
   });
+}
+
+function startChatPolling(contactId) {
+  stopChatPolling();
+  chatPollInterval = setInterval(function() {
+    if (activeChatId === contactId) {
+      // Fetch just to check for new messages (lightweight head request alternative: full refresh)
+      apiGet('/api/messages?contact_id=' + contactId, function(data) {
+        var container = document.getElementById('chat-messages-container');
+        var pageContainer = document.getElementById('chatMessagesArea');
+        var currentCount = container ? container.children.length : 0;
+        var newCount = (data.messages || []).length;
+        if (newCount > currentCount) {
+          refreshMessages(contactId);
+        }
+      });
+    } else {
+      stopChatPolling();
+    }
+  }, 3000);
+}
+
+function stopChatPolling() {
+  if (chatPollInterval) {
+    clearInterval(chatPollInterval);
+    chatPollInterval = null;
+  }
 }
 
 function refreshMessages(contactId) {
@@ -105,6 +133,7 @@ function openChat(contactId, contactName, contactAvatar, contactAvatarUrl, conta
       }
     }
     loadMessages(contactId);
+    startChatPolling(contactId);
   }
 }
 
@@ -164,6 +193,7 @@ function searchNewChatUsers(q) {
 
 function backToContacts() {
   activeChatId = null;
+  stopChatPolling();
   hideNewChat();
   document.getElementById('chat-messages-view').classList.add('hidden');
   var list = document.getElementById('chat-contact-list');
@@ -217,6 +247,7 @@ function openPageChat(contactId, contactName, contactAvatar, contactAvatarUrl, c
     }
   }
   loadPageMessages(contactId);
+  startChatPolling(contactId);
 }
 
 // ===== Init =====

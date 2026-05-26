@@ -170,6 +170,9 @@ document.addEventListener('DOMContentLoaded', function() {
   var hasMore = true;
   var pendingFiles = [];
 
+  // Global post ID tracker for polling
+  var latestPostId = null;
+
   // Load posts
   function loadPosts(reset) {
     if (loading) return;
@@ -192,11 +195,12 @@ document.addEventListener('DOMContentLoaded', function() {
           data.posts.forEach(function(post) {
             container.appendChild(createPostElement(post));
           });
+          if (reset) { latestPostId = data.posts[0].id; }
           hasMore = data.has_more;
           page++;
         } else {
           hasMore = false;
-          document.getElementById('feedEnd').classList.remove('hidden');
+          if (reset) document.getElementById('feedEnd').classList.remove('hidden');
         }
         lucide.createIcons();
       })
@@ -642,6 +646,27 @@ document.addEventListener('DOMContentLoaded', function() {
   loadPosts(true);
   loadSidebar();
   loadAds();
+
+  // Poll for new posts every 30s (lightweight ID check)
+  setInterval(function() {
+    fetch('/api/posts?page=1&limit=1')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.posts && data.posts.length > 0 && latestPostId && data.posts[0].id > latestPostId) {
+          latestPostId = data.posts[0].id;
+          showToast('New posts available — refresh to see', 'info');
+        }
+      })
+      .catch(function() {});
+  }, 30000);
+
+  // Poll for new comments on open sections every 10s
+  setInterval(function() {
+    document.querySelectorAll('.comments-section:not(.hidden)').forEach(function(section) {
+      var postId = section.getAttribute('data-post-id');
+      if (postId) loadComments(postId, section.querySelector('.comments-list'));
+    });
+  }, 10000);
 });
 </script>
 {% endblock %}
