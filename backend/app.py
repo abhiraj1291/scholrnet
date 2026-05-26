@@ -1132,7 +1132,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({'users': [], 'schools': [], 'achievements': []})
         if len(q) > 200:
             return jsonify({'users': [], 'schools': [], 'achievements': []})
-        users = User.query.filter(User.name.ilike(f'%{q}%')).limit(5).all()
+        users = User.query.filter(
+            db.or_(User.name.ilike(f'%{q}%'), User.username.ilike(f'%{q}%'))
+        ).limit(5).all()
         schools = School.query.filter(School.name.ilike(f'%{q}%')).limit(5).all()
         achs = Achievement.query.filter(Achievement.title.ilike(f'%{q}%')).limit(5).all()
         return jsonify({'users': [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'role': u.role, 'username': u.username, 'verified': _is_verified(u)} for u in users], 'schools': [{'id': s.id, 'name': s.name, 'location': s.location or ''} for s in schools], 'achievements': [{'id': a.id, 'title': a.title, 'user_id': a.user_id} for a in achs]})
