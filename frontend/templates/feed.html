@@ -163,6 +163,7 @@
 </div>
 
 <script>
+var CURRENT_USER_ID = {{ user.id }};
 document.addEventListener('DOMContentLoaded', function() {
   var page = 1;
   var loading = false;
@@ -281,6 +282,12 @@ document.addEventListener('DOMContentLoaded', function() {
         '<button class="post-action-btn comment-toggle" data-post-id="' + post.id + '">' +
           '<i data-lucide="message-circle" style="width:1rem;height:1rem;"></i> <span>' + ((post.comments && post.comments.length) || 0) + '</span>' +
         '</button>' +
+        '<button class="post-action-btn share-btn" data-post-id="' + post.id + '" title="Copy link">' +
+          '<i data-lucide="share-2" style="width:1rem;height:1rem;"></i>' +
+        '</button>' +
+        (post.author && post.author.id === CURRENT_USER_ID ? '<button class="post-action-btn delete-btn" data-post-id="' + post.id + '" title="Delete" style="color:var(--danger);">' +
+          '<i data-lucide="trash-2" style="width:1rem;height:1rem;"></i>' +
+        '</button>' : '') +
       '</div>' +
       '<div class="comments-section hidden" data-post-id="' + post.id + '">' +
         '<div class="comments-list"></div>' +
@@ -314,6 +321,44 @@ document.addEventListener('DOMContentLoaded', function() {
         loadComments(postId, section.querySelector('.comments-list'));
       }
     });
+
+    // Share button handler
+    var shareBtn = div.querySelector('.share-btn');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', function() {
+        var postId = this.getAttribute('data-post-id');
+        var url = window.location.origin + '/post/' + postId;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(function() {
+            showToast('Post link copied!', 'success');
+          }).catch(function() {
+            showToast('Copy: ' + url, 'info');
+          });
+        } else {
+          showToast('Copy: ' + url, 'info');
+        }
+      });
+    }
+
+    // Delete button handler
+    var deleteBtn = div.querySelector('.delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', function() {
+        if (!confirm('Delete this post?')) return;
+        var postId = this.getAttribute('data-post-id');
+        fetch('/api/post/' + postId + '/delete', { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.success) {
+              div.remove();
+              showToast('Post deleted', 'success');
+            } else {
+              showToast(data.error || 'Error deleting post', 'info');
+            }
+          })
+          .catch(function() { showToast('Error deleting post', 'info'); });
+      });
+    }
 
     // Comment form handler
     div.querySelector('.comment-form').addEventListener('submit', function(e) {

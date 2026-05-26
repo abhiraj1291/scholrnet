@@ -17,7 +17,7 @@
       </div>
       <div>
         <div class="profile-name">{{ puser.name }} {% set rc = {'student':'#3b82f6','teacher':'#8b5cf6','mentor':'#f59e0b','admin':'#10b981','super_admin':'#ef4444'} %}<span class="text-xs" style="color:{{ rc.get(puser.role, '#6b7280') }};font-weight:600;">{{ puser.role.replace('_',' ').upper() if puser.role else 'STUDENT' }}</span>{% if is_verified %} <i data-lucide="badge-check" style="width:1rem;height:1rem;color:var(--primary);display:inline;"></i>{% endif %}</div>
-        {% if puser.username %}<div class="text-xs text-muted" style="margin-top:-2px;">@{{ puser.username }}</div>{% endif %}
+        {% if puser.username %}<div class="text-xs text-muted" style="margin-top:-2px;">@{{ puser.username }}{% if puser.username %} <button id="shareProfileBtn" class="btn btn-ghost btn-xs" style="display:inline;padding:0 0.25rem;vertical-align:middle;" title="Copy profile link"><i data-lucide="share-2" style="width:0.75rem;height:0.75rem;"></i></button>{% endif %}</div>{% endif %}
         <div class="profile-school">{{ puser.school }}{% if puser.grade %} &middot; Grade {{ puser.grade }}{% endif %}</div>
         {% if puser.school_verified %}<div class="text-xs font-bold mt-1" style="color:var(--success);"><i data-lucide="building-2" style="width:0.75rem;height:0.75rem;display:inline;"></i> Verified Student at {{ puser.school }}</div>{% endif %}
         {% if puser.bio %}<p class="text-sm text-muted mt-1">{{ puser.bio }}</p>{% endif %}
@@ -842,6 +842,24 @@ document.addEventListener('DOMContentLoaded', function() {
   {% if is_own %}
   loadFriendRequests();
   {% endif %}
+
+  // Share profile button
+  var shareBtn = document.getElementById('shareProfileBtn');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var url = window.location.origin + '/share/' + '{{ puser.username }}';
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+          showToast('Profile link copied!', 'success');
+        }).catch(function() {
+          showToast('Copy: ' + url, 'info');
+        });
+      } else {
+        showToast('Copy: ' + url, 'info');
+      }
+    });
+  }
 });
 </script>
 {% endblock %}

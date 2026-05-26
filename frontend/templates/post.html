@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if post.title %}{{ post.title }} — ScholrNet{% else %}Post by {{ author.name if author else 'ScholrNet' }}{% endif %}</title>
+  <meta name="description" content="{{ post.content[:200] if post.content else 'View this post on ScholrNet' }}">
+  <meta property="og:title" content="{{ post.title or 'ScholrNet Post' }}">
+  <meta property="og:description" content="{{ post.content[:300] if post.content else 'View this post on ScholrNet' }}">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://scholrnet.in/post/{{ post.id }}">
+  {% if post.image_url %}<meta property="og:image" content="{{ post.image_url }}">{% endif %}
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',-apple-system,sans-serif;background:#f5f7fa;color:#1a1a2e;line-height:1.6;-webkit-font-smoothing:antialiased;padding:2rem 1rem}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:560px;margin:0 auto}
+    .card{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:14px;padding:1.5rem;margin-bottom:1rem}
+    .back{font-size:0.8rem;color:rgba(26,26,46,0.3);margin-bottom:1rem;display:inline-block}
+    .back:hover{color:#2563eb}
+    .header{display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1rem}
+    .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:800;flex-shrink:0;overflow:hidden}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .author{font-size:0.95rem;font-weight:600}
+    .meta{font-size:0.75rem;color:rgba(26,26,46,0.35);margin-top:0.1rem}
+    .title{font-size:1.1rem;font-weight:700;margin-bottom:0.5rem}
+    .content{font-size:0.88rem;color:rgba(26,26,46,0.55);line-height:1.7}
+    .image{margin-top:0.75rem;border-radius:10px;overflow:hidden}
+    .image img{width:100%;height:auto;display:block}
+    .footer{text-align:center;font-size:0.7rem;color:rgba(26,26,46,0.2);margin-top:1rem}
+    .btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1.2rem;border-radius:6px;font-weight:600;font-size:0.8rem;background:#2563eb;color:#fff;transition:background 0.2s;margin-top:1rem}
+    .btn:hover{background:#1d4ed8}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="javascript:history.back()" class="back">&larr; Back</a>
+    <div class="card">
+      <div class="header">
+        <div class="avatar">{% if author and author.avatar_url %}<img src="{{ author.avatar_url }}" alt="">{% else %}{{ (author.name if author else 'S')[:2]|upper }}{% endif %}</div>
+        <div>
+          <div class="author">{{ author.name if author else 'ScholrNet' }}{% if is_verified %} <i data-lucide="badge-check" style="width:14px;height:14px;color:#2563eb;display:inline;"></i>{% endif %}</div>
+          <div class="meta">{{ author.school if author and author.school else '' }}{% if author and author.school and post.timestamp %} &middot; {% endif %}{{ post.timestamp or '' }}</div>
+        </div>
+      </div>
+      {% if post.title %}<div class="title">{{ post.title }}</div>{% endif %}
+      {% if post.content %}<div class="content">{{ post.content }}</div>{% endif %}
+      {% if post.image_url %}
+      <div class="image">
+        <img src="{{ post.image_url }}" alt="" onerror="this.parentElement.style.display='none'">
+      </div>
+      {% endif %}
+      <a href="{{ url_for('register') }}" class="btn"><i data-lucide="graduation-cap" style="width:14px;height:14px;"></i> Join ScholrNet</a>
+    </div>
+    <div class="footer">&copy; 2026 ScholrNet &middot; <a href="{{ url_for('public_timeline') }}">Public Timeline</a></div>
+  </div>
+  <script>if(typeof lucide!=='undefined') lucide.createIcons()</script>
+</body>
+</html>

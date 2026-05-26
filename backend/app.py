@@ -411,6 +411,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
             is_verified=_is_verified(puser)
         )
 
+    @app.route('/post/<int:post_id>')
+    def single_post(post_id):
+        post = Post.query.get_or_404(post_id)
+        author = User.query.get(post.author_id) if post.author_id else None
+        return render_template('post.html',
+            post=post,
+            author=author,
+            is_verified=_is_verified(author) if author else False
+        )
+
     @app.route('/public')
     def public_timeline():
         posts = Post.query.order_by(Post.id.desc()).limit(50).all()
@@ -651,9 +661,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/post/<int:post_id>/delete', methods=['POST'])
     @login_required
     def api_delete_post(post_id):
-        if current_user.role != 'super_admin':
-            return jsonify({'error': 'Unauthorized'}), 403
         post = Post.query.get_or_404(post_id)
+        if current_user.role != 'super_admin' and post.author_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
         Comment.query.filter_by(post_id=post_id).delete()
         UserLike.query.filter_by(post_id=post_id).delete()
         db.session.delete(post)
