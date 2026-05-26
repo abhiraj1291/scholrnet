@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScholrNet</title>
+  <title>ScholrNet — Academic Trust Network</title>
   <meta name="description" content="Verified academic network for students, teachers, and schools.">
   <meta property="og:title" content="ScholrNet">
   <meta property="og:description" content="Verified academic network for students, teachers, and schools.">
@@ -11,29 +11,37 @@
   <meta property="og:url" content="https://scholrnet.in">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
 </head>
 <body>
 
-<section class="hero">
-  <div class="hero-content">
-    <div class="hero-logo-group">
+<div class="layout">
+  <div class="hero-left">
+    <div class="hero-left-inner">
+      <div class="brand">
+        <div class="brand-icon"><i data-lucide="graduation-cap"></i></div>
+        <span class="brand-name">ScholrNet</span>
+      </div>
+      <h1 class="hero-title">Your achievements,<br><span>verified and connected.</span></h1>
+      <p class="hero-sub">The academic network for students, teachers, and schools.</p>
+      <div class="hero-cta">
+        <a href="{{ url_for('register') }}" class="btn-primary ripple">Join Now</a>
+        <a href="{{ url_for('login') }}" class="btn-outline ripple">Sign In</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-art">
       <div class="minimal-globe"><div class="globe-grid"></div></div>
       <div class="floating-cap"><i data-lucide="graduation-cap"></i></div>
     </div>
-    <h1 class="hero-title">Your achievements,<br><span>verified and connected.</span></h1>
-    <p class="hero-sub">The academic network for students, teachers, and schools.</p>
-    <div class="hero-cta">
-      <a href="{{ url_for('register') }}" class="btn-primary ripple">Join Now</a>
-      <a href="{{ url_for('login') }}" class="btn-outline ripple">Sign In</a>
-    </div>
   </div>
-</section>
+</div>
 
-<section class="features" id="features">
-  <div class="features-grid">
+<section class="features">
+  <div class="features-inner">
     <div class="feature-card reveal">
       <div class="feature-icon"><i data-lucide="badge-check"></i></div>
       <h3>Verified achievements</h3>

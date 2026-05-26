@@ -7,7 +7,7 @@
       var rect = card.getBoundingClientRect();
       var x = e.clientX - rect.left, y = e.clientY - rect.top;
       var cx = rect.width / 2, cy = rect.height / 2;
-      var rx = ((y - cy) / cy) * -3, ry = ((x - cx) / cx) * 3;
+      var rx = ((y - cy) / cy) * -2, ry = ((x - cx) / cx) * 2;
       card.style.transform = 'perspective(600px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
     });
     card.addEventListener('mouseleave', function(){
