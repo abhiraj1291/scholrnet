@@ -52,6 +52,25 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     import traceback, sys
 
+    # Auto-migrate missing columns on startup
+    try:
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        users_cols = [c['name'] for c in inspector.get_columns('users')]
+        schools_cols = [c['name'] for c in inspector.get_columns('schools')]
+        with db.engine.connect() as conn:
+            if 'school_verified' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE"))
+            if 'verified_school_id' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
+            if 'verification_code' not in schools_cols:
+                conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''"))
+            if 'verified_by_email' not in schools_cols:
+                conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''"))
+            conn.commit()
+    except Exception:
+        print("AUTO-MIGRATE: columns may already exist, continuing")
+
     @app.context_processor
     def inject_globals():
         return {'schools': get_all_schools()}
