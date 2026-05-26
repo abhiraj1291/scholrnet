@@ -382,6 +382,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             is_verified=_is_verified(puser),
             achievements=Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all(),
             projects=Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all(),
+            posts=Post.query.filter_by(author_id=user_id).order_by(Post.id.desc()).all(),
             ads=active_ads(),
             notifications=get_user_notifications(current_user.id)
         )
