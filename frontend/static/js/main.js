@@ -129,6 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
     notifBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       notifPanel.classList.toggle('hidden');
+      if (!notifPanel.classList.contains('hidden')) loadNotifications();
     });
     document.addEventListener('click', (e) => {
       if (!notifPanel.contains(e.target) && e.target !== notifBtn) {
@@ -178,4 +179,54 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  // Load notifications
+  function loadNotifications() {
+    fetch('/api/notifications')
+      .then(function(r){return r.json()})
+      .then(function(data){
+        var badge = document.getElementById('notifBadge');
+        var panel = document.getElementById('notif-panel');
+        if (!panel) return;
+        if (badge) {
+          if (data.unread_count > 0) {
+            badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+        panel.innerHTML = '';
+        if (data.notifications && data.notifications.length > 0) {
+          data.notifications.forEach(function(n){
+            var d = document.createElement('div');
+            d.className = 'notif-item' + (n.unread ? ' unread' : '');
+            d.style.cssText = 'padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);font-size:0.8rem;cursor:pointer;transition:background 0.15s;' + (n.unread ? 'background:rgba(37,99,235,0.04);' : '');
+            d.innerHTML = '<div style="font-weight:' + (n.unread ? '600' : '400') + ';color:var(--text);">' + n.title + '</div><div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.15rem;">' + (n.timestamp || '') + '</div>';
+            panel.appendChild(d);
+          });
+          // Add mark-read button at bottom
+          var markBtn = document.createElement('button');
+          markBtn.textContent = 'Mark all as read';
+          markBtn.className = 'btn btn-ghost btn-xs';
+          markBtn.style.cssText = 'width:100%;padding:0.5rem;font-size:0.7rem;color:var(--text-muted);';
+          markBtn.addEventListener('click', function(e){
+            e.stopPropagation();
+            fetch('/api/notifications/read', {method:'POST'})
+              .then(function(r){return r.json()})
+              .then(function(d){
+                if(d.success) loadNotifications();
+              });
+          });
+          panel.appendChild(markBtn);
+        } else {
+          panel.innerHTML = '<div class="text-center text-muted text-xs py-4">No notifications</div>';
+        }
+      })
+      .catch(function(){});
+  }
+
+  // Poll for notifications every 15s
+  loadNotifications();
+  setInterval(loadNotifications, 15000);
 });

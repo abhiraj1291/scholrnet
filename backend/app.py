@@ -609,6 +609,19 @@ def register_routes(app, bcrypt, login_manager, limiter):
         )
         db.session.add(post)
         db.session.commit()
+        # Notify friends about new post
+        try:
+            friend_ids = [c.user_id for c in Connection.query.filter(
+                Connection.connected_user_id == current_user.id, Connection.status == 'accepted').all()]
+            friend_ids += [c.connected_user_id for c in Connection.query.filter(
+                Connection.user_id == current_user.id, Connection.status == 'accepted').all()]
+            for fid in set(friend_ids):
+                db.session.add(Notification(user_id=fid,
+                    title=f"{sanitize_text(current_user.name, 100)} created a new post: {sanitize_text(post.title or post.content[:80], 200)}",
+                    type="friend_post", from_user=current_user.name))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
         print("POST CREATED: id=%d image_url=%s" % (post.id, post.image_url))
         return jsonify({'success': True, 'post': {
             'id': post.id, 'title': post.title, 'content': post.content, 'likes': post.likes,
@@ -647,6 +660,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
             timestamp=short_ts()
         )
         db.session.add(comment)
+        # Notify post author
+        post = Post.query.get(post_id)
+        if post and post.author_id and post.author_id != current_user.id:
+            n = Notification(user_id=post.author_id,
+                title=f"{sanitize_text(current_user.name, 100)} commented on your post",
+                type="comment", from_user=current_user.name)
+            db.session.add(n)
         db.session.commit()
         return jsonify({'success': True, 'comment': {
             'id': comment.id, 'author': {'name': comment.author, 'avatar': comment.avatar},
@@ -1253,6 +1273,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
                          text=sanitize_text(data.get('text', ''), 5000),
                          timestamp=short_ts())
         db.session.add(msg)
+        # Notify receiver
+        n = Notification(user_id=receiver_id,
+            title=f"Message from {sanitize_text(current_user.name, 100)}",
+            type="message", from_user=current_user.name)
+        db.session.add(n)
         db.session.commit()
         return jsonify({'success': True, 'message': {'id': msg.id, 'sender_id': msg.sender_id, 'text': msg.text, 'timestamp': msg.timestamp}})
 
@@ -1288,6 +1313,27 @@ def register_routes(app, bcrypt, login_manager, limiter):
             db.session.commit()
             return jsonify({"success": True})
         return jsonify({"key": current_user.groq_api_key or ''})
+
+    @app.route('/api/notifications')
+    @login_required
+    def api_notifications():
+        notifs = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.id.desc()).limit(30).all()
+        unread_count = Notification.query.filter_by(user_id=current_user.id, unread=True).count()
+        return jsonify({
+            'notifications': [{
+                'id': n.id, 'title': n.title, 'type': n.type,
+                'from_user': n.from_user, 'timestamp': n.timestamp,
+                'unread': n.unread
+            } for n in notifs],
+            'unread_count': unread_count
+        })
+
+    @app.route('/api/notifications/read', methods=['POST'])
+    @login_required
+    def api_notifications_read():
+        Notification.query.filter_by(user_id=current_user.id, unread=True).update({'unread': False})
+        db.session.commit()
+        return jsonify({'success': True})
 
     @app.route('/api/friend/request', methods=['POST'])
     @login_required
