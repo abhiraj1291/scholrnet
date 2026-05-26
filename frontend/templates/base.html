@@ -193,6 +193,26 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <div class="border-t" style="border-color:var(--border);padding-top:1rem;">
+          <div class="font-bold text-sm mb-2">Verify My School</div>
+          {% if user.school_verified %}
+          <div class="text-xs text-muted">Verified at <strong>{{ user.school }}</strong></div>
+          {% else %}
+          <div class="flex items-center gap-2">
+            <select id="verifySchoolSelect" style="flex:1;font-size:0.75rem;padding:0.5rem;">
+              <option value="">Select your school...</option>
+              {% for s in schools %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="flex items-center gap-2 mt-2">
+            <input type="text" id="verifySchoolCode" placeholder="Verification code" style="flex:1;font-size:0.75rem;padding:0.5rem;" maxlength="8">
+            <button class="btn btn-primary btn-sm" id="verifySchoolBtn">Verify</button>
+          </div>
+          <div id="verifySchoolStatus" class="text-xs mt-1"></div>
+          {% endif %}
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>

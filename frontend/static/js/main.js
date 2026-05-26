@@ -85,6 +85,43 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // School verification
+  const verifyBtn = document.getElementById('verifySchoolBtn');
+  const verifyStatus = document.getElementById('verifySchoolStatus');
+  if (verifyBtn && verifyStatus) {
+    verifyBtn.addEventListener('click', () => {
+      const schoolId = document.getElementById('verifySchoolSelect').value;
+      const code = document.getElementById('verifySchoolCode').value.trim().toUpperCase();
+      if (!schoolId || !code) { verifyStatus.textContent = 'Select a school and enter a code'; verifyStatus.style.color = 'var(--danger)'; return; }
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying...';
+      fetch('/api/school/verify', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({school_id: parseInt(schoolId), code: code})
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          verifyStatus.textContent = 'Verified at ' + d.school_name + '!';
+          verifyStatus.style.color = 'var(--success)';
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          verifyStatus.textContent = d.error || 'Verification failed';
+          verifyStatus.style.color = 'var(--danger)';
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = 'Verify';
+        }
+      })
+      .catch(() => {
+        verifyStatus.textContent = 'Network error';
+        verifyStatus.style.color = 'var(--danger)';
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify';
+      });
+    });
+  }
+
   // Notifications dropdown
   const notifBtn = document.getElementById('notif-btn');
   const notifPanel = document.getElementById('notif-panel');

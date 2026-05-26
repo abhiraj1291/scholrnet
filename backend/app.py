@@ -52,6 +52,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     import traceback, sys
 
+    @app.context_processor
+    def inject_globals():
+        return {'schools': get_all_schools()}
+
     @app.errorhandler(404)
     def not_found(e):
         return render_template('error.html', code=404, title='Page Not Found', message='The page you are looking for does not exist.', emoji='🔍'), 404
@@ -1543,6 +1547,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not name:
             return jsonify({'success': False, 'error': 'School name required'}), 400
         school = School(name=name, location=sanitize_text(data.get('location', ''), 200), tagline=sanitize_text(data.get('tagline', ''), 200), about=sanitize_text(data.get('about', ''), 1000), established=sanitize_text(data.get('established', ''), 20))
+        # Generate 8-char verification code
+        import secrets, string
+        school.verification_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
         db.session.add(school)
         db.session.flush()
         email = name.lower().replace(' ', '').replace('.', '')[:30] + '@scholrnet.com'
@@ -1559,7 +1566,53 @@ def register_routes(app, bcrypt, login_manager, limiter):
         user = User(name=name + ' Admin', email=email, password_hash=bcrypt.generate_password_hash(pwd).decode('utf-8'), school=name, role='admin', avatar='SC', username=username or None)
         db.session.add(user)
         db.session.commit()
-        return jsonify({'success': True, 'email': email, 'password': pwd})
+        return jsonify({'success': True, 'email': email, 'password': pwd, 'verification_code': school.verification_code})
+
+    @app.route('/api/schools/list')
+    @login_required
+    def api_schools_list():
+        schools = School.query.order_by(School.name.asc()).all()
+        return jsonify({'schools': [{
+            'id': s.id, 'name': s.name, 'location': s.location or '',
+            'tagline': s.tagline or '', 'avatar': s.avatar or ''
+        } for s in schools]})
+
+    @app.route('/api/school/verify', methods=['POST'])
+    @login_required
+    def api_school_verify():
+        data = request.json or {}
+        code = data.get('code', '').strip().upper()
+        school_id = data.get('school_id', type=int)
+        if not code or not school_id:
+            return jsonify({'success': False, 'error': 'School and verification code required'}), 400
+        if current_user.school_verified:
+            return jsonify({'success': False, 'error': 'Already verified at a school'}), 400
+        school = School.query.get(school_id)
+        if not school:
+            return jsonify({'success': False, 'error': 'School not found'}), 404
+        if school.verification_code != code:
+            return jsonify({'success': False, 'error': 'Invalid verification code'}), 400
+        current_user.school_verified = True
+        current_user.verified_school_id = school_id
+        db.session.commit()
+        return jsonify({'success': True, 'school_name': school.name})
+
+    @app.route('/api/school/<int:school_id>')
+    @login_required
+    def api_school_profile(school_id):
+        school = School.query.get_or_404(school_id)
+        students = User.query.filter_by(verified_school_id=school_id, role='student').limit(50).all()
+        teachers = User.query.filter_by(verified_school_id=school_id, role='teacher').limit(20).all()
+        announcements = SchoolAnnouncement.query.filter_by(school_id=school_id).order_by(SchoolAnnouncement.id.desc()).limit(20).all()
+        return jsonify({
+            'school': {'id': school.id, 'name': school.name, 'location': school.location or '',
+                       'tagline': school.tagline or '', 'about': school.about or '',
+                       'established': school.established or '', 'avatar': school.avatar or ''},
+            'students': [{'id': u.id, 'name': u.name, 'avatar': u.avatar_url or u.avatar or u.name[:2].upper(), 'grade': u.grade} for u in students],
+            'teachers': [{'id': u.id, 'name': u.name, 'avatar': u.avatar_url or u.avatar or u.name[:2].upper()} for u in teachers],
+            'announcements': [{'id': a.id, 'title': a.title, 'content': a.content, 'badge_text': a.badge_text,
+                              'type': a.type, 'timestamp': a.timestamp, 'deadline': a.deadline, 'reward': a.reward} for a in announcements]
+        })
 
     @app.route('/api/health')
     def api_health():
@@ -1598,26 +1651,46 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     conn.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(30) UNIQUE DEFAULT NULL"))
                     conn.commit()
                 mig.append("added users.username")
-            exp_cols = [c['name'] for c in inspector.get_columns('experiences')] if 'experiences' in [t for t, in db.engine.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='experiences'").fetchall()] else []
+            exp_cols = [c['name'] for c in inspector.get_columns('experiences')] if 'experiences' in [t for (t,) in db.engine.execute("SELECT table_name FROM information_schema.tables WHERE table_name='experiences'").fetchall()] else []
             if not exp_cols:
                 with db.engine.connect() as conn:
                     conn.execute(text("""
                         CREATE TABLE IF NOT EXISTS experiences (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            user_id INTEGER NOT NULL,
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER NOT NULL REFERENCES users(id),
                             company VARCHAR(200) NOT NULL,
                             role VARCHAR(200) NOT NULL,
                             description TEXT DEFAULT '',
                             skills VARCHAR(500) DEFAULT '',
                             start_date VARCHAR(20) DEFAULT '',
                             end_date VARCHAR(20) DEFAULT '',
-                            is_current BOOLEAN DEFAULT 0,
-                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            FOREIGN KEY (user_id) REFERENCES users(id)
+                            is_current BOOLEAN DEFAULT FALSE,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
                     """))
                     conn.commit()
                 mig.append("created experiences table")
+            schools_cols = [c['name'] for c in inspector.get_columns('schools')]
+            if 'verification_code' not in schools_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''"))
+                    conn.commit()
+                mig.append("added schools.verification_code")
+            if 'verified_by_email' not in schools_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''"))
+                    conn.commit()
+                mig.append("added schools.verified_by_email")
+            if 'school_verified' not in users_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE"))
+                    conn.commit()
+                mig.append("added users.school_verified")
+            if 'verified_school_id' not in users_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
+                    conn.commit()
+                mig.append("added users.verified_school_id")
         except Exception as e:
             return jsonify({"error": str(e), "ran": mig}), 500
         return jsonify({"message": "Migration complete", "changes": mig})

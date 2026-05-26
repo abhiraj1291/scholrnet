@@ -19,6 +19,8 @@ class User(UserMixin, db.Model):
     theme_color = db.Column(db.String(30), default="navy")
     groq_api_key = db.Column(db.String(200), default="")
     username = db.Column(db.String(30), unique=True, nullable=True)
+    school_verified = db.Column(db.Boolean, default=False)
+    verified_school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     achievements = db.relationship('Achievement', backref='user', lazy=True)
@@ -204,6 +206,8 @@ class School(db.Model):
     about = db.Column(db.Text, default="")
     established = db.Column(db.String(10), default="")
     website = db.Column(db.String(300), default="")
+    verification_code = db.Column(db.String(8), unique=True, default="")
+    verified_by_email = db.Column(db.String(200), default="")
 
 class SchoolAnnouncement(db.Model):
     __tablename__ = 'school_announcements'
