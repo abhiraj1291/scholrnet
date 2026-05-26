@@ -465,6 +465,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         )
         db.session.add(post)
         db.session.commit()
+        print("POST CREATED: id=%d image_url=%s" % (post.id, post.image_url))
         return jsonify({'success': True, 'post': {
             'id': post.id, 'title': post.title, 'content': post.content, 'likes': post.likes,
             'author_name': post.author_name, 'author_avatar': post.author_avatar,
@@ -1373,6 +1374,67 @@ def register_routes(app, bcrypt, login_manager, limiter):
             "supabase_url_set": bool(supabase_url),
             "supabase_key_set": bool(supabase_key)
         })
+
+    @app.route('/api/migrate')
+    def api_migrate():
+        """Add missing columns to existing tables."""
+        from sqlalchemy import text, inspect
+        mig = []
+        try:
+            inspector = inspect(db.engine)
+            posts_cols = [c['name'] for c in inspector.get_columns('posts')]
+            if 'image_url' not in posts_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE posts ADD COLUMN image_url VARCHAR(500) DEFAULT ''"))
+                    conn.commit()
+                mig.append("added posts.image_url")
+            if 'video_url' not in posts_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE posts ADD COLUMN video_url VARCHAR(500) DEFAULT ''"))
+                    conn.commit()
+                mig.append("added posts.video_url")
+            users_cols = [c['name'] for c in inspector.get_columns('users')]
+            if 'avatar_url' not in users_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(300) DEFAULT ''"))
+                    conn.commit()
+                mig.append("added users.avatar_url")
+        except Exception as e:
+            return jsonify({"error": str(e), "ran": mig}), 500
+        return jsonify({"message": "Migration complete", "changes": mig})
+
+    @app.route('/api/test-image-post')
+    @login_required
+    def api_test_image_post():
+        """Create a test post with a known working image URL to verify display."""
+        import urllib.request, struct, zlib
+        def make_png():
+            def chunk(ctype, data):
+                c = ctype + data
+                return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+            sig = b'\x89PNG\r\n\x1a\n'
+            ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
+            raw = zlib.compress(b'\x00\xff\x00\x00\xff')
+            idat = chunk(b'IDAT', raw)
+            iend = chunk(b'IEND', b'')
+            return sig + ihdr + idat + iend
+        png = make_png()
+        path = f"test_post_{uuid.uuid4().hex[:8]}.png"
+        req = urllib.request.Request(
+            f"{supabase_url}/storage/v1/object/uploads/{path}",
+            data=png,
+            headers={"Authorization": f"Bearer {supabase_key}", "Content-Type": "image/png"},
+            method="POST",
+        )
+        try:
+            urllib.request.urlopen(req, timeout=10)
+        except Exception as e:
+            return jsonify({"error": "Upload failed", "detail": str(e)}), 500
+        url = f"{supabase_url}/storage/v1/object/public/uploads/{path}"
+        post = Post(author_id=current_user.id, author_name=current_user.name, author_avatar=current_user.avatar, author_school=current_user.school, type='achievement', title='Test Post with Image', content='This is a test post to verify images display correctly.', image_url=url, likes=0, tags='[]', timestamp=short_ts())
+        db.session.add(post)
+        db.session.commit()
+        return jsonify({"success": True, "post_id": post.id, "image_url": url, "public_readable": True})
 
     @app.route('/api/diag-storage')
     def api_diag_storage():
