@@ -1,72 +1,64 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'Inter',-apple-system,sans-serif;color:#fff;background:#0a0e1a;overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',-apple-system,sans-serif;color:#e8edf5;background:#080c18;overflow-x:hidden;line-height:1.7;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 
-.particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
-.particle{position:absolute;width:4px;height:4px;background:rgba(99,158,255,0.3);border-radius:50%;animation:float linear infinite}
-@keyframes float{0%{transform:translateY(100vh) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) rotate(720deg);opacity:0}}
-
-.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:2rem}
-.hero-content{position:relative;z-index:2;text-align:center;max-width:700px}
-.hero-title{font-size:clamp(1.8rem,4.5vw,3rem);font-weight:700;line-height:1.2;margin-bottom:0.75rem;letter-spacing:-0.02em}
-.hero-title span{background:linear-gradient(135deg,#639eff,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero-sub{font-size:clamp(0.95rem,1.8vw,1.1rem);color:rgba(255,255,255,0.5);margin-bottom:2rem;max-width:520px;margin-left:auto;margin-right:auto}
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+.hero-content{position:relative;z-index:1;text-align:center;max-width:560px}
+.hero-title{font-size:clamp(1.6rem,4vw,2.6rem);font-weight:500;line-height:1.3;margin-bottom:0.75rem;letter-spacing:-0.01em;color:rgba(232,237,245,0.7)}
+.hero-title span{color:#e8edf5;font-weight:600}
+.hero-sub{font-size:clamp(0.85rem,1.5vw,0.95rem);color:rgba(232,237,245,0.35);margin-bottom:2rem;max-width:400px;margin-left:auto;margin-right:auto;font-weight:400}
 .hero-cta{display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap}
 
-.hero-logo-group{position:relative;width:90px;height:90px;margin:0 auto 2rem}
-.minimal-globe{width:80px;height:80px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#3b82f6,#1e3a5f 60%,#0a1628);box-shadow:0 0 40px rgba(59,130,246,0.25),inset 0 -10px 30px rgba(0,0,0,0.4);position:relative;overflow:hidden;margin:5px auto 0}
+.hero-logo-group{position:relative;width:72px;height:72px;margin:0 auto 2.5rem}
+.minimal-globe{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(59,130,246,0.15),rgba(59,130,246,0.03) 60%,transparent);box-shadow:0 0 60px rgba(59,130,246,0.06);position:relative;overflow:hidden;margin:4px auto 0}
 .minimal-globe .globe-grid{position:absolute;inset:0;border-radius:50%}
-.minimal-globe .globe-grid::before{content:'';position:absolute;inset:-50%;border-radius:50%;background:repeating-linear-gradient(0deg,transparent,transparent 18px,rgba(255,255,255,0.08) 18px,rgba(255,255,255,0.08) 19px),repeating-linear-gradient(90deg,transparent,transparent 18px,rgba(255,255,255,0.06) 18px,rgba(255,255,255,0.06) 19px);animation:globeSpin 12s linear infinite;transform-origin:center}
+.minimal-globe .globe-grid::before{content:'';position:absolute;inset:-60%;border-radius:50%;background:repeating-linear-gradient(0deg,transparent,transparent 14px,rgba(59,130,246,0.07) 14px,rgba(59,130,246,0.07) 15px),repeating-linear-gradient(90deg,transparent,transparent 14px,rgba(59,130,246,0.05) 14px,rgba(59,130,246,0.05) 15px);animation:globeSpin 18s linear infinite;transform-origin:center}
 @keyframes globeSpin{100%{transform:rotate(360deg)}}
 
-.floating-cap{position:absolute;top:-8px;right:-18px;color:#a78bfa;animation:capFloat 3s ease-in-out infinite;pointer-events:none}
-.floating-cap svg{width:28px;height:28px}
-@keyframes capFloat{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-10px) rotate(5deg)}}
+.floating-cap{position:absolute;top:-14px;right:-20px;color:rgba(167,139,250,0.4);animation:capFloat 4s ease-in-out infinite;pointer-events:none}
+.floating-cap svg{width:22px;height:22px}
+@keyframes capFloat{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}
 
-.hero-glow{position:fixed;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.08),transparent 70%);pointer-events:none;z-index:0;transform:translate(-50%,-50%);transition:opacity 0.3s;opacity:0}
-.hero:hover .hero-glow{opacity:1}
+.btn-primary,.btn-outline{display:inline-flex;align-items:center;gap:0.5rem;padding:0.7rem 1.6rem;border-radius:6px;font-weight:500;font-size:0.85rem;transition:all 0.2s ease;cursor:pointer;border:1px solid transparent;position:relative;overflow:hidden;letter-spacing:0.01em}
+.btn-primary{background:rgba(59,130,246,0.1);color:#93baf5;border-color:rgba(59,130,246,0.15)}
+.btn-primary:hover{background:rgba(59,130,246,0.18);border-color:rgba(59,130,246,0.25)}
+.btn-outline{background:transparent;border-color:rgba(232,237,245,0.08);color:rgba(232,237,245,0.5)}
+.btn-outline:hover{background:rgba(232,237,245,0.03);border-color:rgba(232,237,245,0.15);color:rgba(232,237,245,0.7)}
 
-.btn-primary,.btn-outline{display:inline-flex;align-items:center;gap:0.5rem;padding:0.8rem 1.8rem;border-radius:10px;font-weight:600;font-size:0.95rem;transition:all 0.25s ease;cursor:pointer;border:2px solid transparent;position:relative;overflow:hidden}
-.btn-primary{background:linear-gradient(135deg,#639eff,#4f46e5);color:#fff;box-shadow:0 4px 20px rgba(99,158,255,0.25)}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,158,255,0.4)}
-.btn-outline{background:transparent;border-color:rgba(255,255,255,0.2);color:#fff}
-.btn-outline:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.35)}
-.ripple-effect{position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);transform:scale(0);animation:rippleAnim 0.5s ease-out;pointer-events:none}
+.ripple-effect{position:absolute;border-radius:50%;background:rgba(147,186,245,0.15);transform:scale(0);animation:rippleAnim 0.5s ease-out;pointer-events:none}
 @keyframes rippleAnim{to{transform:scale(4);opacity:0}}
 
-section{padding:4rem 1.5rem;position:relative}
-.section-title{font-size:clamp(1.5rem,3vw,2rem);font-weight:700;text-align:center;margin-bottom:0.5rem;letter-spacing:-0.02em}
-.section-sub{text-align:center;color:rgba(255,255,255,0.45);font-size:1rem;margin-bottom:2.5rem;max-width:520px;margin-left:auto;margin-right:auto}
+section{padding:3.5rem 1.5rem;position:relative}
+.section-title{font-size:clamp(1.2rem,2.5vw,1.5rem);font-weight:500;text-align:center;margin-bottom:0.5rem;color:rgba(232,237,245,0.7)}
+.section-sub{text-align:center;color:rgba(232,237,245,0.35);font-size:0.85rem;margin-bottom:2.5rem;max-width:480px;margin-left:auto;margin-right:auto}
 
-.features{background:linear-gradient(180deg,#0a0e1a 0%,#0f1525 100%)}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.25rem;max-width:800px;margin:0 auto}
-.feature-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:1.75rem;transition:all 0.35s cubic-bezier(0.175,0.885,0.32,1.275);cursor:default;transform:perspective(800px) rotateX(0deg) rotateY(0deg)}
-.feature-card:hover{background:rgba(255,255,255,0.06);border-color:rgba(99,158,255,0.15);transform:perspective(800px) rotateX(-2deg) rotateY(3deg) translateY(-3px);box-shadow:0 15px 40px rgba(0,0,0,0.25)}
-.feature-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(99,158,255,0.12),rgba(79,70,229,0.12));display:flex;align-items:center;justify-content:center;margin-bottom:1rem;color:#639eff}
-.feature-icon svg{width:22px;height:22px}
-.feature-card h3{font-size:1.05rem;font-weight:600;margin-bottom:0.4rem}
-.feature-card p{font-size:0.85rem;color:rgba(255,255,255,0.45);line-height:1.6}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem;max-width:720px;margin:0 auto}
+.feature-card{cursor:default;transition:all 0.3s ease}
+.feature-card:hover{opacity:0.7}
+.feature-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;margin-bottom:1rem;color:rgba(147,186,245,0.5)}
+.feature-icon svg{width:20px;height:20px}
+.feature-card h3{font-size:0.9rem;font-weight:500;margin-bottom:0.4rem;color:rgba(232,237,245,0.7)}
+.feature-card p{font-size:0.8rem;color:rgba(232,237,245,0.3);line-height:1.7;font-weight:400}
 
-.cta-section{background:linear-gradient(180deg,#0f1525 0%,#0a0e1a 100%);text-align:center;padding:5rem 1.5rem 2.5rem}
-.cta-section h2{font-size:clamp(1.4rem,2.5vw,1.8rem);font-weight:700;margin-bottom:0.5rem}
-.cta-section p{color:rgba(255,255,255,0.45);margin-bottom:1.5rem;font-size:1rem}
-.footer-bar{margin-top:3rem;font-size:0.8rem;color:rgba(255,255,255,0.25)}
-.footer-bar a{color:rgba(255,255,255,0.35)}
-.footer-bar a:hover{color:#639eff}
+.cta-section{text-align:center;padding:4rem 1.5rem 2.5rem}
+.cta-section h2{font-size:clamp(1.2rem,2.5vw,1.5rem);font-weight:500;margin-bottom:0.5rem;color:rgba(232,237,245,0.7)}
+.cta-section p{color:rgba(232,237,245,0.35);margin-bottom:1.5rem;font-size:0.85rem}
+.footer-bar{margin-top:3rem;font-size:0.75rem;color:rgba(232,237,245,0.15)}
+.footer-bar a{color:rgba(232,237,245,0.2)}
+.footer-bar a:hover{color:rgba(147,186,245,0.5)}
 
-.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.6s ease,transform 0.6s ease}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity 0.5s ease,transform 0.5s ease}
 .reveal.visible{opacity:1;transform:translateY(0)}
 
 @media(max-width:600px){
   .hero{padding:1.5rem}
-  .hero-title{font-size:1.6rem}
-  .features-grid{grid-template-columns:1fr}
-  .feature-card:hover{transform:none}
-  .cta-section{padding:3.5rem 1.5rem 2rem}
-  .minimal-globe{width:64px;height:64px;margin:12px auto 0}
-  .hero-logo-group{width:72px;height:72px}
-  .floating-cap{top:-12px;right:-16px}
-  .floating-cap svg{width:24px;height:24px}
-  .globe-grid::before{animation-duration:8s}
+  .hero-title{font-size:1.4rem}
+  .features-grid{grid-template-columns:1fr;gap:1.5rem;text-align:center}
+  .feature-icon{margin-left:auto;margin-right:auto}
+  .cta-section{padding:3rem 1.5rem 2rem}
+  .minimal-globe{width:52px;height:52px;margin:10px auto 0}
+  .hero-logo-group{width:60px;height:60px;margin-bottom:2rem}
+  .floating-cap{top:-12px;right:-18px}
+  .floating-cap svg{width:20px;height:20px}
 }

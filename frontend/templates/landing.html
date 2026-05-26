@@ -3,74 +3,69 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScholrNet — Academic Trust Network</title>
-  <meta name="description" content="Where your achievements build your future. Join the verified academic network for students, teachers, and schools.">
-  <meta property="og:title" content="ScholrNet — Academic Trust Network">
-  <meta property="og:description" content="Where your achievements build your future. Join the verified academic network for students, teachers, and schools.">
+  <title>ScholrNet</title>
+  <meta name="description" content="Verified academic network for students, teachers, and schools.">
+  <meta property="og:title" content="ScholrNet">
+  <meta property="og:description" content="Verified academic network for students, teachers, and schools.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://scholrnet.in">
-  <meta name="twitter:card" content="summary_large_image">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
 </head>
 <body>
-  <div class="hero-glow" id="heroGlow"></div>
 
-  <section class="hero">
-    <div class="particles" id="particles"></div>
-    <div class="hero-content">
-      <div class="hero-logo-group">
-        <div class="minimal-globe"><div class="globe-grid"></div></div>
-        <div class="floating-cap"><i data-lucide="graduation-cap"></i></div>
-      </div>
-      <h1 class="hero-title">Where Your Achievements<br><span>Build Your Future</span></h1>
-      <p class="hero-sub">The verified academic network for students, teachers, and schools.<br>Showcase achievements, connect with mentors, find opportunities.</p>
-      <div class="hero-cta">
-        <a href="{{ url_for('register') }}" class="btn-primary ripple">Join Now</a>
-        <a href="{{ url_for('login') }}" class="btn-outline ripple">Sign In</a>
-      </div>
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-logo-group">
+      <div class="minimal-globe"><div class="globe-grid"></div></div>
+      <div class="floating-cap"><i data-lucide="graduation-cap"></i></div>
     </div>
-  </section>
-
-  <section class="features" id="features">
-    <h2 class="section-title reveal">Everything You Need</h2>
-    <p class="section-sub reveal">Build your academic identity with tools designed for students and educators.</p>
-    <div class="features-grid">
-      <div class="feature-card reveal">
-        <div class="feature-icon"><i data-lucide="badge-check"></i></div>
-        <h3>Achievement Verification</h3>
-        <p>Get your awards and certifications verified by your school. Build a trusted academic record.</p>
-      </div>
-      <div class="feature-card reveal">
-        <div class="feature-icon"><i data-lucide="users"></i></div>
-        <h3>Academic Network</h3>
-        <p>Connect with classmates, teachers, and mentors. Grow your academic community.</p>
-      </div>
-      <div class="feature-card reveal">
-        <div class="feature-icon"><i data-lucide="book-open"></i></div>
-        <h3>Trust Portfolio</h3>
-        <p>A complete, verified portfolio of your achievements, projects, and experience.</p>
-      </div>
-      <div class="feature-card reveal">
-        <div class="feature-icon"><i data-lucide="sparkles"></i></div>
-        <h3>Opportunities</h3>
-        <p>Discover scholarships, internships, competitions, and events tailored to you.</p>
-      </div>
+    <h1 class="hero-title">Your achievements,<br><span>verified and connected.</span></h1>
+    <p class="hero-sub">The academic network for students, teachers, and schools.</p>
+    <div class="hero-cta">
+      <a href="{{ url_for('register') }}" class="btn-primary ripple">Join Now</a>
+      <a href="{{ url_for('login') }}" class="btn-outline ripple">Sign In</a>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="cta-section">
-    <h2 class="reveal">Ready to build your academic future?</h2>
-    <p class="reveal">Join students and educators already on ScholrNet.</p>
-    <a href="{{ url_for('register') }}" class="btn-primary ripple reveal">Get Started Free</a>
-    <div class="footer-bar">
-      &copy; 2026 ScholrNet &middot; <a href="mailto:scolrnetsupport@gmail.com">Contact</a>
+<section class="features" id="features">
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-icon"><i data-lucide="badge-check"></i></div>
+      <h3>Verified achievements</h3>
+      <p>Your awards and certifications, confirmed by your school.</p>
     </div>
-  </section>
+    <div class="feature-card reveal">
+      <div class="feature-icon"><i data-lucide="users"></i></div>
+      <h3>Academic network</h3>
+      <p>Connect with classmates, teachers, and mentors.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon"><i data-lucide="book-open"></i></div>
+      <h3>Trust portfolio</h3>
+      <p>A verified record of achievements, projects, and experience.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon"><i data-lucide="sparkles"></i></div>
+      <h3>Opportunities</h3>
+      <p>Scholarships, internships, and events tailored to you.</p>
+    </div>
+  </div>
+</section>
 
-  <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+<section class="cta-section">
+  <h2 class="reveal">Ready to begin?</h2>
+  <p class="reveal">Join ScholrNet and build your academic future.</p>
+  <a href="{{ url_for('register') }}" class="btn-primary ripple reveal">Get Started</a>
+  <div class="footer-bar">
+    &copy; 2026 ScholrNet &middot; <a href="mailto:scolrnetsupport@gmail.com">Contact</a>
+  </div>
+</section>
+
+<script src="{{ url_for('static', filename='js/landing.js') }}"></script>
 </body>
 </html>
