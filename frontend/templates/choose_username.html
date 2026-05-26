@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ 'dark' if request.cookies.get('theme') == 'dark' else '' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choose Username - ScholrNet</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
+  <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
+    <style>@media (max-width: 30rem) { .card { padding: 1.25rem !important; } }</style>
+    <div class="flex items-center gap-2 mb-4">
+      <div class="logo"><span>Scholr</span><span>Net</span></div>
+    </div>
+    <h1 class="text-lg font-black mb-1">Choose your username</h1>
+    <p class="text-sm text-muted mb-4">This will be your public profile URL: <strong>scholrnet.in/u/<span id="usernamePreview">username</span></strong></p>
+
+    {% if error %}
+      <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
+    {% endif %}
+
+    <div style="margin-bottom: 0.75rem;">
+      <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Username</label>
+      <div class="flex items-center gap-2">
+        <input type="text" id="usernameInput" placeholder="e.g. aarav_sharma" maxlength="30" style="flex:1;" autofocus>
+        <span id="usernameStatus" class="text-xs font-bold" style="white-space:nowrap;"></span>
+      </div>
+      <div class="text-xs text-muted mt-1">3-30 characters: letters, numbers, underscores. No spaces.</div>
+    </div>
+
+    <button id="setUsernameBtn" class="btn btn-primary w-full" style="padding: 0.75rem;" disabled>Set Username</button>
+
+    <p class="text-xs text-muted text-center mt-4">
+      <a href="{{ url_for('dashboard') }}" class="font-bold" style="color:var(--text-muted);">Skip for now</a>
+    </p>
+  </div>
+
+  <script>
+  const input = document.getElementById('usernameInput');
+  const status = document.getElementById('usernameStatus');
+  const preview = document.getElementById('usernamePreview');
+  const btn = document.getElementById('setUsernameBtn');
+  let checkTimer = null;
+
+  input.addEventListener('input', function() {
+    const val = this.value.trim().toLowerCase();
+    preview.textContent = val || 'username';
+    if (!val) {
+      status.textContent = '';
+      status.style.color = '';
+      btn.disabled = true;
+      return;
+    }
+    if (!/^[a-z0-9_]{3,30}$/.test(val)) {
+      status.textContent = 'Invalid';
+      status.style.color = 'var(--danger)';
+      btn.disabled = true;
+      return;
+    }
+    status.textContent = 'Checking...';
+    status.style.color = 'var(--text-muted)';
+    btn.disabled = true;
+    clearTimeout(checkTimer);
+    checkTimer = setTimeout(() => {
+      fetch('/api/username/check?u=' + encodeURIComponent(val))
+        .then(r => r.json())
+        .then(d => {
+          if (d.available) {
+            status.textContent = 'Available';
+            status.style.color = 'var(--success)';
+            btn.disabled = false;
+          } else {
+            status.textContent = d.error || 'Taken';
+            status.style.color = 'var(--danger)';
+            btn.disabled = true;
+          }
+        })
+        .catch(() => {
+          status.textContent = 'Error';
+          status.style.color = 'var(--danger)';
+        });
+    }, 300);
+  });
+
+  btn.addEventListener('click', function() {
+    const val = input.value.trim().toLowerCase();
+    if (!val) return;
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    fetch('/api/username/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: val })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        window.location.href = '/dashboard';
+      } else {
+        status.textContent = d.error || 'Error';
+        status.style.color = 'var(--danger)';
+        btn.disabled = false;
+        btn.textContent = 'Set Username';
+      }
+    })
+    .catch(() => {
+      status.textContent = 'Network error';
+      status.style.color = 'var(--danger)';
+      btn.disabled = false;
+      btn.textContent = 'Set Username';
+    });
+  });
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !btn.disabled) btn.click();
+  });
+  </script>
+</body>
+</html>

@@ -109,6 +109,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
             allowed = ['choose_role', 'api_set_role', 'logout', 'static']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
                 return redirect(url_for('choose_role'))
+        # Redirect users without a username to choose-username (skip for certain endpoints)
+        if current_user.is_authenticated and not current_user.username and current_user.role != 'pending':
+            allowed = ['choose_username', 'api_username_check', 'api_username_set', 'logout', 'static']
+            if request.endpoint not in allowed and not request.path.startswith('/static/'):
+                return redirect(url_for('choose_username'))
 
     def get_gemini_client():
         api_key = app.config.get("GEMINI_API_KEY", "")
@@ -242,6 +247,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             password = request.form.get('password', '')
             school = sanitize_text(request.form.get('school', ''), 200)
             role = request.form.get('role', 'student')
+            username = request.form.get('username', '').strip().lower()
 
             if not name or not email or not password:
                 return render_template('auth/register.html', error="All fields are required")
@@ -255,14 +261,22 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 role = 'student'
             if User.query.filter_by(email=email).first():
                 return render_template('auth/register.html', error="Email already registered")
+            if username:
+                if not re.match(r'^[a-z0-9_]{3,30}$', username):
+                    return render_template('auth/register.html', error="Username: 3-30 chars, letters, numbers, underscores only")
+                if User.query.filter_by(username=username).first():
+                    return render_template('auth/register.html', error="Username already taken")
             hashed = bcrypt.generate_password_hash(password).decode('utf-8')
             avatar = "".join(p[0] for p in name.strip().split() if p)[:2].upper() or "ST"
             user = User(name=name, email=email, password_hash=hashed, school=school, role=role,
-                        avatar=avatar, grade="Class XII", bio="Active ScholrNet Member")
+                        avatar=avatar, grade="Class XII", bio="Active ScholrNet Member",
+                        username=username or None)
             db.session.add(user)
             db.session.commit()
             login_user(user)
             flask_session.permanent = True
+            if not user.username:
+                return redirect(url_for('choose_username'))
             return redirect(url_for('dashboard'))
         return render_template('auth/register.html')
 
@@ -348,6 +362,50 @@ def register_routes(app, bcrypt, login_manager, limiter):
             ads=active_ads(),
             notifications=get_user_notifications(current_user.id)
         )
+
+    @app.route('/u/<username>')
+    @login_required
+    def profile_by_username(username):
+        puser = User.query.filter_by(username=username).first()
+        if not puser:
+            abort(404)
+        return redirect(url_for('profile_by_id', user_id=puser.id))
+
+    @app.route('/choose-username')
+    @login_required
+    def choose_username():
+        if current_user.username:
+            return redirect(url_for('dashboard'))
+        return render_template('choose_username.html',
+            user=current_user,
+            notifications=get_user_notifications(current_user.id)
+        )
+
+    @app.route('/api/username/check', methods=['GET'])
+    def api_username_check():
+        u = request.args.get('u', '').strip().lower()
+        if not u:
+            return jsonify({'available': False, 'error': 'Empty username'})
+        if not re.match(r'^[a-z0-9_]{3,30}$', u):
+            return jsonify({'available': False, 'error': '3-30 chars, letters, numbers, underscores only'})
+        taken = User.query.filter_by(username=u).first() is not None
+        return jsonify({'available': not taken})
+
+    @app.route('/api/username/set', methods=['POST'])
+    @login_required
+    def api_username_set():
+        data = request.json or {}
+        u = data.get('username', '').strip().lower()
+        if not u:
+            return jsonify({'success': False, 'error': 'Username is required'}), 400
+        if not re.match(r'^[a-z0-9_]{3,30}$', u):
+            return jsonify({'success': False, 'error': '3-30 chars, letters, numbers, underscores only'}), 400
+        existing = User.query.filter_by(username=u).first()
+        if existing and existing.id != current_user.id:
+            return jsonify({'success': False, 'error': 'Username already taken'}), 400
+        current_user.username = u
+        db.session.commit()
+        return jsonify({'success': True, 'username': u})
 
     @app.route('/opportunities')
     @login_required
@@ -921,6 +979,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'author': {'id': p.author_id, 'name': p.author_name, 'school': p.author_school, 'avatar': p.author_avatar,
                           'avatar_url': authors.get(p.author_id).avatar_url if p.author_id and p.author_id in authors else '',
                           'role': authors.get(p.author_id).role if p.author_id and p.author_id in authors else '',
+                          'username': authors.get(p.author_id).username if p.author_id and p.author_id in authors else '',
                           'verified': _is_verified(authors.get(p.author_id)) if p.author_id else False}
             } for p in posts],
             'has_more': has_more
@@ -1019,7 +1078,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         users = User.query.filter(User.name.ilike(f'%{q}%')).limit(5).all()
         schools = School.query.filter(School.name.ilike(f'%{q}%')).limit(5).all()
         achs = Achievement.query.filter(Achievement.title.ilike(f'%{q}%')).limit(5).all()
-        return jsonify({'users': [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'role': u.role, 'verified': _is_verified(u)} for u in users], 'schools': [{'id': s.id, 'name': s.name, 'location': s.location or ''} for s in schools], 'achievements': [{'id': a.id, 'title': a.title, 'user_id': a.user_id} for a in achs]})
+        return jsonify({'users': [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'role': u.role, 'username': u.username, 'verified': _is_verified(u)} for u in users], 'schools': [{'id': s.id, 'name': s.name, 'location': s.location or ''} for s in schools], 'achievements': [{'id': a.id, 'title': a.title, 'user_id': a.user_id} for a in achs]})
 
     @app.route('/api/notifications')
     @login_required
@@ -1048,7 +1107,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             cids.add(other)
         if cids:
             users = {u.id: u for u in User.query.filter(User.id.in_(cids)).all()}
-            contacts = [{'id': u.id, 'name': u.name, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'school': u.school, 'role': u.role, 'verified': _is_verified(u)} for u in users.values()]
+            contacts = [{'id': u.id, 'name': u.name, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'school': u.school, 'role': u.role, 'username': u.username, 'verified': _is_verified(u)} for u in users.values()]
         else:
             contacts = []
         return jsonify({'contacts': contacts})
@@ -1411,7 +1470,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
         existing = User.query.filter_by(email=email).first()
         if existing:
             email = 'school' + str(school.id) + '@scholrnet.com'
-        user = User(name=name + ' Admin', email=email, password_hash=bcrypt.generate_password_hash(pwd).decode('utf-8'), school=name, role='admin', avatar='SC')
+        username = sanitize_text(data.get('username', ''), 30).strip().lower()
+        if username:
+            if not re.match(r'^[a-z0-9_]{3,30}$', username):
+                return jsonify({'success': False, 'error': 'Invalid username format'}), 400
+            if User.query.filter_by(username=username).first():
+                return jsonify({'success': False, 'error': 'Username already taken'}), 400
+        user = User(name=name + ' Admin', email=email, password_hash=bcrypt.generate_password_hash(pwd).decode('utf-8'), school=name, role='admin', avatar='SC', username=username or None)
         db.session.add(user)
         db.session.commit()
         return jsonify({'success': True, 'email': email, 'password': pwd})
@@ -1448,6 +1513,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(300) DEFAULT ''"))
                     conn.commit()
                 mig.append("added users.avatar_url")
+            if 'username' not in users_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(30) UNIQUE DEFAULT NULL"))
+                    conn.commit()
+                mig.append("added users.username")
         except Exception as e:
             return jsonify({"error": str(e), "ran": mig}), 500
         return jsonify({"message": "Migration complete", "changes": mig})

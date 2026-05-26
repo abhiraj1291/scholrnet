@@ -266,6 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 typeBadge +
               '</div>' +
             '<div class="text-xs text-muted">' + escapeHtml(post.author.school || '') + '</div>' +
+            (post.author.username ? '<div class="text-xs" style="color:var(--text-light);">@' + escapeHtml(post.author.username) + '</div>' : '') +
           '</div>' +
         '</a>' +
       '</div>' +

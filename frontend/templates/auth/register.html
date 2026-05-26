@@ -6,6 +6,27 @@
   <title>ScholrNet - Register</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+  // Username availability check on registration form
+  const regUsername = document.getElementById('regUsername');
+  const usernameStatus = document.getElementById('usernameStatus');
+  let checkTimer = null;
+  if (regUsername) {
+    regUsername.addEventListener('input', function() {
+      const val = this.value.trim().toLowerCase();
+      if (!val) { usernameStatus.textContent = '3-30 chars: letters, numbers, underscores'; usernameStatus.style.color = ''; return; }
+      if (!/^[a-z0-9_]{3,30}$/.test(val)) { usernameStatus.textContent = 'Invalid characters'; usernameStatus.style.color = 'var(--danger)'; return; }
+      usernameStatus.textContent = 'Checking...'; usernameStatus.style.color = 'var(--text-muted)';
+      clearTimeout(checkTimer);
+      checkTimer = setTimeout(() => {
+        fetch('/api/username/check?u=' + encodeURIComponent(val))
+          .then(r => r.json())
+          .then(d => { usernameStatus.textContent = d.available ? 'Available' : (d.error || 'Taken'); usernameStatus.style.color = d.available ? 'var(--success)' : 'var(--danger)'; })
+          .catch(() => { usernameStatus.textContent = 'Error checking'; usernameStatus.style.color = 'var(--danger)'; });
+      }, 300);
+    });
+  }
+  </script>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
   <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
@@ -32,6 +53,11 @@
       <div style="margin-bottom: 0.75rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Password</label>
         <input type="password" id="regPassword" name="password" placeholder="Min. 6 characters" required minlength="6">
+      </div>
+      <div style="margin-bottom: 0.75rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Username <span class="text-xs text-muted">(optional, set later)</span></label>
+        <input type="text" id="regUsername" name="username" placeholder="e.g. aarav_sharma" maxlength="30">
+        <div id="usernameStatus" class="text-xs text-muted mt-1">3-30 chars: letters, numbers, underscores</div>
       </div>
       <div style="margin-bottom: 0.75rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">School / Institution</label>

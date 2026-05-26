@@ -18,6 +18,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default="student")
     theme_color = db.Column(db.String(30), default="navy")
     groq_api_key = db.Column(db.String(200), default="")
+    username = db.Column(db.String(30), unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     achievements = db.relationship('Achievement', backref='user', lazy=True)

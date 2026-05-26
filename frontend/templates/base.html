@@ -76,6 +76,7 @@
           <div id="account-dropdown" class="hidden" style="position:absolute;right:0;top:100%;margin-top:8px;width:220px;max-width:calc(100vw - 2rem);background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:200;">
             <div class="p-3 border-b" style="border-color:var(--border);">
               <div class="font-bold text-sm">{{ user.name }}{% if user.role in ('admin', 'super_admin') or user.email == 'abhiraj29in@gmail.com' %} <i data-lucide="badge-check" style="width:0.875rem;height:0.875rem;color:var(--primary);display:inline;"></i>{% endif %}</div>
+              {% if user.username %}<div class="text-xs text-muted">@{{ user.username }}</div>{% endif %}
               <div class="text-xs text-muted">{{ user.email }}</div>
               <div style="margin-top:2px;">{% set rc = {'student':'#3b82f6','teacher':'#8b5cf6','mentor':'#f59e0b','admin':'#10b981','super_admin':'#ef4444'} %}<span class="text-xs" style="color:{{ rc.get(user.role, '#6b7280') }};font-weight:600;">{{ user.role.replace('_',' ').upper() if user.role else 'STUDENT' }}</span></div>
             </div>
