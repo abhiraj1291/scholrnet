@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
           html += '<div class="mt-3" style="border-radius:0.75rem;overflow:hidden;max-height:500px;"><video src="' + url + '" controls style="width:100%;max-height:500px;object-fit:contain;background:#000;"></video></div>';
         } else {
-          html += '<div class="mt-3" style="border-radius:0.75rem;overflow:hidden;max-height:500px;"><img src="' + url + '" alt="Post media" style="width:100%;max-height:500px;object-fit:cover;display:block;" loading="lazy"></div>';
+          html += '<div class="mt-3" style="border-radius:0.75rem;overflow:hidden;max-height:500px;background:var(--bg-hover);display:flex;align-items:center;justify-content:center;"><img src="' + url + '" alt="Post media" style="width:100%;max-height:500px;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div>';
         }
       });
     }
@@ -443,57 +443,83 @@ document.addEventListener('DOMContentLoaded', function() {
     togglePostFields();
   }
 
-  // File upload with preview
+  // File upload with preview + client-side compression
   var postMediaInput = document.getElementById('postMediaInput');
   if (postMediaInput) {
+    function compressImage(file, maxW, quality) {
+      return new Promise(function(resolve) {
+        if (file.type === 'image/gif' || file.size < 100 * 1024) { resolve(file); return; }
+        var img = new Image();
+        img.onload = function() {
+          var w = img.width, h = img.height;
+          if (w <= maxW && file.size < 500 * 1024) { resolve(file); return; }
+          if (w > maxW) { h = h * maxW / w; w = maxW; }
+          var c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          var ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          c.toBlob(function(blob) {
+            if (!blob) { resolve(file); return; }
+            var nf = new File([blob], file.name, {type: 'image/jpeg'});
+            resolve(nf);
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = function() { resolve(file); };
+        var url = URL.createObjectURL(file);
+        img.src = url;
+      });
+    }
+
     postMediaInput.addEventListener('change', function() {
       var preview = document.getElementById('mediaPreview');
       preview.innerHTML = '';
       preview.classList.remove('hidden');
-      Array.from(this.files).forEach(function(file) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-          var wrap = document.createElement('div');
-          wrap.style.cssText = 'position:relative;width:80px;height:80px;border-radius:0.5rem;overflow:hidden;border:1px solid var(--border);flex-shrink:0;';
-          if (file.type.startsWith('video/')) {
-            wrap.innerHTML = '<video src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;"></video>';
-          } else {
-            wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-          }
-          preview.appendChild(wrap);
-        };
-        reader.readAsDataURL(file);
-      });
-      // Upload files to server
       var files = Array.from(this.files);
-      files.forEach(function(file) {
-        var ext = file.name.split('.').pop().toLowerCase();
-        // Get signed upload URL
-        fetch('/api/upload-token?ext=' + encodeURIComponent(ext))
-          .then(function(r) { return r.json(); })
-          .then(function(token) {
-            if (token.uploadUrl) {
-              // Direct upload to Supabase via signed URL
-              fetch(token.uploadUrl, { method: 'PUT', body: file })
-                .then(function() {
-                  uploadedMediaUrls.push(token.publicUrl);
-                  showToast('File uploaded!', 'success');
-                })
-                .catch(function() { showToast('Upload failed', 'info'); });
+      var uploads = files.map(function(file) {
+        return compressImage(file, 1200, 0.82).then(function(compressed) {
+          // Show local preview
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            var wrap = document.createElement('div');
+            wrap.style.cssText = 'position:relative;width:80px;height:80px;border-radius:0.5rem;overflow:hidden;border:1px solid var(--border);flex-shrink:0;';
+            if (file.type.startsWith('video/')) {
+              wrap.innerHTML = '<video src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;"></video>';
             } else {
-              // Fallback: upload via server proxy
-              var fd = new FormData();
-              fd.append('file', file);
-              fetch('/api/upload', { method: 'POST', body: fd })
-                .then(function(r) { return r.json(); })
-                .then(function(res) {
-                  if (res.success) { uploadedMediaUrls.push(res.url); showToast('File uploaded!', 'success'); }
-                  else { showToast(res.error || 'Upload failed', 'info'); }
-                })
-                .catch(function() { showToast('Upload failed', 'info'); });
+              wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
             }
-          })
-          .catch(function() { showToast('Upload failed', 'info'); });
+            preview.appendChild(wrap);
+          };
+          reader.readAsDataURL(compressed);
+          return compressed;
+        });
+      });
+      Promise.all(uploads).then(function(compressedFiles) {
+        compressedFiles.forEach(function(file) {
+          var ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+          fetch('/api/upload-token?ext=' + encodeURIComponent(ext))
+            .then(function(r) { return r.json(); })
+            .then(function(token) {
+              if (token.uploadUrl) {
+                fetch(token.uploadUrl, { method: 'PUT', body: file })
+                  .then(function() {
+                    uploadedMediaUrls.push(token.publicUrl);
+                    showToast('File uploaded!', 'success');
+                  })
+                  .catch(function() { showToast('Upload failed', 'info'); });
+              } else {
+                var fd = new FormData();
+                fd.append('file', file);
+                fetch('/api/upload', { method: 'POST', body: fd })
+                  .then(function(r) { return r.json(); })
+                  .then(function(res) {
+                    if (res.success) { uploadedMediaUrls.push(res.url); showToast('File uploaded!', 'success'); }
+                    else { showToast(res.error || 'Upload failed', 'info'); }
+                  })
+                  .catch(function() { showToast('Upload failed', 'info'); });
+              }
+            })
+            .catch(function() { showToast('Upload failed', 'info'); });
+        });
       });
     });
   }
