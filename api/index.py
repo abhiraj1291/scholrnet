@@ -66,6 +66,5 @@ def add_security_headers(response):
 from app import register_routes
 
 with app.app_context():
-    # Create all tables first so auto-migration can inspect them
-    db.create_all()
     register_routes(app, bcrypt, login_manager, limiter)
+    db.create_all()
