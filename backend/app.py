@@ -58,7 +58,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
         inspector = inspect(db.engine)
         users_cols = [c['name'] for c in inspector.get_columns('users')]
         schools_cols = [c['name'] for c in inspector.get_columns('schools')]
-        ads_cols = [c['name'] for c in inspector.get_columns('ads')]
         with db.engine.connect() as conn:
             if 'school_verified' not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE"))
@@ -68,12 +67,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''"))
             if 'verified_by_email' not in schools_cols:
                 conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''"))
-            if 'active' not in ads_cols:
-                conn.execute(text("ALTER TABLE ads ADD COLUMN active BOOLEAN DEFAULT TRUE"))
-            if 'target_role' not in ads_cols:
-                conn.execute(text("ALTER TABLE ads ADD COLUMN target_role VARCHAR(30) DEFAULT ''"))
-            if 'created_at' not in ads_cols:
-                conn.execute(text("ALTER TABLE ads ADD COLUMN created_at TIMESTAMP DEFAULT NOW()"))
+            try:
+                ads_cols = [c['name'] for c in inspector.get_columns('ads')]
+                if 'active' not in ads_cols:
+                    conn.execute(text("ALTER TABLE ads ADD COLUMN active BOOLEAN DEFAULT TRUE"))
+                if 'target_role' not in ads_cols:
+                    conn.execute(text("ALTER TABLE ads ADD COLUMN target_role VARCHAR(30) DEFAULT ''"))
+                if 'created_at' not in ads_cols:
+                    conn.execute(text("ALTER TABLE ads ADD COLUMN created_at TIMESTAMP DEFAULT NOW()"))
+            except Exception:
+                print("AUTO-MIGRATE: ads table or columns may already exist, continuing")
             conn.commit()
     except Exception:
         print("AUTO-MIGRATE: columns may already exist, continuing")
@@ -162,10 +165,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return "Just now"
 
     def active_ads():
-        q = Ad.query.filter_by(active=True)
-        if current_user.is_authenticated and current_user.role:
-            q = q.filter((Ad.target_role == '') | (Ad.target_role == current_user.role))
-        return q.order_by(Ad.id.desc()).limit(20).all()
+        try:
+            q = Ad.query.filter_by(active=True)
+            if current_user.is_authenticated and current_user.role:
+                q = q.filter((Ad.target_role == '') | (Ad.target_role == current_user.role))
+            return q.order_by(Ad.id.desc()).limit(20).all()
+        except Exception:
+            return Ad.query.limit(20).all()
 
     def get_all_posts():
         return Post.query.order_by(Post.id.desc()).limit(50).all()
@@ -1744,7 +1750,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         school = School.query.get_or_404(school_id)
         # Remove school reference from users
         User.query.filter_by(verified_school_id=school_id).update({'verified_school_id': None, 'school_verified': False})
-        User.query.filter_by(school=school.name).update({User.school: ''})
+        User.query.filter_by(school=school.name).update({'school': ''})
         SchoolAnnouncement.query.filter_by(school_id=school_id).delete()
         db.session.delete(school)
         db.session.commit()
