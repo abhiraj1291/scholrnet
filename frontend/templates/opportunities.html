@@ -1,25 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
 <div>
-  <div class="flex items-center justify-between mb-4">
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
     <div>
       <h1 class="text-xl font-black">Opportunities</h1>
       <p class="text-sm text-muted">Discover competitions, scholarships, and programs</p>
     </div>
-    <div class="relative hidden sm:block" style="max-width:16rem;width:100%;">
-      <i data-lucide="search" class="search-icon" style="width:1rem;height:1rem;"></i>
-      <input type="text" id="oppSearch" placeholder="Search opportunities..." class="w-full">
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <div class="relative flex-1 sm:flex-none" style="max-width:16rem;">
+        <i data-lucide="search" class="search-icon" style="width:1rem;height:1rem;"></i>
+        <input type="text" id="oppSearch" placeholder="Search..." class="w-full">
+      </div>
+      {% if current_user.role in ('admin','super_admin','teacher','mentor') %}
+      <button class="btn btn-primary btn-sm whitespace-nowrap" onclick="document.getElementById('oppFormModal').classList.remove('hidden')"><i data-lucide="plus" style="width:14px;height:14px;"></i> Post</button>
+      {% endif %}
     </div>
   </div>
 
   <!-- Filters -->
-  <div class="flex gap-2 mb-4 overflow-x-auto" style="scrollbar-width:none;">
-    <button class="btn btn-sm opp-filter active" data-type="all" style="background:var(--primary);color:#fff;">All</button>
-    <button class="btn btn-sm opp-filter btn-outline" data-type="competition">Competitions</button>
-    <button class="btn btn-sm opp-filter btn-outline" data-type="scholarship">Scholarships</button>
-    <button class="btn btn-sm opp-filter btn-outline" data-type="internship">Internships</button>
-    <button class="btn btn-sm opp-filter btn-outline" data-type="program">Programs</button>
-    <button class="btn btn-sm opp-filter btn-outline" data-type="workshop">Workshops</button>
+  <div class="flex gap-2 mb-4 overflow-x-auto pb-1" style="scrollbar-width:none;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;">
+    <button class="btn btn-sm opp-filter active" data-type="all" style="background:var(--primary);color:#fff;flex-shrink:0;">All</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="competition" style="flex-shrink:0;">Competitions</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="scholarship" style="flex-shrink:0;">Scholarships</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="internship" style="flex-shrink:0;">Internships</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="program" style="flex-shrink:0;">Programs</button>
+    <button class="btn btn-sm opp-filter btn-outline" data-type="workshop" style="flex-shrink:0;">Workshops</button>
   </div>
 
   <!-- Opportunities Grid -->
@@ -31,6 +36,53 @@
   <div id="oppEmpty" class="text-center text-muted text-sm py-8 hidden">
     <i data-lucide="search-x" style="width:2rem;height:2rem;margin:0 auto 0.5rem;display:block;"></i>
     No opportunities found
+  </div>
+</div>
+
+<!-- Post Opportunity Modal -->
+<div id="oppFormModal" class="hidden" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:1rem;">
+  <div class="card" style="max-width:28rem;width:100%;max-height:90vh;overflow-y:auto;">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-bold">Post Opportunity</h2>
+      <button class="btn btn-sm" onclick="document.getElementById('oppFormModal').classList.add('hidden')"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <form id="oppForm" onsubmit="event.preventDefault();postOpportunity();">
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Title</label>
+        <input type="text" id="oppName" class="w-full" required placeholder="e.g. National Science Olympiad">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Type</label>
+        <select id="oppType" class="w-full">
+          <option value="competition">Competition</option>
+          <option value="scholarship">Scholarship</option>
+          <option value="internship">Internship</option>
+          <option value="program">Program</option>
+          <option value="workshop">Workshop</option>
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Provider</label>
+        <input type="text" id="oppProvider" class="w-full" placeholder="e.g. NCERT, IIT Delhi">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Prize / Stipend</label>
+        <input type="text" id="oppPrize" class="w-full" placeholder="e.g. ₹50,000">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Description</label>
+        <textarea id="oppDesc" rows="3" class="w-full" placeholder="Describe the opportunity..."></textarea>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Eligibility</label>
+        <input type="text" id="oppElig" class="w-full" placeholder="e.g. Grade IX-XII students">
+      </div>
+      <div class="mb-3">
+        <label class="text-xs font-bold text-muted block mb-1">Deadline</label>
+        <input type="date" id="oppDeadline" class="w-full">
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Post Opportunity</button>
+    </form>
   </div>
 </div>
 
@@ -152,6 +204,35 @@ document.addEventListener('DOMContentLoaded', function() {
     var d = document.createElement('div');
     d.textContent = text;
     return d.innerHTML;
+  }
+
+  function postOpportunity() {
+    var body = {
+      name: document.getElementById('oppName').value,
+      type: document.getElementById('oppType').value,
+      provider: document.getElementById('oppProvider').value,
+      prize_pool: document.getElementById('oppPrize').value,
+      description: document.getElementById('oppDesc').value,
+      eligibility: document.getElementById('oppElig').value,
+      deadline: document.getElementById('oppDeadline').value
+    };
+    fetch('/api/opportunity/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('Opportunity posted!', 'success');
+        document.getElementById('oppFormModal').classList.add('hidden');
+        document.getElementById('oppForm').reset();
+        loadOpportunities();
+      } else {
+        showToast(data.error || 'Error posting', 'info');
+      }
+    })
+    .catch(function() { showToast('Network error', 'info'); });
   }
 
   loadOpportunities();

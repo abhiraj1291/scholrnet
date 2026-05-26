@@ -5,6 +5,11 @@ let activeChatId = null;
 
 // ===== Shared helpers =====
 
+function roleBadge(role) {
+  var colors = {student:'#3b82f6',teacher:'#8b5cf6',mentor:'#f59e0b',admin:'#10b981',super_admin:'#ef4444'};
+  return '<span class="text-xs" style="color:' + (colors[role] || '#6b7280') + ';font-weight:600;">' + (role ? role.replace('_',' ').toUpperCase() : 'STUDENT') + '</span>';
+}
+
 function avatarHtml(c) {
   if (c.avatar_url) return '<div class="avatar avatar-sm" style="overflow:hidden;"><img src="' + c.avatar_url + '" alt="" style="width:100%;height:100%;object-fit:cover;"></div>';
   return '<div class="avatar avatar-sm">' + (c.avatar || (c.name ? c.name[0] : '?')) + '</div>';
@@ -71,13 +76,13 @@ function renderChatContacts() {
   chatContacts.forEach(function(c) {
     const div = document.createElement('div');
     div.className = 'chat-contact';
-    div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + c.name + '</div><div class="text-xs text-muted">' + (c.school || '') + '</div></div>';
-    div.addEventListener('click', function() { openChat(c.id, c.name, c.avatar, c.avatar_url); });
+    div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + c.name + ' ' + roleBadge(c.role) + (c.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + (c.school || '') + '</div></div>';
+    div.addEventListener('click', function() { openChat(c.id, c.name, c.avatar, c.avatar_url, c.role); });
     list.appendChild(div);
   });
 }
 
-function openChat(contactId, contactName, contactAvatar, contactAvatarUrl) {
+function openChat(contactId, contactName, contactAvatar, contactAvatarUrl, contactRole) {
   activeChatId = contactId;
   const view = document.getElementById('chat-messages-view');
   const list = document.getElementById('chat-contact-list');
@@ -87,6 +92,8 @@ function openChat(contactId, contactName, contactAvatar, contactAvatarUrl) {
   if (view) {
     view.classList.remove('hidden');
     view.querySelector('.chat-contact-name').textContent = contactName || 'User';
+    var roleEl = view.querySelector('.chat-contact-role');
+    if (roleEl) roleEl.innerHTML = roleBadge(contactRole);
     var headerAvatar = view.querySelector('.avatar');
     if (headerAvatar) {
       if (contactAvatarUrl) {
@@ -145,9 +152,9 @@ function searchNewChatUsers(q) {
     data.users.forEach(function(u) {
       var div = document.createElement('div');
       div.className = 'chat-contact';
-      div.innerHTML = avatarHtml(u) + '<div><div class="font-bold text-xs">' + u.name + '</div><div class="text-xs text-muted">' + (u.school || '') + '</div></div>';
+      div.innerHTML = avatarHtml(u) + '<div><div class="font-bold text-xs">' + u.name + ' ' + roleBadge(u.role) + (u.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + (u.school || '') + '</div></div>';
       div.addEventListener('click', function() {
-        openChat(u.id, u.name, u.avatar, u.avatar_url);
+        openChat(u.id, u.name, u.avatar, u.avatar_url, u.role);
       });
       results.appendChild(div);
     });
@@ -182,22 +189,24 @@ function loadPageChatContacts() {
     contacts.forEach(function(c) {
       var div = document.createElement('div');
       div.className = 'chat-contact';
-    div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + c.name + '</div><div class="text-xs text-muted">' + (c.school || '') + '</div></div>';
-      div.addEventListener('click', function() { openPageChat(c.id, c.name, c.avatar, c.avatar_url); });
+      div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + c.name + ' ' + roleBadge(c.role) + (c.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + (c.school || '') + '</div></div>';
+      div.addEventListener('click', function() { openPageChat(c.id, c.name, c.avatar, c.avatar_url, c.role); });
       list.appendChild(div);
     });
   });
 }
 
-function openPageChat(contactId, contactName, contactAvatar, contactAvatarUrl) {
+function openPageChat(contactId, contactName, contactAvatar, contactAvatarUrl, contactRole) {
   activeChatId = contactId;
   var placeholder = document.getElementById('chatPlaceholder');
   var activeView = document.getElementById('chatActiveView');
   var nameEl = document.getElementById('chatActiveName');
+  var roleEl = document.getElementById('chatActiveRole');
   var avatarEl = document.getElementById('chatActiveAvatar');
   if (placeholder) placeholder.classList.add('hidden');
   if (activeView) activeView.classList.remove('hidden');
   if (nameEl) nameEl.textContent = contactName || 'User';
+  if (roleEl) roleEl.innerHTML = roleBadge(contactRole);
   if (avatarEl) {
     if (contactAvatarUrl) {
       avatarEl.innerHTML = '<img src="' + contactAvatarUrl + '" alt="" style="width:100%;height:100%;object-fit:cover;">';

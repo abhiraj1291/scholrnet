@@ -3,6 +3,39 @@
 <div style="max-width:56rem;margin:0 auto;">
   <h1 class="text-xl font-black mb-4">Admin Panel</h1>
 
+  <!-- Manage Schools -->
+  <div class="card mb-3">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="building-2" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        <span class="font-bold text-sm">Manage Schools</span>
+      </div>
+      <button id="toggleSchoolFormBtn" class="btn btn-primary btn-sm"><i data-lucide="plus" style="width:1rem;height:1rem;"></i> Add School</button>
+    </div>
+    <div id="schoolFormContainer" class="hidden mb-3 p-3 rounded-xl" style="background:var(--bg-hover);">
+      <form id="schoolForm">
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">School Name</label>
+          <input type="text" id="schoolName" class="w-full" required placeholder="e.g. Delhi Public School">
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Location</label>
+          <input type="text" id="schoolLocation" class="w-full" placeholder="e.g. New Delhi">
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Tagline</label>
+          <input type="text" id="schoolTagline" class="w-full" placeholder="e.g. Service Before Self">
+        </div>
+        <div class="mb-3">
+          <label class="text-xs font-bold text-muted block mb-1">About</label>
+          <textarea id="schoolAbout" rows="2" class="w-full" placeholder="Brief description..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Create School</button>
+      </form>
+    </div>
+    <div id="schoolsList"></div>
+  </div>
+
   <!-- Manage Ads -->
   <div class="card mb-3">
     <div class="flex items-center justify-between mb-3">
@@ -12,11 +45,9 @@
       </div>
       <button id="toggleAdFormBtn" class="btn btn-primary btn-sm"><i data-lucide="plus" style="width:1rem;height:1rem;"></i> Create Ad</button>
     </div>
-
-    <!-- Create Ad Form -->
     <div id="adFormContainer" class="hidden mb-3 p-3 rounded-xl" style="background:var(--bg-hover);">
       <form id="adForm">
-        <div class="grid gap-2" style="grid-template-columns:1fr 1fr;">
+        <div class="grid gap-2 ad-form-grid">
           <div class="mb-2">
             <label class="text-xs font-bold text-muted block mb-1">Title</label>
             <input type="text" id="adTitle" placeholder="Ad title" required>
@@ -30,7 +61,7 @@
           <label class="text-xs font-bold text-muted block mb-1">Content</label>
           <textarea id="adContent" rows="2" placeholder="Ad description" required></textarea>
         </div>
-        <div class="grid gap-2" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="grid gap-2 ad-form-grid-3">
           <div class="mb-2">
             <label class="text-xs font-bold text-muted block mb-1">CTA Text</label>
             <input type="text" id="adCtaText" placeholder="Learn More">
@@ -50,8 +81,6 @@
         <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Create Ad</button>
       </form>
     </div>
-
-    <!-- Ads List -->
     <div id="adsList"></div>
   </div>
 
@@ -66,27 +95,86 @@
       <div class="shimmer" style="height:6rem;width:100%;"></div>
     </div>
   </div>
-
-  <!-- Manage Schools -->
-  <div class="card">
-    <div class="flex items-center gap-2 mb-3">
-      <i data-lucide="building-2" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
-      <span class="font-bold text-sm">Schools</span>
-    </div>
-    <div id="schoolsList"></div>
-  </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Toggle ad form
-  document.getElementById('toggleAdFormBtn').addEventListener('click', function() {
-    var container = document.getElementById('adFormContainer');
-    container.classList.toggle('hidden');
+  function escapeHtml(text) {
+    if (!text) return '';
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  // School Management
+  document.getElementById('toggleSchoolFormBtn').addEventListener('click', function() {
+    var c = document.getElementById('schoolFormContainer');
+    c.classList.toggle('hidden');
     lucide.createIcons();
   });
 
-  // Load ads
+  document.getElementById('schoolForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch('/api/admin/school/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name: document.getElementById('schoolName').value,
+        location: document.getElementById('schoolLocation').value,
+        tagline: document.getElementById('schoolTagline').value,
+        about: document.getElementById('schoolAbout').value
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('School created! Login: ' + data.email + ' / ' + data.password, 'success');
+        document.getElementById('schoolForm').reset();
+        document.getElementById('schoolFormContainer').classList.add('hidden');
+        loadSchools();
+      } else {
+        showToast(data.error || 'Error', 'info');
+      }
+    })
+    .catch(function() { showToast('Error creating school', 'info'); });
+  });
+
+  function loadSchools() {
+    fetch('/api/admin/schools')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('schoolsList');
+        list.innerHTML = '';
+        if (data.schools && data.schools.length > 0) {
+          data.schools.forEach(function(s) {
+            var el = document.createElement('div');
+            el.className = 'p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div class="flex items-center gap-3">' +
+                '<i data-lucide="building-2" style="width:1.5rem;height:1.5rem;color:var(--primary);"></i>' +
+                '<div>' +
+                  '<div class="font-bold text-sm">' + escapeHtml(s.name) + '</div>' +
+                  '<div class="text-xs text-muted">' + escapeHtml(s.location || '') + (s.tagline ? ' &middot; ' + escapeHtml(s.tagline) : '') + '</div>' +
+                '</div>' +
+              '</div>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No schools registered</div>';
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Ads Management
+  document.getElementById('toggleAdFormBtn').addEventListener('click', function() {
+    var c = document.getElementById('adFormContainer');
+    c.classList.toggle('hidden');
+    lucide.createIcons();
+  });
+
   function loadAds() {
     fetch('/api/admin/ads')
       .then(function(r) { return r.json(); })
@@ -108,33 +196,26 @@ document.addEventListener('DOMContentLoaded', function() {
             list.appendChild(el);
           });
           lucide.createIcons();
+          document.querySelectorAll('.delete-ad').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              if (!confirm('Delete this ad?')) return;
+              fetch('/api/admin/ad/' + this.getAttribute('data-id') + '/delete', { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) { showToast('Ad deleted', 'success'); loadAds(); }
+                  else { showToast(d.error || 'Error', 'info'); }
+                })
+                .catch(function() {});
+            });
+          });
         } else {
           list.innerHTML = '<div class="text-center text-muted text-sm py-4">No ads created yet</div>';
         }
-
-        // Delete ads
-        document.querySelectorAll('.delete-ad').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            if (!confirm('Delete this ad?')) return;
-            fetch('/api/admin/ad/' + id + '/delete', { method: 'DELETE' })
-              .then(function(r) { return r.json(); })
-              .then(function(data) {
-                if (data.success) {
-                  showToast('Ad deleted', 'success');
-                  loadAds();
-                } else {
-                  showToast(data.error || 'Error', 'info');
-                }
-              })
-              .catch(function() { showToast('Error deleting ad', 'info'); });
-          });
-        });
       })
       .catch(function() {});
   }
 
-  // Load posts
+  // Posts Management
   function loadPosts() {
     document.getElementById('postsLoader').classList.remove('hidden');
     fetch('/api/admin/posts')
@@ -161,79 +242,39 @@ document.addEventListener('DOMContentLoaded', function() {
             list.appendChild(el);
           });
           lucide.createIcons();
+          document.querySelectorAll('.delete-post').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              if (!confirm('Delete this post?')) return;
+              fetch('/api/admin/post/' + this.getAttribute('data-id') + '/delete', { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) { showToast('Post deleted', 'success'); loadPosts(); }
+                  else { showToast(d.error || 'Error', 'info'); }
+                })
+                .catch(function() {});
+            });
+          });
         } else {
           list.innerHTML = '<div class="text-center text-muted text-sm py-4">No posts yet</div>';
         }
-
-        // Delete posts
-        document.querySelectorAll('.delete-post').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            if (!confirm('Delete this post? This cannot be undone.')) return;
-            fetch('/api/admin/post/' + id + '/delete', { method: 'DELETE' })
-              .then(function(r) { return r.json(); })
-              .then(function(data) {
-                if (data.success) {
-                  showToast('Post deleted', 'success');
-                  loadPosts();
-                } else {
-                  showToast(data.error || 'Error', 'info');
-                }
-              })
-              .catch(function() { showToast('Error deleting post', 'info'); });
-          });
-        });
       })
-      .catch(function() {
-        document.getElementById('postsLoader').classList.add('hidden');
-      });
+      .catch(function() { document.getElementById('postsLoader').classList.add('hidden'); });
   }
 
-  // Load schools
-  function loadSchools() {
-    fetch('/api/admin/schools')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var list = document.getElementById('schoolsList');
-        list.innerHTML = '';
-        if (data.schools && data.schools.length > 0) {
-          data.schools.forEach(function(s) {
-            var el = document.createElement('div');
-            el.className = 'p-3 rounded-xl mb-2';
-            el.style.background = 'var(--bg-hover)';
-            el.innerHTML =
-              '<div class="flex items-center gap-3">' +
-                '<i data-lucide="building-2" style="width:1.5rem;height:1.5rem;color:var(--primary);"></i>' +
-                '<div>' +
-                  '<div class="font-bold text-sm">' + escapeHtml(s.name || 'Unknown School') + '</div>' +
-                  '<div class="text-xs text-muted">' + (s.students_count || 0) + ' students &middot; ' + (s.achievements_count || 0) + ' achievements</div>' +
-                '</div>' +
-              '</div>';
-            list.appendChild(el);
-          });
-          lucide.createIcons();
-        } else {
-          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No schools registered</div>';
-        }
-      })
-      .catch(function() {});
-  }
-
-  // Create ad form
+  // Ad form
   document.getElementById('adForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    var body = {
-      title: document.getElementById('adTitle').value,
-      company: document.getElementById('adCompany').value,
-      content: document.getElementById('adContent').value,
-      cta_text: document.getElementById('adCtaText').value,
-      cta_url: document.getElementById('adCtaUrl').value,
-      placement: document.getElementById('adPlacement').value
-    };
     fetch('/api/admin/ad/create', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        title: document.getElementById('adTitle').value,
+        company: document.getElementById('adCompany').value,
+        content: document.getElementById('adContent').value,
+        cta_text: document.getElementById('adCtaText').value,
+        cta_url: document.getElementById('adCtaUrl').value,
+        placement: document.getElementById('adPlacement').value
+      })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -249,16 +290,9 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(function() { showToast('Error creating ad', 'info'); });
   });
 
-  function escapeHtml(text) {
-    if (!text) return '';
-    var d = document.createElement('div');
-    d.textContent = text;
-    return d.innerHTML;
-  }
-
+  loadSchools();
   loadAds();
   loadPosts();
-  loadSchools();
 });
 </script>
 {% endblock %}

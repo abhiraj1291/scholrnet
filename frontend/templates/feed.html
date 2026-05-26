@@ -214,6 +214,12 @@ document.addEventListener('DOMContentLoaded', function() {
     return '<div class="avatar" style="width:' + size + ';height:' + size + ';">' + (author.avatar || author.name.slice(0,2).toUpperCase()) + '</div>';
   }
 
+  // Role badge helper
+  function roleBadge(role) {
+    var colors = {student:'#3b82f6',teacher:'#8b5cf6',mentor:'#f59e0b',admin:'#10b981',super_admin:'#ef4444'};
+    return '<span class="text-xs" style="color:' + (colors[role] || '#6b7280') + ';font-weight:600;margin-right:0.25rem;">' + (role ? role.replace(/_/g,' ').toUpperCase() : 'STUDENT') + '</span>';
+  }
+
   // Build media HTML for a post
   function mediaHtml(post) {
     var html = '';
@@ -252,12 +258,13 @@ document.addEventListener('DOMContentLoaded', function() {
         '<a href="/profile/' + authorId + '" class="flex items-center gap-3" style="text-decoration:none;color:inherit;">' +
           avatarHtml(post.author) +
           '<div style="flex:1;min-width:0;">' +
-            '<div class="flex items-center gap-2">' +
-              '<span class="font-bold text-sm">' + escapeHtml(post.author.name) + '</span>' +
-              '<i data-lucide="badge-check" style="width:0.875rem;height:0.875rem;color:var(--primary);flex-shrink:0;"></i>' +
-              (post.badge ? '<span class="badge badge-primary">' + post.badge + '</span>' : '') +
-              typeBadge +
-            '</div>' +
+              '<div class="flex items-center gap-2">' +
+                '<span class="font-bold text-sm">' + escapeHtml(post.author.name) + '</span>' +
+                roleBadge(post.author.role) +
+                (post.author.verified ? '<i data-lucide="badge-check" style="width:0.875rem;height:0.875rem;color:var(--primary);flex-shrink:0;"></i>' : '') +
+                (post.badge ? '<span class="badge badge-primary">' + post.badge + '</span>' : '') +
+                typeBadge +
+              '</div>' +
             '<div class="text-xs text-muted">' + escapeHtml(post.author.school || '') + '</div>' +
           '</div>' +
         '</a>' +

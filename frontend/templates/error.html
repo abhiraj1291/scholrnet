@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ code }} - ScholrNet</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@0.468.0" defer></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #ebf4ff;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 1.5rem;
+      padding: 3rem 2.5rem;
+      text-align: center;
+      max-width: 28rem;
+      width: 100%;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    .code { font-size: 5rem; font-weight: 900; color: #1a2744; line-height: 1; }
+    .emoji { font-size: 2.5rem; margin-top: 0.5rem; }
+    .title { font-size: 1.25rem; font-weight: 700; margin-top: 1rem; }
+    .msg { font-size: 0.875rem; color: #5a6a7a; margin-top: 0.5rem; line-height: 1.6; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      background: #1a2744;
+      color: #fff;
+      border: none;
+      border-radius: 0.75rem;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #2d4a7a; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="emoji">{{ emoji }}</div>
+    <div class="code">{{ code }}</div>
+    <div class="title">{{ title }}</div>
+    <div class="msg">{{ message }}</div>
+    <a href="/" class="btn"><i data-lucide="home" style="width:16px;height:16px;"></i> Go Home</a>
+  </div>
+  <script>if(typeof lucide!=='undefined')lucide.createIcons();</script>
+</body>
+</html>

@@ -50,11 +50,29 @@ def register_routes(app, bcrypt, login_manager, limiter):
     supabase_key = app.config.get("SUPABASE_STORAGE_KEY", "")
     supabase_bucket = "uploads"
 
+    import traceback, sys
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return render_template('error.html', code=404, title='Page Not Found', message='The page you are looking for does not exist.', emoji='🔍'), 404
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template('error.html', code=403, title='Access Denied', message='You do not have permission to access this page.', emoji='🚫'), 403
+
+    @app.errorhandler(500)
+    def server_error(e):
+        print("SERVER ERROR:", traceback.format_exc())
+        return render_template('error.html', code=500, title='Something Went Wrong', message='An unexpected error occurred. Our team has been notified.', emoji='⚠️'), 500
+
     MIME_TYPES = {
         'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
         'gif': 'image/gif', 'webp': 'image/webp', 'mp4': 'video/mp4',
         'mov': 'video/quicktime', 'svg': 'image/svg+xml',
     }
+
+    def _is_verified(u):
+        return u and (u.role in ('admin', 'super_admin') or u.email == 'abhiraj29in@gmail.com')
 
     def _save_to_supabase(file_data, bucket, path, content_type=None):
         if not supabase_url or not supabase_key:
@@ -147,10 +165,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
             if len(email) > 254 or len(password) > 128:
                 return render_template('auth/login.html', error="Invalid credentials")
             user = User.query.filter_by(email=email).first()
-            if user and user.password_hash != '*firebase*' and bcrypt.check_password_hash(user.password_hash, password):
-                login_user(user)
-                flask_session.permanent = True
-                return redirect(url_for('dashboard'))
+            if user and user.password_hash != '*firebase*':
+                try:
+                    if bcrypt.check_password_hash(user.password_hash, password):
+                        login_user(user)
+                        flask_session.permanent = True
+                        return redirect(url_for('dashboard'))
+                except Exception:
+                    print("LOGIN ERROR: bcrypt check failed for user", email)
             return render_template('auth/login.html', error="Invalid email or password")
         return render_template('auth/login.html',
             firebase_config=app.config.get("FIREBASE_CONFIG", {})
@@ -320,8 +342,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
             puser=puser,
             is_own=is_own,
             friend_status=friend_status,
-            achievements=Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all() if is_own else [],
-            projects=Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all() if is_own else [],
+            is_verified=_is_verified(puser),
+            achievements=Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all(),
+            projects=Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all(),
             ads=active_ads(),
             notifications=get_user_notifications(current_user.id)
         )
@@ -626,6 +649,57 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         return jsonify({'success': True})
 
+    @app.route('/api/admin/posts')
+    @login_required
+    def api_admin_posts():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        posts = Post.query.order_by(Post.id.desc()).limit(50).all()
+        uids = set(p.author_id for p in posts if p.author_id)
+        users = {u.id: {'name': u.name, 'avatar': u.avatar} for u in User.query.filter(User.id.in_(uids)).all()} if uids else {}
+        return jsonify({'posts': [{'id': p.id, 'title': p.title, 'content': p.content, 'likes_count': p.likes or 0, 'created_at': p.timestamp or '', 'author': users.get(p.author_id, {'name': 'Unknown', 'avatar': ''})} for p in posts]})
+
+    @app.route('/api/admin/post/<int:post_id>/delete', methods=['DELETE'])
+    @login_required
+    def api_admin_delete_post(post_id):
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        post = Post.query.get_or_404(post_id)
+        Comment.query.filter_by(post_id=post_id).delete()
+        UserLike.query.filter_by(post_id=post_id).delete()
+        db.session.delete(post)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/admin/ads')
+    @login_required
+    def api_admin_ads():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        ads = Ad.query.order_by(Ad.id.desc()).all()
+        return jsonify({'ads': [{'id': a.id, 'title': a.title, 'company': a.company, 'content': a.content, 'placement': a.placement} for a in ads]})
+
+    @app.route('/api/admin/ad/create', methods=['POST'])
+    @login_required
+    def api_admin_create_ad():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        data = request.json or {}
+        ad = Ad(title=sanitize_text(data.get('title', ''), 200), company=sanitize_text(data.get('company', ''), 200), content=sanitize_text(data.get('content', ''), 5000), cta_url=sanitize_text(data.get('cta_url', ''), 500), cta_text=sanitize_text(data.get('cta_text', ''), 100), placement=sanitize_text(data.get('placement', 'sidebar'), 30))
+        db.session.add(ad)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/admin/ad/<int:ad_id>/delete', methods=['DELETE'])
+    @login_required
+    def api_admin_delete_ad(ad_id):
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        ad = Ad.query.get_or_404(ad_id)
+        db.session.delete(ad)
+        db.session.commit()
+        return jsonify({'success': True})
+
     @app.route('/api/team/create', methods=['POST'])
     @login_required
     @limiter.limit("10 per minute")
@@ -828,7 +902,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'tags': json.loads(p.tags) if p.tags else [],
                 'comments': comments_by_post.get(p.id, []),
                 'author': {'id': p.author_id, 'name': p.author_name, 'school': p.author_school, 'avatar': p.author_avatar,
-                          'avatar_url': authors.get(p.author_id).avatar_url if p.author_id and p.author_id in authors else ''}
+                          'avatar_url': authors.get(p.author_id).avatar_url if p.author_id and p.author_id in authors else '',
+                          'role': authors.get(p.author_id).role if p.author_id and p.author_id in authors else '',
+                          'verified': _is_verified(authors.get(p.author_id)) if p.author_id else False}
             } for p in posts],
             'has_more': has_more
         })
@@ -926,7 +1002,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         users = User.query.filter(User.name.ilike(f'%{q}%')).limit(5).all()
         schools = School.query.filter(School.name.ilike(f'%{q}%')).limit(5).all()
         achs = Achievement.query.filter(Achievement.title.ilike(f'%{q}%')).limit(5).all()
-        return jsonify({'users': [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or ''} for u in users], 'schools': [{'id': s.id, 'name': s.name, 'location': s.location or ''} for s in schools], 'achievements': [{'id': a.id, 'title': a.title, 'user_id': a.user_id} for a in achs]})
+        return jsonify({'users': [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'role': u.role, 'verified': _is_verified(u)} for u in users], 'schools': [{'id': s.id, 'name': s.name, 'location': s.location or ''} for s in schools], 'achievements': [{'id': a.id, 'title': a.title, 'user_id': a.user_id} for a in achs]})
 
     @app.route('/api/notifications')
     @login_required
@@ -955,7 +1031,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             cids.add(other)
         if cids:
             users = {u.id: u for u in User.query.filter(User.id.in_(cids)).all()}
-            contacts = [{'id': u.id, 'name': u.name, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'school': u.school} for u in users.values()]
+            contacts = [{'id': u.id, 'name': u.name, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'school': u.school, 'role': u.role, 'verified': _is_verified(u)} for u in users.values()]
         else:
             contacts = []
         return jsonify({'contacts': contacts})
@@ -1260,6 +1336,36 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         return jsonify({"message": "All seed data removed. Test users preserved."})
 
+    @app.route('/api/admin/schools')
+    @login_required
+    def api_admin_schools():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        schools = School.query.order_by(School.id.desc()).all()
+        return jsonify({'schools': [{'id': s.id, 'name': s.name, 'location': s.location or '', 'tagline': s.tagline or ''} for s in schools]})
+
+    @app.route('/api/admin/school/create', methods=['POST'])
+    @login_required
+    def api_admin_create_school():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        data = request.json or {}
+        name = sanitize_text(data.get('name', ''), 200)
+        if not name:
+            return jsonify({'success': False, 'error': 'School name required'}), 400
+        school = School(name=name, location=sanitize_text(data.get('location', ''), 200), tagline=sanitize_text(data.get('tagline', ''), 200), about=sanitize_text(data.get('about', ''), 1000), established=sanitize_text(data.get('established', ''), 20))
+        db.session.add(school)
+        db.session.flush()
+        email = name.lower().replace(' ', '').replace('.', '')[:30] + '@scholrnet.com'
+        pwd = 'school' + str(school.id)
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            email = 'school' + str(school.id) + '@scholrnet.com'
+        user = User(name=name + ' Admin', email=email, password_hash=bcrypt.generate_password_hash(pwd).decode('utf-8'), school=name, role='admin', avatar='SC')
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({'success': True, 'email': email, 'password': pwd})
+
     @app.route('/api/health')
     def api_health():
         return jsonify({
@@ -1294,10 +1400,19 @@ def register_routes(app, bcrypt, login_manager, limiter):
         try:
             resp = urllib.request.urlopen(req, timeout=10)
             public_url = f"{supabase_url}/storage/v1/object/public/uploads/{test_path}"
+            # Verify public read access
+            read_ok = False
+            try:
+                read_req = urllib.request.Request(public_url, method="GET")
+                read_resp = urllib.request.urlopen(read_req, timeout=10)
+                read_ok = read_resp.status == 200
+            except Exception:
+                pass
             return jsonify({
                 "success": True,
                 "upload_status": resp.status,
                 "public_url": public_url,
+                "public_readable": read_ok,
                 "html": f'<img src="{public_url}" alt="test image" style="width:200px;height:200px;border:2px solid red;">',
             })
         except urllib.error.HTTPError as e:

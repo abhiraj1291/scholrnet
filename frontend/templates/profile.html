@@ -16,7 +16,7 @@
         {% endif %}
       </div>
       <div>
-        <div class="profile-name">{{ puser.name }}</div>
+        <div class="profile-name">{{ puser.name }} {% set rc = {'student':'#3b82f6','teacher':'#8b5cf6','mentor':'#f59e0b','admin':'#10b981','super_admin':'#ef4444'} %}<span class="text-xs" style="color:{{ rc.get(puser.role, '#6b7280') }};font-weight:600;">{{ puser.role.replace('_',' ').upper() if puser.role else 'STUDENT' }}</span>{% if is_verified %} <i data-lucide="badge-check" style="width:1rem;height:1rem;color:var(--primary);display:inline;"></i>{% endif %}</div>
         <div class="profile-school">{{ puser.school }}{% if puser.grade %} &middot; Grade {{ puser.grade }}{% endif %}</div>
         {% if puser.bio %}<p class="text-sm text-muted mt-1">{{ puser.bio }}</p>{% endif %}
       </div>
