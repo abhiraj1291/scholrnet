@@ -1827,6 +1827,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
             "supabase_key_set": bool(supabase_key)
         })
 
+    @app.route('/robots.txt')
+    def robots_txt():
+        return Response("User-agent: *\nAllow: /\nSitemap: https://scholrnet.in/sitemap.xml\n", mimetype='text/plain')
+
     @app.route('/sitemap.xml')
     def sitemap():
         from xml.sax.saxutils import escape as xml_escape
