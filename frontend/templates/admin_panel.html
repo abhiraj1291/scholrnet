@@ -179,11 +179,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<div style="flex:1;min-width:0;">' +
                   '<div class="text-sm font-bold">' + escapeHtml(s.name) + '</div>' +
                   '<div class="text-xs text-muted">ID: ' + s.id + (s.location ? ' &middot; ' + escapeHtml(s.location) : '') + (s.tagline ? ' &middot; ' + escapeHtml(s.tagline) : '') + '</div>' +
+                  (s.admin_email ? '<div class="text-xs mt-1" style="color:var(--text-muted);">Login: <code style="background:var(--bg);padding:0.1rem 0.35rem;border-radius:0.25rem;font-size:0.65rem;">' + escapeHtml(s.admin_email) + '</code></div>' : '') +
                   (s.verification_code ? '<div class="text-xs mt-1" style="color:var(--text-muted);">Code: <code style="background:var(--bg);padding:0.1rem 0.35rem;border-radius:0.25rem;font-size:0.65rem;">' + escapeHtml(s.verification_code) + '</code></div>' : '') +
                 '</div>' +
                 '<div class="flex items-center gap-1 flex-shrink-0">' +
-                  '<button class="btn btn-sm edit-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '" data-location="' + escapeHtml(s.location) + '" data-tagline="' + escapeHtml(s.tagline) + '" data-about="' + escapeHtml(s.about) + '" data-established="' + escapeHtml(s.established) + '"><i data-lucide="pencil" style="width:0.875rem;height:0.875rem;"></i></button>' +
-                  '<button class="btn btn-danger btn-sm delete-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                  '<button class="btn btn-sm edit-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '" data-location="' + escapeHtml(s.location) + '" data-tagline="' + escapeHtml(s.tagline) + '" data-about="' + escapeHtml(s.about) + '" data-established="' + escapeHtml(s.established) + '" title="Edit"><i data-lucide="pencil" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                  '<button class="btn btn-sm reset-school-pwd" data-id="' + s.id + '" title="Reset Password"><i data-lucide="key-round" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                  '<button class="btn btn-danger btn-sm delete-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '" title="Delete"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>' +
                 '</div>' +
               '</div>' +
               '<div id="edit-school-' + s.id + '" class="hidden mt-3 p-3 rounded-xl" style="background:var(--card);border:1px solid var(--border);"></div>';
@@ -272,7 +274,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           });
 
-          // Delete school
+          // Reset school admin password
+          document.querySelectorAll('.reset-school-pwd').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              if (!confirm('Reset password for this school admin?')) return;
+              fetch('/api/admin/school/' + id + '/reset-password', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) {
+                    showToast('Password reset! Email: ' + d.email + ' / New password: ' + d.password, 'success');
+                  } else {
+                    showToast(d.error || 'Error', 'info');
+                  }
+                })
+                .catch(function() {});
+            });
+          });
           document.querySelectorAll('.delete-school').forEach(function(btn) {
             btn.addEventListener('click', function() {
               var id = this.getAttribute('data-id');

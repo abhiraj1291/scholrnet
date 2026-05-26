@@ -1682,7 +1682,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
         schools = School.query.order_by(School.id.desc()).all()
-        return jsonify({'schools': [{'id': s.id, 'name': s.name, 'location': s.location or '', 'tagline': s.tagline or '', 'about': s.about or '', 'established': s.established or '', 'verification_code': s.verification_code or ''} for s in schools]})
+        result = []
+        for s in schools:
+            admin = User.query.filter_by(school=s.name, role='admin').first()
+            result.append({
+                'id': s.id, 'name': s.name, 'location': s.location or '',
+                'tagline': s.tagline or '', 'about': s.about or '',
+                'established': s.established or '', 'verification_code': s.verification_code or '',
+                'admin_email': admin.email if admin else ''
+            })
+        return jsonify({'schools': result})
 
     @app.route('/api/admin/school/create', methods=['POST'])
     @login_required
@@ -1734,6 +1743,21 @@ def register_routes(app, bcrypt, login_manager, limiter):
             school.established = sanitize_text(data['established'], 20)
         db.session.commit()
         return jsonify({'success': True})
+
+    @app.route('/api/admin/school/<int:school_id>/reset-password', methods=['POST'])
+    @login_required
+    def api_admin_school_reset_password(school_id):
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        school = School.query.get_or_404(school_id)
+        admin = User.query.filter_by(school=school.name, role='admin').first()
+        if not admin:
+            return jsonify({'error': 'School admin not found'}), 404
+        import secrets, string
+        new_pwd = 'school' + str(school.id) + secrets.choice(string.ascii_lowercase)
+        admin.password_hash = bcrypt.generate_password_hash(new_pwd).decode('utf-8')
+        db.session.commit()
+        return jsonify({'success': True, 'email': admin.email, 'password': new_pwd})
 
     @app.route('/api/admin/school/<int:school_id>/delete', methods=['DELETE'])
     @login_required
