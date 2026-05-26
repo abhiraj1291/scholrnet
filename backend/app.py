@@ -1273,8 +1273,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/upload', methods=['POST'])
     @login_required
-    @limiter.limit("5 per minute")
+    @limiter.limit("10 per minute")
     def api_upload():
+        """Fallback: server-side upload."""
         if 'file' not in request.files:
             return jsonify({"success": False, "error": "No file provided"}), 400
         f = request.files['file']
@@ -1284,7 +1285,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
         allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov'}
         if ext not in allowed_ext:
             return jsonify({"success": False, "error": f"File type .{ext} not allowed"}), 400
-        # Validate image files with Pillow
         if ext in ('png', 'jpg', 'jpeg', 'gif', 'webp'):
             try:
                 from PIL import Image
@@ -1298,6 +1298,39 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not url:
             return jsonify({"success": False, "error": "Failed to upload file"}), 500
         return jsonify({"success": True, "url": url})
+
+    @app.route('/api/upload-token')
+    @login_required
+    @limiter.limit("30 per minute")
+    def api_upload_token():
+        """Generate a signed upload URL so the client uploads directly to Supabase."""
+        import urllib.request, json as json_module
+        ext = request.args.get('ext', 'png').lower()
+        allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov'}
+        if ext not in allowed_ext:
+            return jsonify({"error": f"Extension .{ext} not allowed"}), 400
+        safe_name = f"{uuid.uuid4().hex[:16]}_{current_user.id}.{ext}"
+        public_url = f"{supabase_url}/storage/v1/object/public/uploads/{safe_name}"
+        # Try Supabase signed upload URL API
+        try:
+            sign_req = urllib.request.Request(
+                f"{supabase_url}/storage/v1/object/upload/sign/uploads/{safe_name}",
+                data=b'{"expiresIn":"3600"}',
+                headers={
+                    "Authorization": f"Bearer {supabase_key}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(sign_req, timeout=10) as resp:
+                sign_data = json_module.loads(resp.read().decode())
+                signed_url = sign_data.get("url") or sign_data.get("signedURL") or ""
+                if signed_url:
+                    return jsonify({"uploadUrl": signed_url, "publicUrl": public_url})
+        except Exception:
+            pass
+        # Fallback: return server-side URL for proxy upload
+        return jsonify({"uploadUrl": "", "publicUrl": public_url})
 
     @app.route('/api/seed')
     def api_seed():

@@ -465,24 +465,36 @@ document.addEventListener('DOMContentLoaded', function() {
         reader.readAsDataURL(file);
       });
       // Upload files to server
-      var formData = new FormData();
-      Array.from(this.files).forEach(function(f) { formData.append('file', f); });
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload', true);
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          var res = JSON.parse(xhr.responseText);
-          if (res.success) {
-            uploadedMediaUrls.push(res.url);
-            showToast('File uploaded!', 'success');
-          } else {
-            showToast(res.error || 'Upload failed', 'info');
-          }
-        } else {
-          showToast('Upload failed', 'info');
-        }
-      };
-      xhr.send(formData);
+      var files = Array.from(this.files);
+      files.forEach(function(file) {
+        var ext = file.name.split('.').pop().toLowerCase();
+        // Get signed upload URL
+        fetch('/api/upload-token?ext=' + encodeURIComponent(ext))
+          .then(function(r) { return r.json(); })
+          .then(function(token) {
+            if (token.uploadUrl) {
+              // Direct upload to Supabase via signed URL
+              fetch(token.uploadUrl, { method: 'PUT', body: file })
+                .then(function() {
+                  uploadedMediaUrls.push(token.publicUrl);
+                  showToast('File uploaded!', 'success');
+                })
+                .catch(function() { showToast('Upload failed', 'info'); });
+            } else {
+              // Fallback: upload via server proxy
+              var fd = new FormData();
+              fd.append('file', file);
+              fetch('/api/upload', { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                  if (res.success) { uploadedMediaUrls.push(res.url); showToast('File uploaded!', 'success'); }
+                  else { showToast(res.error || 'Upload failed', 'info'); }
+                })
+                .catch(function() { showToast('Upload failed', 'info'); });
+            }
+          })
+          .catch(function() { showToast('Upload failed', 'info'); });
+      });
     });
   }
 
