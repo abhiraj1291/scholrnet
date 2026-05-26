@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var page = 1;
   var loading = false;
   var hasMore = true;
-  var uploadedMediaUrls = [];
+  var pendingFiles = [];
 
   // Load posts
   function loadPosts(reset) {
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var createPostModal = document.getElementById('createPostModal');
   document.getElementById('openCreatePost').addEventListener('click', function() {
     createPostModal.classList.remove('hidden');
-    uploadedMediaUrls = [];
+    pendingFiles = [];
     document.getElementById('mediaPreview').classList.add('hidden');
     document.getElementById('mediaPreview').innerHTML = '';
     lucide.createIcons();
@@ -443,8 +443,9 @@ document.addEventListener('DOMContentLoaded', function() {
     togglePostFields();
   }
 
-  // File upload with preview + client-side compression
+  // File handling with client-side compression
   var postMediaInput = document.getElementById('postMediaInput');
+  var pendingFiles = [];
   if (postMediaInput) {
     function compressImage(file, maxW, quality) {
       return new Promise(function(resolve) {
@@ -460,7 +461,7 @@ document.addEventListener('DOMContentLoaded', function() {
           ctx.drawImage(img, 0, 0, w, h);
           c.toBlob(function(blob) {
             if (!blob) { resolve(file); return; }
-            var nf = new File([blob], file.name, {type: 'image/jpeg'});
+            var nf = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {type: 'image/jpeg'});
             resolve(nf);
           }, 'image/jpeg', quality);
         };
@@ -474,92 +475,103 @@ document.addEventListener('DOMContentLoaded', function() {
       var preview = document.getElementById('mediaPreview');
       preview.innerHTML = '';
       preview.classList.remove('hidden');
+      pendingFiles = [];
       var files = Array.from(this.files);
-      var uploads = files.map(function(file) {
+      Promise.all(files.map(function(file) {
         return compressImage(file, 1200, 0.82).then(function(compressed) {
-          // Show local preview
+          pendingFiles.push(compressed);
           var reader = new FileReader();
           reader.onload = function(e) {
             var wrap = document.createElement('div');
             wrap.style.cssText = 'position:relative;width:80px;height:80px;border-radius:0.5rem;overflow:hidden;border:1px solid var(--border);flex-shrink:0;';
-            if (file.type.startsWith('video/')) {
-              wrap.innerHTML = '<video src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;"></video>';
-            } else {
-              wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-            }
+            wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
             preview.appendChild(wrap);
           };
           reader.readAsDataURL(compressed);
-          return compressed;
         });
-      });
-      Promise.all(uploads).then(function(compressedFiles) {
-        compressedFiles.forEach(function(file) {
-          var ext = file.name.split('.').pop().toLowerCase() || 'jpg';
-          fetch('/api/upload-token?ext=' + encodeURIComponent(ext))
-            .then(function(r) { return r.json(); })
-            .then(function(token) {
-              if (token.uploadUrl) {
-                fetch(token.uploadUrl, { method: 'PUT', body: file })
-                  .then(function() {
-                    uploadedMediaUrls.push(token.publicUrl);
-                    showToast('File uploaded!', 'success');
-                  })
-                  .catch(function() { showToast('Upload failed', 'info'); });
-              } else {
-                var fd = new FormData();
-                fd.append('file', file);
-                fetch('/api/upload', { method: 'POST', body: fd })
-                  .then(function(r) { return r.json(); })
-                  .then(function(res) {
-                    if (res.success) { uploadedMediaUrls.push(res.url); showToast('File uploaded!', 'success'); }
-                    else { showToast(res.error || 'Upload failed', 'info'); }
-                  })
-                  .catch(function() { showToast('Upload failed', 'info'); });
-              }
-            })
-            .catch(function() { showToast('Upload failed', 'info'); });
-        });
-      });
+      }));
     });
   }
 
   // Create post form submit
   document.getElementById('createPostForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    var body = {
-      content: document.getElementById('postContent').value,
-      tags: document.getElementById('postTags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean),
-      type: document.getElementById('postType').value
-    };
-    var titleEl = document.getElementById('postTitle');
-    var badgeEl = document.getElementById('postBadge');
-    var videoEl = document.getElementById('postVideo');
-    if (titleEl && titleEl.value) body.title = titleEl.value;
-    if (badgeEl && badgeEl.value) body.badge = badgeEl.value;
-    if (videoEl && videoEl.value) body.video_url = videoEl.value;
-    if (uploadedMediaUrls.length > 0) body.imageUrl = uploadedMediaUrls.join('|||');
+    var submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Posting...';
 
-    fetch('/api/post/create', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.success) {
-        createPostModal.classList.add('hidden');
-        document.getElementById('createPostForm').reset();
-        document.getElementById('mediaPreview').classList.add('hidden');
-        document.getElementById('mediaPreview').innerHTML = '';
-        uploadedMediaUrls = [];
-        showToast('Post created!', 'success');
-        loadPosts(true);
-      } else {
-        showToast(data.error || 'Error creating post', 'info');
-      }
-    })
-    .catch(function() { showToast('Error creating post', 'info'); });
+    if (pendingFiles.length > 0) {
+      var fd = new FormData();
+      fd.append('content', document.getElementById('postContent').value);
+      fd.append('tags', document.getElementById('postTags').value);
+      fd.append('type', document.getElementById('postType').value);
+      var titleEl = document.getElementById('postTitle');
+      var badgeEl = document.getElementById('postBadge');
+      var videoEl = document.getElementById('postVideo');
+      if (titleEl && titleEl.value) fd.append('title', titleEl.value);
+      if (badgeEl && badgeEl.value) fd.append('badge', badgeEl.value);
+      if (videoEl && videoEl.value) fd.append('video_url', videoEl.value);
+      pendingFiles.forEach(function(f) { fd.append('files', f); });
+
+      fetch('/api/post/create', { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Post';
+          if (data.success) {
+            createPostModal.classList.add('hidden');
+            document.getElementById('createPostForm').reset();
+            document.getElementById('mediaPreview').classList.add('hidden');
+            document.getElementById('mediaPreview').innerHTML = '';
+            pendingFiles = [];
+            showToast('Post created!', 'success');
+            loadPosts(true);
+          } else {
+            showToast(data.error || 'Error creating post', 'info');
+          }
+        })
+        .catch(function() {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Post';
+          showToast('Error creating post', 'info');
+        });
+    } else {
+      var body = {
+        content: document.getElementById('postContent').value,
+        tags: document.getElementById('postTags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean),
+        type: document.getElementById('postType').value
+      };
+      var titleEl = document.getElementById('postTitle');
+      var badgeEl = document.getElementById('postBadge');
+      var videoEl = document.getElementById('postVideo');
+      if (titleEl && titleEl.value) body.title = titleEl.value;
+      if (badgeEl && badgeEl.value) body.badge = badgeEl.value;
+      if (videoEl && videoEl.value) body.video_url = videoEl.value;
+
+      fetch('/api/post/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Post';
+        if (data.success) {
+          createPostModal.classList.add('hidden');
+          document.getElementById('createPostForm').reset();
+          showToast('Post created!', 'success');
+          loadPosts(true);
+        } else {
+          showToast(data.error || 'Error creating post', 'info');
+        }
+      })
+      .catch(function() {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Post';
+        showToast('Error creating post', 'info');
+      });
+    }
   });
 
   // Infinite scroll

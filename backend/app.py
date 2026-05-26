@@ -442,7 +442,23 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     @limiter.limit("30 per minute")
     def api_create_post():
-        data = request.json or {}
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            data = request.form
+            uploaded = request.files.getlist('files')
+            image_urls = []
+            for f in uploaded:
+                if f and f.filename:
+                    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+                    allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov'}
+                    if ext in allowed_ext:
+                        safe_name = f"{uuid.uuid4().hex[:16]}_{current_user.id}.{ext}"
+                        url = _save_to_supabase(f.read(), 'uploads', safe_name)
+                        if url:
+                            image_urls.append(url)
+            image_url = '|||'.join(image_urls)
+        else:
+            data = request.json or {}
+            image_url = sanitize_text(data.get('imageUrl', ''), 500)
         tags_raw = data.get('tags', [])
         if isinstance(tags_raw, str):
             tags_raw = [sanitize_text(t, 50) for t in tags_raw.split(',') if t.strip()]
@@ -461,7 +477,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             tags=json.dumps(tags_raw[:20]),
             timestamp=short_ts(),
             video_url=sanitize_text(data.get('video_url', data.get('videoUrl', '')), 500),
-            image_url=sanitize_text(data.get('imageUrl', ''), 500)
+            image_url=image_url
         )
         db.session.add(post)
         db.session.commit()
