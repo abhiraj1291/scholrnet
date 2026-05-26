@@ -5,7 +5,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 
-from flask import render_template, request, jsonify, redirect, url_for, session as flask_session, abort
+from flask import render_template, request, jsonify, redirect, url_for, session as flask_session, abort, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from markupsafe import escape as escape_html
 
@@ -1826,6 +1826,37 @@ def register_routes(app, bcrypt, login_manager, limiter):
             "supabase_url_set": bool(supabase_url),
             "supabase_key_set": bool(supabase_key)
         })
+
+    @app.route('/sitemap.xml')
+    def sitemap():
+        from xml.sax.saxutils import escape as xml_escape
+        pages = []
+        base = 'https://scholrnet.in'
+        # Static pages
+        for url, priority, changefreq in [
+            ('/', '1.0', 'weekly'),
+            ('/login', '0.5', 'monthly'),
+            ('/register', '0.6', 'monthly'),
+            ('/public', '0.7', 'daily'),
+        ]:
+            pages.append({'loc': base + url, 'priority': priority, 'changefreq': changefreq})
+        # Public profiles
+        users = User.query.filter(User.username.isnot(None), User.username != '').order_by(User.id.desc()).limit(500).all()
+        for u in users:
+            pages.append({'loc': base + '/share/' + u.username, 'priority': '0.8', 'changefreq': 'weekly'})
+        # Public posts
+        posts = Post.query.order_by(Post.id.desc()).limit(500).all()
+        for p in posts:
+            pages.append({'loc': base + '/post/' + str(p.id), 'priority': '0.6', 'changefreq': 'monthly'})
+        xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        for p in pages:
+            xml += '  <url>\n'
+            xml += '    <loc>' + xml_escape(p['loc']) + '</loc>\n'
+            xml += '    <changefreq>' + p['changefreq'] + '</changefreq>\n'
+            xml += '    <priority>' + p['priority'] + '</priority>\n'
+            xml += '  </url>\n'
+        xml += '</urlset>'
+        return Response(xml, mimetype='application/xml')
 
     @app.route('/api/migrate')
     def api_migrate():

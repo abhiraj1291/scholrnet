@@ -37,6 +37,21 @@
     .btn:hover{background:#1d4ed8}
   </style>
   <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "{{ post.title or 'ScholrNet Post' }}",
+    "description": "{{ (post.content or '')[:200] }}",
+    "author": {
+      "@type": "Person",
+      "name": "{{ author.name if author else 'ScholrNet User' }}"
+    },
+    "url": "https://scholrnet.in/post/{{ post.id }}"
+    {% if post.image_url %},
+    "image": "{{ post.image_url }}"{% endif %}
+  }
+  </script>
 </head>
 <body>
   <div class="container">
