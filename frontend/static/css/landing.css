@@ -27,15 +27,12 @@ a{color:inherit;text-decoration:none}
 .btn-outline .ripple-effect{background:rgba(37,99,235,0.1)}
 @keyframes rippleAnim{to{transform:scale(4);opacity:0}}
 
-.hero-art{position:relative;width:200px;height:200px;display:flex;align-items:center;justify-content:center}
-.minimal-globe{width:140px;height:140px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(37,99,235,0.08),rgba(37,99,235,0.02) 60%,transparent);box-shadow:0 0 80px rgba(37,99,235,0.04);position:relative;overflow:hidden}
-.minimal-globe .globe-grid{position:absolute;inset:0;border-radius:50%}
-.minimal-globe .globe-grid::before{content:'';position:absolute;inset:-60%;border-radius:50%;background:repeating-linear-gradient(0deg,transparent,transparent 16px,rgba(37,99,235,0.08) 16px,rgba(37,99,235,0.08) 17px),repeating-linear-gradient(90deg,transparent,transparent 16px,rgba(37,99,235,0.06) 16px,rgba(37,99,235,0.06) 17px);animation:globeSpin 20s linear infinite;transform-origin:center}
-@keyframes globeSpin{100%{transform:rotate(360deg)}}
-
-.floating-cap{position:absolute;top:5px;right:-5px;color:rgba(124,58,237,0.25);animation:capFloat 4s ease-in-out infinite;pointer-events:none}
-.floating-cap svg{width:32px;height:32px}
-@keyframes capFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-10px) rotate(4deg)}}
+.hero-art{position:relative;width:280px;height:280px;display:flex;align-items:center;justify-content:center}
+.blob{position:absolute;border-radius:42% 58% 70% 30% / 45% 45% 55% 55%;animation:morph 8s ease-in-out infinite;opacity:0.7}
+.blob-1{width:180px;height:180px;background:linear-gradient(135deg,rgba(37,99,235,0.2),rgba(124,58,237,0.15));animation-delay:0s}
+.blob-2{width:140px;height:140px;background:linear-gradient(135deg,rgba(37,99,235,0.12),rgba(236,72,153,0.1));animation-delay:-3s;border-radius:58% 42% 42% 58% / 55% 55% 45% 45%}
+.blob-3{width:100px;height:100px;background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(37,99,235,0.08));animation-delay:-5s;border-radius:33% 67% 58% 42% / 50% 40% 60% 50%}
+@keyframes morph{0%,100%{border-radius:42% 58% 70% 30% / 45% 45% 55% 55%;transform:translate(0,0) rotate(0deg)}33%{border-radius:58% 42% 42% 58% / 55% 55% 45% 45%;transform:translate(12px,-8px) rotate(5deg)}66%{border-radius:33% 67% 58% 42% / 50% 40% 60% 50%;transform:translate(-8px,10px) rotate(-3deg)}}
 
 section{padding:3.5rem 1.5rem;position:relative}
 
@@ -63,8 +60,10 @@ section{padding:3.5rem 1.5rem;position:relative}
   .hero-left{justify-content:center;padding:2rem 1.5rem 3rem}
   .hero-left-inner{max-width:100%;padding-right:0;text-align:center}
   .hero-right{justify-content:center;padding:3rem 1.5rem 2rem}
-  .hero-art{width:140px;height:140px}
-  .minimal-globe{width:100px;height:100px}
+  .hero-art{width:200px;height:200px}
+  .blob-1{width:130px;height:130px}
+  .blob-2{width:100px;height:100px}
+  .blob-3{width:70px;height:70px}
   .brand{justify-content:center}
   .hero-sub{margin-left:auto;margin-right:auto}
   .hero-cta{justify-content:center}
@@ -76,6 +75,8 @@ section{padding:3.5rem 1.5rem;position:relative}
   .features-inner{grid-template-columns:1fr;gap:1.5rem}
   .hero-left{padding:1.5rem 1.25rem 2rem}
   .hero-right{padding:2rem 1.25rem 1.5rem}
-  .hero-art{width:120px;height:120px}
-  .minimal-globe{width:80px;height:80px}
+  .hero-art{width:160px;height:160px}
+  .blob-1{width:100px;height:100px}
+  .blob-2{width:75px;height:75px}
+  .blob-3{width:55px;height:55px}
 }
