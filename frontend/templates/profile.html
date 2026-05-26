@@ -95,6 +95,99 @@
     {% endif %}
   </div>
 
+  {% if is_own %}
+  <!-- Edit Profile -->
+  <div class="card mb-3">
+    <button id="toggleEditProfile" class="w-full flex items-center justify-between text-left" style="background:none;border:none;color:var(--text);padding:0;">
+      <span class="font-bold text-sm"><i data-lucide="settings" style="width:1rem;height:1rem;display:inline;margin-right:0.375rem;"></i> Edit Profile</span>
+      <i data-lucide="chevron-down" id="editChevron" style="width:1.25rem;height:1.25rem;transition:transform 0.2s;"></i>
+    </button>
+    <form id="editProfileForm" class="hidden mt-3">
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Name</label>
+        <input type="text" id="editName" value="{{ puser.name }}" required>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">School</label>
+        <input type="text" id="editSchool" value="{{ puser.school }}">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Grade</label>
+        <input type="text" id="editGrade" value="{{ puser.grade }}">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Bio</label>
+        <textarea id="editBio" rows="3">{{ puser.bio }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label class="text-xs font-bold text-muted block mb-1">Theme Color</label>
+        <div class="flex items-center gap-2 flex-wrap">
+          {% set palette_list = ['navy','coral','blush','gold','slate','ice-blue'] %}
+          {% for p in palette_list %}
+          <button type="button" class="palette-option" data-palette="{{ p }}" style="width:28px;height:28px;border-radius:50%;border:2px solid {{ 'var(--primary)' if p == puser.theme_color else 'transparent' }};background:{{ {'navy':'#1a2744','coral':'#e86565','blush':'#d48a8a','gold':'#b8942e','slate':'#4a5568','ice-blue':'#5a9fd4'}[p] }};cursor:pointer;"></button>
+          {% endfor %}
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Save Changes</button>
+    </form>
+  </div>
+
+  <!-- Friend Requests -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="user-plus" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
+      <span class="font-bold text-sm">Friend Requests</span>
+      <span id="friendReqBadge" class="badge badge-primary hidden" style="margin-left:auto;">0</span>
+    </div>
+    <div id="friendRequestsList">
+      <p class="text-xs text-muted text-center py-2">No pending requests</p>
+    </div>
+  </div>
+
+  <!-- Add Achievement -->
+  <div class="card mb-3">
+    <button id="toggleAchievementForm" class="w-full flex items-center justify-between text-left" style="background:none;border:none;color:var(--text);padding:0;">
+      <span class="font-bold text-sm"><i data-lucide="award" style="width:1rem;height:1rem;display:inline;margin-right:0.375rem;"></i> Add Achievement</span>
+      <i data-lucide="chevron-down" id="achChevron" style="width:1.25rem;height:1.25rem;transition:transform 0.2s;"></i>
+    </button>
+    <form id="achievementForm" class="hidden mt-3">
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Title</label>
+        <input type="text" id="achTitle" placeholder="e.g. First Prize in Science Fair" required>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Description</label>
+        <textarea id="achDesc" rows="2" placeholder="Describe your achievement"></textarea>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Category</label>
+        <select id="achCategory">
+          <option value="Excellence">Excellence</option>
+          <option value="Leadership">Leadership</option>
+          <option value="Sports">Sports</option>
+          <option value="Arts">Arts</option>
+          <option value="Community">Community</option>
+          <option value="Academic">Academic</option>
+          <option value="Research">Research</option>
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Institution</label>
+        <input type="text" id="achInstitution" placeholder="e.g. Science Olympiad Foundation">
+      </div>
+      <div class="mb-2">
+        <label class="text-xs font-bold text-muted block mb-1">Year</label>
+        <input type="text" id="achYear" placeholder="e.g. 2025">
+      </div>
+      <div class="mb-3">
+        <label class="text-xs font-bold text-muted block mb-1">Certificate File (optional)</label>
+        <input type="text" id="achCertificate" placeholder="Filename or URL">
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Add Achievement</button>
+    </form>
+  </div>
+  {% endif %}
+
   <!-- Achievements List -->
   <div class="card mb-3">
     <div class="flex items-center gap-2 mb-3">
@@ -724,6 +817,9 @@ document.addEventListener('DOMContentLoaded', function() {
   loadExperiences();
   loadFriends();
   loadProfile();
+  {% if is_own %}
+  loadFriendRequests();
+  {% endif %}
 });
 </script>
 {% endblock %}
