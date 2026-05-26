@@ -1142,13 +1142,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         return jsonify({'success': True})
 
-    @app.route('/api/ad/<int:ad_id>/click', methods=['POST'])
-    def api_ad_click(ad_id):
-        ad = Ad.query.get_or_404(ad_id)
-        ad.clicks = (ad.clicks or 0) + 1
-        db.session.commit()
-        return jsonify({'success': True})
-
     @app.route('/api/posts')
     @login_required
     def api_posts():
