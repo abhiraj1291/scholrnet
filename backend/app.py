@@ -619,11 +619,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
             if friend_ids:
                 now = short_ts()
                 title = sanitize_text(current_user.name, 100) + " created a new post"
-                db.session.bulk_insert_mappings(Notification, [
-                    {'user_id': fid, 'title': title, 'type': 'friend_post',
-                     'from_user': current_user.name, 'timestamp': now}
-                    for fid in friend_ids
-                ])
+                for fid in friend_ids:
+                    db.session.add(Notification(
+                        user_id=fid, title=title, type='friend_post',
+                        from_user=current_user.name, timestamp=now
+                    ))
                 db.session.commit()
         except Exception:
             db.session.rollback()
