@@ -647,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
   loadSidebar();
   loadAds();
 
-  // Poll for new posts every 30s (lightweight ID check)
+  // Poll for new posts every 60s (lightweight ID check, serverless-friendly)
   setInterval(function() {
     fetch('/api/posts?page=1&limit=1')
       .then(function(r) { return r.json(); })

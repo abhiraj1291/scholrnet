@@ -609,17 +609,22 @@ def register_routes(app, bcrypt, login_manager, limiter):
         )
         db.session.add(post)
         db.session.commit()
-        # Notify friends about new post
+        # Notify friends about new post (bulk insert for serverless perf)
         try:
             friend_ids = [c.user_id for c in Connection.query.filter(
                 Connection.connected_user_id == current_user.id, Connection.status == 'accepted').all()]
             friend_ids += [c.connected_user_id for c in Connection.query.filter(
                 Connection.user_id == current_user.id, Connection.status == 'accepted').all()]
-            for fid in set(friend_ids):
-                db.session.add(Notification(user_id=fid,
-                    title=f"{sanitize_text(current_user.name, 100)} created a new post: {sanitize_text(post.title or post.content[:80], 200)}",
-                    type="friend_post", from_user=current_user.name))
-            db.session.commit()
+            friend_ids = set(friend_ids)
+            if friend_ids:
+                now = short_ts()
+                title = sanitize_text(current_user.name, 100) + " created a new post"
+                db.session.bulk_insert_mappings(Notification, [
+                    {'user_id': fid, 'title': title, 'type': 'friend_post',
+                     'from_user': current_user.name, 'timestamp': now}
+                    for fid in friend_ids
+                ])
+                db.session.commit()
         except Exception:
             db.session.rollback()
         print("POST CREATED: id=%d image_url=%s" % (post.id, post.image_url))

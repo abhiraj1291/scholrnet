@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(function(){});
   }
 
-  // Poll for notifications every 15s
+  // Poll for notifications every 30s (serverless-friendly: fewer cold starts)
   loadNotifications();
-  setInterval(loadNotifications, 15000);
+  setInterval(loadNotifications, 30000);
 });
