@@ -57,23 +57,23 @@ function doSearch(q, callback) {
       var data = JSON.parse(xhr.responseText);
       var html = '';
       if (data.users && data.users.length) {
-        html += '<div class="p-3 border-b border-slate-100"><div class="text-xs font-bold text-muted mb-2">People</div>';
+        html += '<div class="p-3" style="border-bottom:1px solid var(--border);"><div class="text-xs font-bold text-muted mb-2">People</div>';
         data.users.forEach(function(u) {
-          html += '<a href="/profile/' + u.id + '" class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg" style="text-decoration:none;color:inherit;"><div class="avatar avatar-sm">' + (u.avatar || u.name[0]) + '</div><div><div class="text-xs font-bold">' + u.name + '</div><div class="text-xs text-muted">' + (u.school || '') + '</div></div></a>';
+          html += '<a href="/profile/' + u.id + '" class="flex items-center gap-2 p-2" style="text-decoration:none;color:inherit;border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'"><div class="avatar avatar-sm">' + (u.avatar || u.name[0]) + '</div><div><div class="text-xs font-bold">' + u.name + '</div><div class="text-xs text-muted">' + (u.school || '') + '</div></div></a>';
         });
         html += '</div>';
       }
       if (data.achievements && data.achievements.length) {
-        html += '<div class="p-3 border-b border-slate-100"><div class="text-xs font-bold text-muted mb-2">Achievements</div>';
+        html += '<div class="p-3" style="border-bottom:1px solid var(--border);"><div class="text-xs font-bold text-muted mb-2">Achievements</div>';
         data.achievements.forEach(function(a) {
-          html += '<div class="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg"><span class="text-xs font-bold">' + a.title + '</span><span class="badge ' + (a.verification_status === 'Verified' ? 'badge-success' : 'badge-muted') + '">' + a.verification_status + '</span></div>';
+          html += '<div class="flex items-center justify-between p-2" style="border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'"><span class="text-xs font-bold">' + a.title + '</span><span class="badge ' + (a.verification_status === 'Verified' ? 'badge-success' : 'badge-muted') + '">' + a.verification_status + '</span></div>';
         });
         html += '</div>';
       }
       if (data.schools && data.schools.length) {
         html += '<div class="p-3"><div class="text-xs font-bold text-muted mb-2">Schools</div>';
         data.schools.forEach(function(s) {
-          html += '<div class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg"><span class="text-sm">\uD83C\uDFEB</span><div><div class="text-xs font-bold">' + s.name + '</div><div class="text-xs text-muted">' + (s.location || '') + '</div></div></div>';
+          html += '<div class="flex items-center gap-2 p-2" style="border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'"><span class="text-sm">\uD83C\uDFEB</span><div><div class="text-xs font-bold">' + s.name + '</div><div class="text-xs text-muted">' + (s.location || '') + '</div></div></div>';
         });
         html += '</div>';
       }

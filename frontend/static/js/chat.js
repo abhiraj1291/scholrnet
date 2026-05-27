@@ -227,6 +227,8 @@ function loadPageChatContacts() {
 }
 
 function openPageChat(contactId, contactName, contactAvatar, contactAvatarUrl, contactRole) {
+  var grid = document.getElementById('chatPageGrid');
+  if (grid && window.innerWidth < 640) grid.classList.add('chat-active');
   activeChatId = contactId;
   var placeholder = document.getElementById('chatPlaceholder');
   var activeView = document.getElementById('chatActiveView');

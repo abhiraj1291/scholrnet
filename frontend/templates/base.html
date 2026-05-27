@@ -57,8 +57,9 @@
         </a>
       </div>
 
-      <div class="search-bar flex-1 hidden sm:block max-w-md mx-auto">
-        <input type="text" id="global-search" placeholder="Search posts, people, opportunities..." class="w-full">
+      <div class="search-bar flex-1 hidden sm:block max-w-md mx-auto relative">
+        <input type="text" id="global-search" placeholder="Search posts, people, opportunities..." class="w-full" inputmode="search" autocomplete="off">
+        <div id="search-panel" class="hidden" style="position:absolute;top:100%;left:0;right:0;margin-top:0.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:200;max-height:20rem;overflow-y:auto;"></div>
       </div>
 
       <div class="flex items-center gap-2">
@@ -177,7 +178,7 @@
       <div id="new-chat-view" class="hidden">
         <div class="flex items-center gap-2 p-2" style="border-bottom:1px solid var(--border);">
           <i data-lucide="arrow-left" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;color:var(--text-muted);" onclick="hideNewChat()"></i>
-          <input type="text" id="newChatSearch" placeholder="Search users..." style="flex:1;border:none;outline:none;background:transparent;color:var(--text);font-size:0.8125rem;">
+          <input type="text" id="newChatSearch" placeholder="Search users..." inputmode="search" autocomplete="off" style="flex:1;border:none;outline:none;background:transparent;color:var(--text);">
         </div>
         <div id="newChatResults" class="chat-contact-list"></div>
       </div>
@@ -187,7 +188,7 @@
         </div>
         <div id="chat-messages-container" class="chat-messages"></div>
         <div class="chat-input">
-          <input type="text" id="chatInput" placeholder="Type a message...">
+          <input type="text" id="chatInput" placeholder="Type a message..." inputmode="text" autocomplete="off">
           <button class="btn btn-primary btn-sm" onclick="sendChatMessage(document.getElementById('chatInput'))"><i data-lucide="send" style="width:16px;height:16px;"></i></button>
         </div>
       </div>
@@ -231,6 +232,16 @@
           </div>
           <div id="verifySchoolStatus" class="text-xs mt-1"></div>
           {% endif %}
+        </div>
+        <div class="border-t" style="border-color:var(--border);padding-top:1rem;margin-top:1rem;">
+          <div class="font-bold text-sm mb-2">Theme Color</div>
+          <div class="flex gap-2 palette-picker">
+            {% set palette_list = ['navy','coral','blush','gold','slate','ice-blue'] %}
+            {% set palette_colors = {'navy':'#1a2744','coral':'#e86565','blush':'#d48a8a','gold':'#b8942e','slate':'#4a5568','ice-blue':'#5a9fd4'} %}
+            {% for p in palette_list %}
+            <button type="button" class="palette-option" data-palette="{{ p }}" style="width:32px;height:32px;border-radius:50%;border:2px solid {{ 'var(--primary)' if p == current_user.theme_color else 'transparent' }};background:{{ palette_colors[p] }};cursor:pointer;" title="{{ p|capitalize }}"></button>
+            {% endfor %}
+          </div>
         </div>
       </div>
       <div class="modal-footer">

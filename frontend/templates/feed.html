@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
       '<div class="comments-section hidden" data-post-id="' + post.id + '">' +
         '<div class="comments-list"></div>' +
         '<form class="comment-form flex gap-2 mt-2">' +
-          '<input type="text" class="comment-input" placeholder="Write a comment..." style="flex:1;font-size:0.75rem;">' +
+          '<input type="text" class="comment-input" placeholder="Write a comment..." inputmode="text" autocomplete="off" style="flex:1;">' +
           '<button type="submit" class="btn btn-primary btn-sm">Post</button>' +
         '</form>' +
       '</div>';
@@ -661,7 +661,9 @@ document.addEventListener('DOMContentLoaded', function() {
   loadAds();
 
   // Poll for new posts every 60s (lightweight ID check, serverless-friendly)
-  setInterval(function() {
+  var postPollTimer = null;
+  function pollNewPosts() {
+    if (document.hidden) { postPollTimer = setTimeout(pollNewPosts, 30000); return; }
     fetch('/api/posts?page=1&limit=1')
       .then(function(r) { return r.json(); })
       .then(function(data) {
@@ -670,16 +672,22 @@ document.addEventListener('DOMContentLoaded', function() {
           showToast('New posts available — refresh to see', 'info');
         }
       })
-      .catch(function() {});
-  }, 30000);
+      .catch(function() {})
+      .finally(function() { postPollTimer = setTimeout(pollNewPosts, 30000); });
+  }
+  pollNewPosts();
 
   // Poll for new comments on open sections every 10s
-  setInterval(function() {
+  var commentPollTimer = null;
+  function pollComments() {
+    if (document.hidden) { commentPollTimer = setTimeout(pollComments, 10000); return; }
     document.querySelectorAll('.comments-section:not(.hidden)').forEach(function(section) {
       var postId = section.getAttribute('data-post-id');
       if (postId) loadComments(postId, section.querySelector('.comments-list'));
     });
-  }, 10000);
+    commentPollTimer = setTimeout(pollComments, 10000);
+  }
+  pollComments();
 });
 </script>
 {% endblock %}

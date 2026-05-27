@@ -78,11 +78,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // Settings modal controls
   const settingsBtn = document.getElementById('settings-btn');
   const settingsModal = document.getElementById('settings-modal');
+  const closeSettingsBtn = document.getElementById('close-settings-btn');
   if (settingsBtn && settingsModal) {
     settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
     settingsModal.addEventListener('click', (e) => {
       if (e.target === settingsModal) settingsModal.classList.add('hidden');
     });
+    if (closeSettingsBtn) {
+      closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    }
   }
 
   // School verification
@@ -179,6 +183,35 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  // Save Settings button
+  const saveBtn = document.getElementById('saveSettingsBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function() {
+      const activePalette = document.querySelector('.palette-option[style*="var(--primary)"]');
+      const palette = activePalette ? activePalette.getAttribute('data-palette') : null;
+      if (palette) {
+        apiPost('/api/profile/update', {theme_color: palette}, function(d) {
+          if (d.success) {
+            showToast('Settings saved', 'success');
+            setTimeout(function() { location.reload(); }, 800);
+          }
+        });
+      } else {
+        showToast('No changes to save', 'info');
+      }
+    });
+  }
+
+  // Palette picker click (in settings modal)
+  document.querySelectorAll('.palette-option').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.palette-option').forEach(function(b) {
+        b.style.borderColor = 'transparent';
+      });
+      this.style.borderColor = 'var(--primary)';
+    });
+  });
 
   // Load notifications
   function loadNotifications() {
