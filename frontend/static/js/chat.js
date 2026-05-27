@@ -112,6 +112,8 @@ function renderChatContacts() {
 
 function openChat(contactId, contactName, contactAvatar, contactAvatarUrl, contactRole) {
   activeChatId = contactId;
+  fetch('/api/messages/mark-read', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contact_id:contactId})}).then(function(){}).catch(function(){});
+  updateChatBadge();
   const view = document.getElementById('chat-messages-view');
   const list = document.getElementById('chat-contact-list');
   const newChatView = document.getElementById('new-chat-view');
@@ -250,6 +252,25 @@ function openPageChat(contactId, contactName, contactAvatar, contactAvatarUrl, c
   }
   loadPageMessages(contactId);
   startChatPolling(contactId);
+  fetch('/api/messages/mark-read', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contact_id:contactId})}).then(function(){}).catch(function(){});
+  updateChatBadge();
+}
+
+// ===== Unread Badge =====
+
+function updateChatBadge() {
+  var badge = document.getElementById('chatBadge');
+  if (!badge) return;
+  fetch('/api/messages/unread-count')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.unread_count > 0) {
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    })
+    .catch(function(){});
 }
 
 // ===== Init =====
@@ -295,6 +316,10 @@ function initChat() {
       }
     });
   }
+
+  // Unread badge polling
+  updateChatBadge();
+  setInterval(updateChatBadge, 15000);
 }
 
 document.addEventListener('DOMContentLoaded', initChat);

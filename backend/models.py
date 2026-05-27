@@ -196,6 +196,7 @@ class ChatMessage(db.Model):
     receiver_id = db.Column(db.Integer, nullable=False, index=True)
     text = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.String(30), default="")
+    is_read = db.Column(db.Boolean, default=False, index=True)
 
     __table_args__ = (db.Index('idx_chat_sender_receiver', 'sender_id', 'receiver_id'),)
 

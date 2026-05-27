@@ -124,8 +124,9 @@
         ('analytics_page', 'bar-chart-3', 'Analytics'),
       ] %}
       {% for endpoint, icon, label in primary_tabs %}
-      <a href="{{ url_for(endpoint) }}" class="tab-btn {{ 'active' if request.endpoint == endpoint else '' }}">
+      <a href="{{ url_for(endpoint) }}" class="tab-btn {{ 'active' if request.endpoint == endpoint else '' }}" style="position:relative;">
         <i data-lucide="{{ icon }}" style="width:16px;height:16px;"></i>{{ label }}
+        {% if endpoint == 'chat_page' %}<span id="chatBadge" class="hidden" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:var(--danger);border-radius:50%;"></span>{% endif %}
       </a>
       {% endfor %}
       {% if user.role in ('admin','super_admin') %}

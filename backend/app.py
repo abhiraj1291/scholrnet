@@ -77,6 +77,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     conn.execute(text("ALTER TABLE ads ADD COLUMN created_at TIMESTAMP DEFAULT NOW()"))
             except Exception:
                 print("AUTO-MIGRATE: ads table or columns may already exist, continuing")
+            try:
+                chat_cols = [c['name'] for c in inspector.get_columns('chat_messages')]
+                if 'is_read' not in chat_cols:
+                    conn.execute(text("ALTER TABLE chat_messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE"))
+            except Exception:
+                print("AUTO-MIGRATE: chat_messages table may not exist yet, continuing")
             conn.commit()
     except Exception:
         print("AUTO-MIGRATE: columns may already exist, continuing")
@@ -1283,7 +1289,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         contact_id = request.args.get('contact_id', type=int)
         if contact_id:
             msgs = ChatMessage.query.filter(((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == contact_id)) | ((ChatMessage.sender_id == contact_id) & (ChatMessage.receiver_id == current_user.id))).order_by(ChatMessage.id.asc()).all()
-            return jsonify({'messages': [{'id': m.id, 'sender_id': m.sender_id, 'text': m.text, 'timestamp': m.timestamp} for m in msgs]})
+            return jsonify({'messages': [{'id': m.id, 'sender_id': m.sender_id, 'text': m.text, 'timestamp': m.timestamp, 'is_read': m.is_read} for m in msgs]})
         msgs = ChatMessage.query.filter((ChatMessage.sender_id == current_user.id) | (ChatMessage.receiver_id == current_user.id)).order_by(ChatMessage.timestamp.desc()).limit(200).all()
         cids = set()
         for m in msgs:
@@ -1315,6 +1321,22 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.add(n)
         db.session.commit()
         return jsonify({'success': True, 'message': {'id': msg.id, 'sender_id': msg.sender_id, 'text': msg.text, 'timestamp': msg.timestamp}})
+
+    @app.route('/api/messages/unread-count')
+    @login_required
+    def api_messages_unread_count():
+        count = ChatMessage.query.filter_by(receiver_id=current_user.id, is_read=False).count()
+        return jsonify({'unread_count': count})
+
+    @app.route('/api/messages/mark-read', methods=['POST'])
+    @login_required
+    def api_messages_mark_read():
+        data = request.json or {}
+        contact_id = data.get('contact_id')
+        if contact_id:
+            ChatMessage.query.filter_by(sender_id=contact_id, receiver_id=current_user.id, is_read=False).update({'is_read': True})
+            db.session.commit()
+        return jsonify({'success': True})
 
     @app.route('/api/profile/avatar', methods=['POST'])
     @login_required
