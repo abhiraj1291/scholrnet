@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScholrNet - Academic Trust Network</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://www.gstatic.com">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -50,7 +51,10 @@
   <header class="header">
     <div class="header-inner">
       <div class="flex items-center gap-3">
-        <a href="{{ url_for('dashboard') }}" class="logo"><span>Scholr</span><span>Net</span></a>
+        <a href="{{ url_for('dashboard') }}" class="logo">
+          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28" class="logo-light">
+          <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="28" class="logo-dark">
+        </a>
       </div>
 
       <div class="search-bar flex-1 hidden sm:block max-w-md mx-auto">

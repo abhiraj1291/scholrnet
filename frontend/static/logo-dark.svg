@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 56" fill="none">
+  <circle cx="36" cy="28" r="22" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <path d="M16 22 Q36 18 56 22" stroke="#ffffff" stroke-width="0.8" opacity="0.25" fill="none"/>
+  <path d="M16 34 Q36 38 56 34" stroke="#ffffff" stroke-width="0.8" opacity="0.25" fill="none"/>
+  <circle cx="28" cy="18" r="2.5" fill="#d4b85c"/>
+  <circle cx="48" cy="20" r="2.5" fill="#d4b85c"/>
+  <circle cx="44" cy="36" r="2.5" fill="#d4b85c"/>
+  <circle cx="24" cy="34" r="2.5" fill="#d4b85c"/>
+  <path d="M28 18 Q34 16 48 20" stroke="#d4b85c" stroke-width="0.8" opacity="0.6" fill="none"/>
+  <path d="M48 20 Q50 28 44 36" stroke="#d4b85c" stroke-width="0.8" opacity="0.6" fill="none"/>
+  <path d="M44 36 Q34 38 24 34" stroke="#d4b85c" stroke-width="0.8" opacity="0.6" fill="none"/>
+  <path d="M24 34 Q20 26 28 18" stroke="#d4b85c" stroke-width="0.8" opacity="0.6" fill="none"/>
+  <text x="68" y="26" font-family="system-ui,-apple-system,sans-serif" font-weight="800" font-size="20" letter-spacing="-0.02em" fill="#ffffff">ScholrNet</text>
+  <text x="68" y="40" font-family="system-ui,-apple-system,sans-serif" font-weight="500" font-size="9" fill="#9ca3af" letter-spacing="0.04em">Your achievements, verified.</text>
+</svg>

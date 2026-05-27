@@ -9,9 +9,8 @@ a{color:inherit;text-decoration:none}
 .hero-right-inner{max-width:440px;padding-left:3rem}
 
 .brand{display:flex;align-items:center;gap:0.5rem;margin-bottom:2.5rem}
-.brand-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff}
-.brand-icon svg{width:18px;height:18px}
-.brand-name{font-size:1.1rem;font-weight:700;color:#1a1a2e;letter-spacing:-0.02em}
+.brand img{height:32px;width:auto}
+.brand .logo-dark{display:none}
 
 .hero-title{font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:700;line-height:1.25;margin-bottom:0.75rem;letter-spacing:-0.02em;color:#1a1a2e}
 .hero-title span{color:#2563eb}

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScholrNet - Register</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
@@ -33,7 +34,10 @@
   <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
     <style>@media (max-width: 30rem) { .card { padding: 1.25rem !important; } }</style>
     <div class="flex items-center gap-2 mb-4">
-      <div class="logo"><span>Scholr</span><span>Net</span></div>
+      <div class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28" class="logo-light">
+        <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="28" class="logo-dark">
+      </div>
     </div>
     <h1 class="text-lg font-black mb-1">Create your profile</h1>
     <p class="text-sm text-muted mb-4">Join the academic trust network</p>

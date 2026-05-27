@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScholrNet - Choose Your Role</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -28,7 +29,10 @@
   <div class="role-container">
     <div class="role-card">
       <div style="margin-bottom:1rem;">
-        <div class="logo" style="font-size:1.75rem;justify-content:center;"><span>Scholr</span><span>Net</span></div>
+        <div class="logo" style="justify-content:center;">
+          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="32" class="logo-light">
+          <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="32" class="logo-dark">
+        </div>
       </div>
       <h1>Welcome to ScholrNet</h1>
       <p class="sub">What describes you best?</p>

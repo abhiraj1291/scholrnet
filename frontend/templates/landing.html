@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScholrNet — Academic Trust Network</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
   <meta name="description" content="Verified academic network for students, teachers, and schools.">
   <meta property="og:title" content="ScholrNet">
   <meta property="og:description" content="Verified academic network for students, teachers, and schools.">
@@ -35,7 +36,7 @@
     "@type": "Organization",
     "name": "ScholrNet",
     "url": "https://scholrnet.in",
-    "logo": "https://scholrnet.in/static/favicon.ico",
+    "logo": "https://scholrnet.in/static/logo.svg",
     "description": "Academic trust network connecting students, teachers, and schools with verified achievements."
   }
   </script>
@@ -52,10 +53,10 @@
   </div>
   <div class="hero-right">
     <div class="hero-right-inner">
-      <div class="brand">
-        <div class="brand-icon"><i data-lucide="graduation-cap"></i></div>
-        <span class="brand-name">ScholrNet</span>
-      </div>
+      <a href="https://scholrnet.in" class="brand">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" class="logo-light">
+        <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" class="logo-dark">
+      </a>
       <h1 class="hero-title">Your achievements,<br><span>verified and connected.</span></h1>
       <p class="hero-sub">The academic network for students, teachers, and schools.</p>
       <div class="hero-cta">
