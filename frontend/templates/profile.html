@@ -270,6 +270,15 @@
     </div>
     <div id="friendsList"></div>
   </div>
+
+  <!-- Clubs -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="users" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">Clubs</span>
+    </div>
+    <div id="profileClubsList"></div>
+  </div>
 </div>
 
 <script>
@@ -659,6 +668,31 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Friend list
+  function loadClubs() {
+    fetch('/api/user/' + puserId + '/clubs')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var list = document.getElementById('profileClubsList');
+        if (!list) return;
+        list.innerHTML = '';
+        if (d.clubs && d.clubs.length > 0) {
+          d.clubs.forEach(function(c) {
+            var el = document.createElement('a');
+            el.href = '/club/' + c.id;
+            el.style.textDecoration = 'none';
+            el.style.color = 'inherit';
+            el.className = 'flex items-center justify-between p-2 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML = '<div><div class="font-bold text-xs">' + escapeHtml(c.name) + '</div><div class="text-xs text-muted">' + c.member_count + ' members &middot; ' + c.role.toUpperCase() + '</div></div><i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted);"></i>';
+            list.appendChild(el);
+          });
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No clubs joined yet</p>';
+        }
+      });
+  }
+
   function loadFriends() {
     var url = isOwn ? '/api/friend/list' : '/api/user/' + puserId + '/connections';
     fetch(url)
@@ -838,6 +872,7 @@ document.addEventListener('DOMContentLoaded', function() {
   loadProjects();
   loadExperiences();
   loadFriends();
+  loadClubs();
   loadProfile();
   {% if is_own %}
   loadFriendRequests();

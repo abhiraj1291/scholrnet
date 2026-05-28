@@ -70,6 +70,7 @@ class Post(db.Model):
     timestamp = db.Column(db.String(30), default="")
     video_url = db.Column(db.String(500), default="")
     image_url = db.Column(db.String(500), default="")
+    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=True, index=True)
 
 class Comment(db.Model):
     __tablename__ = 'comments'
@@ -133,6 +134,7 @@ class VerificationRequest(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     student_name = db.Column(db.String(100), nullable=False)
     student_school = db.Column(db.String(200), default="")
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=True, index=True)
     achievement_title = db.Column(db.String(300), nullable=False)
     category = db.Column(db.String(50), default="")
     institution = db.Column(db.String(200), default="")
@@ -199,6 +201,28 @@ class ChatMessage(db.Model):
     is_read = db.Column(db.Boolean, default=False, index=True)
 
     __table_args__ = (db.Index('idx_chat_sender_receiver', 'sender_id', 'receiver_id'),)
+
+class Club(db.Model):
+    __tablename__ = 'clubs'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default="")
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    avatar = db.Column(db.String(300), default="")
+    cover_url = db.Column(db.String(500), default="")
+    created_at = db.Column(db.String(30), default="")
+    member_count = db.Column(db.Integer, default=1)
+    tags = db.Column(db.String(500), default="")
+
+class ClubMember(db.Model):
+    __tablename__ = 'club_members'
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    role = db.Column(db.String(20), default='member')
+    joined_at = db.Column(db.String(30), default="")
+
+    __table_args__ = (db.Index('idx_club_member', 'club_id', 'user_id', unique=True),)
 
 class School(db.Model):
     __tablename__ = 'schools'

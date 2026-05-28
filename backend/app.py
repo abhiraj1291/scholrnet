@@ -83,6 +83,25 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     conn.execute(text("ALTER TABLE chat_messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE"))
             except Exception:
                 print("AUTO-MIGRATE: chat_messages table may not exist yet, continuing")
+            try:
+                vreq_cols = [c['name'] for c in inspector.get_columns('verification_requests')]
+                if 'school_id' not in vreq_cols:
+                    conn.execute(text("ALTER TABLE verification_requests ADD COLUMN school_id INTEGER REFERENCES schools(id)"))
+            except Exception:
+                print("AUTO-MIGRATE: verification_requests table may not exist yet, continuing")
+            try:
+                posts_cols = [c['name'] for c in inspector.get_columns('posts')]
+                if 'club_id' not in posts_cols:
+                    conn.execute(text("ALTER TABLE posts ADD COLUMN club_id INTEGER REFERENCES clubs(id)"))
+            except Exception:
+                print("AUTO-MIGRATE: posts table migration failed, continuing")
+            conn.commit()
+            conn.execute(text("CREATE TABLE IF NOT EXISTS clubs (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT DEFAULT '', owner_id INTEGER REFERENCES users(id) NOT NULL, avatar VARCHAR(300) DEFAULT '', cover_url VARCHAR(500) DEFAULT '', created_at VARCHAR(30) DEFAULT '', member_count INTEGER DEFAULT 1, tags VARCHAR(500) DEFAULT '')"))
+            conn.execute(text("CREATE TABLE IF NOT EXISTS club_members (id SERIAL PRIMARY KEY, club_id INTEGER REFERENCES clubs(id) NOT NULL, user_id INTEGER REFERENCES users(id) NOT NULL, role VARCHAR(20) DEFAULT 'member', joined_at VARCHAR(30) DEFAULT '')"))
+            try:
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_club_member ON club_members(club_id, user_id)"))
+            except Exception:
+                pass
             conn.commit()
     except Exception:
         print("AUTO-MIGRATE: columns may already exist, continuing")
@@ -544,6 +563,37 @@ def register_routes(app, bcrypt, login_manager, limiter):
             notifications=get_user_notifications(current_user.id)
         )
 
+    @app.route('/clubs')
+    @login_required
+    def clubs_page():
+        return render_template('clubs.html',
+            user=current_user,
+            notifications=get_user_notifications(current_user.id)
+        )
+
+    @app.route('/club/<int:club_id>')
+    @login_required
+    def club_detail_page(club_id):
+        club = Club.query.get_or_404(club_id)
+        owner = User.query.get(club.owner_id)
+        is_member = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first() is not None
+        user_role = None
+        if is_member:
+            mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+            user_role = mem.role if mem else None
+        members = ClubMember.query.filter_by(club_id=club_id).order_by(ClubMember.id.asc()).all()
+        member_ids = [m.user_id for m in members]
+        user_map = {}
+        if member_ids:
+            users = User.query.filter(User.id.in_(member_ids)).all()
+            user_map = {u.id: u for u in users}
+        return render_template('club_detail.html',
+            club=club, owner=owner, is_member=is_member, user_role=user_role,
+            members=members, user_map=user_map,
+            user=current_user,
+            notifications=get_user_notifications(current_user.id)
+        )
+
     @app.route('/search')
     @login_required
     def search_page():
@@ -614,6 +664,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
             tags_raw = [sanitize_text(t, 50) for t in tags_raw.split(',') if t.strip()]
         elif isinstance(tags_raw, list):
             tags_raw = [sanitize_text(str(t), 50) for t in tags_raw if t]
+        club_id = data.get('club_id', type=int) if isinstance(data, dict) else None
+        if club_id:
+            is_member = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+            if not is_member:
+                return jsonify({'error': 'You are not a member of this club'}), 403
         post = Post(
             author_id=current_user.id,
             author_name=sanitize_text(data.get('author_name', current_user.name), 100),
@@ -627,7 +682,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
             tags=json.dumps(tags_raw[:20]),
             timestamp=short_ts(),
             video_url=sanitize_text(data.get('video_url', data.get('videoUrl', '')), 500),
-            image_url=image_url
+            image_url=image_url,
+            club_id=club_id
         )
         db.session.add(post)
         db.session.commit()
@@ -746,6 +802,37 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         return jsonify({'success': True})
 
+    @app.route('/api/achievement/<int:ach_id>/verify-request', methods=['POST'])
+    @login_required
+    @limiter.limit("10 per minute")
+    def api_request_achievement_verify(ach_id):
+        ach = Achievement.query.get_or_404(ach_id)
+        if ach.user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        data = request.json or {}
+        school_id = data.get('school_id', current_user.verified_school_id)
+        if not school_id:
+            return jsonify({'error': 'No school selected for verification'}), 400
+        existing = VerificationRequest.query.filter_by(user_id=current_user.id, achievement_title=ach.title, status='pending').first()
+        if existing:
+            return jsonify({'error': 'A verification request for this achievement is already pending'}), 400
+        vreq = VerificationRequest(
+            user_id=current_user.id,
+            student_name=current_user.name,
+            student_school=current_user.school,
+            school_id=school_id,
+            achievement_title=ach.title,
+            category=ach.category,
+            institution=ach.institution,
+            year=ach.year,
+            details=ach.description,
+            status='pending',
+            requested_at=jnow()
+        )
+        db.session.add(vreq)
+        db.session.commit()
+        return jsonify({'success': True, 'request': {'id': vreq.id, 'status': vreq.status}})
+
     @app.route('/api/project/create', methods=['POST'])
     @login_required
     @limiter.limit("20 per minute")
@@ -831,6 +918,25 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         return jsonify({'success': True})
 
+    @app.route('/api/verification-requests')
+    @login_required
+    def api_verification_requests():
+        if current_user.role not in ('admin', 'super_admin'):
+            return jsonify({'error': 'Unauthorized'}), 403
+        query = VerificationRequest.query.filter_by(status='pending')
+        if current_user.verified_school_id and current_user.role != 'super_admin':
+            query = query.filter_by(school_id=current_user.verified_school_id)
+        elif current_user.school and current_user.role != 'super_admin':
+            query = query.filter(VerificationRequest.student_school == current_user.school)
+        reqs = query.order_by(VerificationRequest.id.desc()).limit(50).all()
+        import secrets
+        return jsonify({'requests': [{
+            'id': r.id, 'user_id': r.user_id, 'student_name': r.student_name,
+            'student_school': r.student_school, 'achievement_title': r.achievement_title,
+            'category': r.category, 'institution': r.institution, 'year': r.year,
+            'details': r.details, 'status': r.status, 'requested_at': r.requested_at
+        } for r in reqs]})
+
     @app.route('/api/verification-request', methods=['POST'])
     @login_required
     @limiter.limit("10 per minute")
@@ -853,16 +959,34 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         return jsonify({'success': True, 'request': {'id': vreq.id, 'status': vreq.status}})
 
+    @app.route('/api/achievements')
+    def api_achievements():
+        user_id = request.args.get('user_id', type=int)
+        if not user_id:
+            return jsonify({'achievements': []})
+        achs = Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all()
+        return jsonify({'achievements': [{'id': a.id, 'title': a.title, 'description': a.description, 'category': a.category, 'institution': a.institution, 'year': a.year, 'verification_status': a.verification_status, 'verified_by': a.verified_by, 'verified_at': a.verified_at, 'verification_hash': a.verification_hash} for a in achs]})
+
+    @app.route('/api/projects')
+    def api_projects():
+        user_id = request.args.get('user_id', type=int)
+        if not user_id:
+            return jsonify({'projects': []})
+        projs = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all()
+        return jsonify({'projects': [{'id': p.id, 'title': p.title, 'description': p.description, 'collaborators': p.collaborators, 'link': p.link, 'skills': p.skills, 'verification_status': p.verification_status} for p in projs]})
+
     @app.route('/api/verification/<int:req_id>/action', methods=['POST'])
     @login_required
     def api_verification_action(req_id):
         if current_user.role not in ('admin', 'super_admin'):
             return jsonify({'error': 'Unauthorized'}), 403
+        vreq = VerificationRequest.query.get_or_404(req_id)
+        if current_user.role != 'super_admin' and current_user.verified_school_id and vreq.school_id and vreq.school_id != current_user.verified_school_id:
+            return jsonify({'error': 'This request does not belong to your school'}), 403
         data = request.json or {}
         action = data.get('action', '')
         if action not in ('approve', 'reject'):
             return jsonify({'error': 'Invalid action'}), 400
-        vreq = VerificationRequest.query.get_or_404(req_id)
         vreq.status = 'approved' if action == 'approve' else 'rejected'
         if action == 'approve':
             matching = Achievement.query.filter_by(user_id=vreq.user_id, title=vreq.achievement_title).first()
@@ -887,6 +1011,145 @@ def register_routes(app, bcrypt, login_manager, limiter):
             db.session.add(notif)
         db.session.commit()
         return jsonify({'success': True, 'status': vreq.status})
+
+    # ===== Clubs API =====
+
+    @app.route('/api/club/create', methods=['POST'])
+    @login_required
+    @limiter.limit("10 per minute")
+    def api_create_club():
+        data = request.json or {}
+        name = sanitize_text(data.get('name', ''), 200)
+        if not name:
+            return jsonify({'error': 'Club name is required'}), 400
+        description = sanitize_text(data.get('description', ''), 5000)
+        tags = sanitize_text(data.get('tags', ''), 500)
+        club = Club(name=name, description=description, owner_id=current_user.id,
+                    tags=tags, created_at=jnow(), member_count=1)
+        db.session.add(club)
+        db.session.flush()
+        membership = ClubMember(club_id=club.id, user_id=current_user.id, role='owner', joined_at=jnow())
+        db.session.add(membership)
+        db.session.commit()
+        return jsonify({'success': True, 'club': {'id': club.id, 'name': club.name, 'member_count': club.member_count}})
+
+    @app.route('/api/clubs')
+    def api_clubs():
+        page = request.args.get('page', 1, type=int)
+        search = request.args.get('q', '').strip()
+        query = Club.query
+        if search:
+            query = query.filter(Club.name.ilike(f'%{search}%'))
+        clubs = query.order_by(Club.id.desc()).paginate(page=page, per_page=20, error_out=False)
+        return jsonify({'clubs': [{'id': c.id, 'name': c.name, 'description': c.description[:200] if c.description else '',
+            'owner_id': c.owner_id, 'member_count': c.member_count, 'tags': c.tags, 'created_at': c.created_at} for c in clubs.items],
+            'total': clubs.total, 'pages': clubs.pages, 'page': page})
+
+    @app.route('/api/club/<int:club_id>')
+    def api_club_detail(club_id):
+        club = Club.query.get_or_404(club_id)
+        owner = User.query.get(club.owner_id)
+        is_member = False
+        user_role = None
+        if current_user.is_authenticated:
+            mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+            if mem:
+                is_member = True
+                user_role = mem.role
+        members = ClubMember.query.filter_by(club_id=club_id).order_by(ClubMember.id.asc()).limit(50).all()
+        member_ids = [m.user_id for m in members]
+        user_map = {}
+        if member_ids:
+            users = User.query.filter(User.id.in_(member_ids)).all()
+            user_map = {u.id: {'name': u.name, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'role': u.role} for u in users}
+        return jsonify({'club': {'id': club.id, 'name': club.name, 'description': club.description,
+            'owner_id': club.owner_id, 'owner_name': owner.name if owner else 'Unknown',
+            'member_count': club.member_count, 'tags': club.tags, 'created_at': club.created_at},
+            'members': [{'id': m.id, 'user_id': m.user_id, 'role': m.role, 'joined_at': m.joined_at,
+                'user': user_map.get(m.user_id, {})} for m in members],
+            'is_member': is_member, 'user_role': user_role})
+
+    @app.route('/api/club/<int:club_id>/join', methods=['POST'])
+    @login_required
+    def api_join_club(club_id):
+        club = Club.query.get_or_404(club_id)
+        existing = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+        if existing:
+            return jsonify({'error': 'Already a member'}), 400
+        mem = ClubMember(club_id=club_id, user_id=current_user.id, role='member', joined_at=jnow())
+        db.session.add(mem)
+        club.member_count = (club.member_count or 0) + 1
+        db.session.commit()
+        return jsonify({'success': True, 'member_count': club.member_count})
+
+    @app.route('/api/club/<int:club_id>/leave', methods=['POST'])
+    @login_required
+    def api_leave_club(club_id):
+        club = Club.query.get_or_404(club_id)
+        mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+        if not mem:
+            return jsonify({'error': 'Not a member'}), 400
+        if mem.role == 'owner':
+            return jsonify({'error': 'Owner cannot leave. Transfer ownership or delete the club.'}), 400
+        db.session.delete(mem)
+        club.member_count = max(0, (club.member_count or 1) - 1)
+        db.session.commit()
+        return jsonify({'success': True, 'member_count': club.member_count})
+
+    @app.route('/api/club/<int:club_id>/posts')
+    def api_club_posts(club_id):
+        club = Club.query.get_or_404(club_id)
+        page = request.args.get('page', 1, type=int)
+        posts = Post.query.filter_by(club_id=club_id).order_by(Post.id.desc()).paginate(page=page, per_page=10, error_out=False)
+        uids = set(p.author_id for p in posts.items if p.author_id)
+        user_map = {}
+        if uids:
+            users = User.query.filter(User.id.in_(uids)).all()
+            user_map = {u.id: {'name': u.name, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'role': u.role} for u in users}
+        return jsonify({'posts': [{'id': p.id, 'author_id': p.author_id, 'author_name': p.author_name, 'author_avatar': p.author_avatar, 'author_school': p.author_school, 'type': p.type, 'title': p.title, 'content': p.content[:500] if p.content else '', 'badge_text': p.badge_text, 'likes': p.likes or 0, 'tags': p.tags, 'timestamp': p.timestamp, 'image_url': p.image_url or '', 'video_url': p.video_url or '', 'author': user_map.get(p.author_id, {})} for p in posts.items],
+            'total': posts.total, 'pages': posts.pages, 'page': page})
+
+    @app.route('/api/club/<int:club_id>/update', methods=['POST'])
+    @login_required
+    def api_update_club(club_id):
+        club = Club.query.get_or_404(club_id)
+        mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+        if not mem or mem.role not in ('owner', 'admin'):
+            return jsonify({'error': 'Only the owner or admins can update the club'}), 403
+        data = request.json or {}
+        if 'name' in data:
+            club.name = sanitize_text(data['name'], 200)
+        if 'description' in data:
+            club.description = sanitize_text(data['description'], 5000)
+        if 'tags' in data:
+            club.tags = sanitize_text(data['tags'], 500)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/club/<int:club_id>/delete', methods=['POST'])
+    @login_required
+    def api_delete_club(club_id):
+        club = Club.query.get_or_404(club_id)
+        if club.owner_id != current_user.id and current_user.role != 'super_admin':
+            return jsonify({'error': 'Only the owner can delete the club'}), 403
+        ClubMember.query.filter_by(club_id=club_id).delete()
+        Post.query.filter_by(club_id=club_id).update({'club_id': None})
+        db.session.delete(club)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/user/<int:user_id>/clubs')
+    def api_user_clubs(user_id):
+        memberships = ClubMember.query.filter_by(user_id=user_id).all()
+        if not memberships:
+            return jsonify({'clubs': []})
+        club_ids = [m.club_id for m in memberships]
+        clubs = Club.query.filter(Club.id.in_(club_ids)).all()
+        club_map = {c.id: c for c in clubs}
+        return jsonify({'clubs': [{'id': m.club_id, 'name': club_map[m.club_id].name if m.club_id in club_map else 'Unknown',
+            'description': (club_map[m.club_id].description or '')[:200] if m.club_id in club_map else '',
+            'member_count': club_map[m.club_id].member_count if m.club_id in club_map else 0,
+            'role': m.role, 'joined_at': m.joined_at} for m in memberships]})
 
     @app.route('/api/opportunity/<int:opp_id>/apply', methods=['POST'])
     @login_required
@@ -1072,21 +1335,59 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         return jsonify({'success': True})
 
+    @app.route('/api/announcement/create', methods=['POST'])
+    @login_required
+    def api_create_school_announcement_auto():
+        if current_user.role not in ('admin', 'super_admin') or not current_user.verified_school_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        data = request.json or {}
+        ann = SchoolAnnouncement(
+            school_id=current_user.verified_school_id,
+            title=sanitize_text(data.get('title', ''), 300),
+            content=sanitize_text(data.get('content', ''), 5000),
+            badge_text=sanitize_text(data.get('badge', ''), 100),
+            type=sanitize_text(data.get('type', 'announcement'), 30),
+            timestamp=short_ts()
+        )
+        db.session.add(ann)
+        db.session.commit()
+        return jsonify({'success': True, 'announcement': {'id': ann.id, 'title': ann.title}})
+
+    @app.route('/api/announcement/<int:ann_id>/delete', methods=['DELETE'])
+    @login_required
+    def api_delete_announcement_auto(ann_id):
+        ann = SchoolAnnouncement.query.get_or_404(ann_id)
+        school = School.query.get(ann.school_id)
+        if current_user.role != 'super_admin' and (not school or current_user.verified_school_id != ann.school_id):
+            return jsonify({'error': 'Unauthorized'}), 403
+        db.session.delete(ann)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/school/announcements')
+    @login_required
+    def api_school_announcements():
+        if current_user.role not in ('admin', 'super_admin') or not current_user.verified_school_id:
+            return jsonify({'announcements': []})
+        anns = SchoolAnnouncement.query.filter_by(school_id=current_user.verified_school_id).order_by(SchoolAnnouncement.id.desc()).limit(50).all()
+        return jsonify({'announcements': [{'id': a.id, 'title': a.title, 'content': a.content, 'badge': a.badge_text, 'type': a.type, 'created_at': a.timestamp} for a in anns]})
+
     @app.route('/api/school/<int:school_id>/announcement', methods=['POST'])
     @login_required
-    @limiter.limit("10 per minute")
-    def api_school_announcement(school_id):
+    def api_create_school_announcement(school_id):
         if current_user.role not in ('admin', 'super_admin'):
             return jsonify({'error': 'Unauthorized'}), 403
         data = request.json or {}
-        ann = SchoolAnnouncement(school_id=school_id,
-                                title=sanitize_text(data.get('title', ''), 200),
-                                content=sanitize_text(data.get('content', ''), MAX_CONTENT_LEN),
-                                badge_text=sanitize_text(data.get('badgeText', 'Bulletin'), 100),
-                                type=sanitize_text(data.get('type', 'announcement'), 50),
-                                timestamp=short_ts(),
-                                deadline=sanitize_text(data.get('eventDeadline', ''), 100),
-                                reward=sanitize_text(data.get('eventReward', ''), 200))
+        ann = SchoolAnnouncement(
+            school_id=school_id,
+            title=sanitize_text(data.get('title', ''), 300),
+            content=sanitize_text(data.get('content', ''), 5000),
+            badge_text=sanitize_text(data.get('badge', ''), 100),
+            type=sanitize_text(data.get('type', 'announcement'), 30),
+            timestamp=short_ts(),
+            deadline=sanitize_text(data.get('deadline', ''), 50),
+            reward=sanitize_text(data.get('reward', ''), 200)
+        )
         db.session.add(ann)
         db.session.commit()
         return jsonify({'success': True, 'announcement': {'id': ann.id, 'title': ann.title}})

@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:48rem;margin:0 auto;">
+  <!-- Club Header -->
+  <div class="card mb-4">
+    <div class="flex items-start justify-between gap-3">
+      <div style="flex:1;min-width:0;">
+        <h1 class="text-xl font-black mb-1">{{ club.name }}</h1>
+        <p class="text-sm text-muted mb-2">{{ club.description or 'No description' }}</p>
+        <div class="flex items-center gap-3 text-xs text-muted">
+          <span><i data-lucide="users" style="width:14px;height:14px;display:inline;"></i> {{ club.member_count }} members</span>
+          <span>Owner: <strong>{{ owner.name if owner else 'Unknown' }}</strong></span>
+          {% if club.tags %}
+          <span>Tags: {{ club.tags }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        {% if is_member %}
+          {% if user_role in ('owner', 'admin') %}
+          <button class="btn btn-secondary btn-sm" onclick="showEditClub()"><i data-lucide="settings" style="width:14px;height:14px;"></i></button>
+          {% endif %}
+          <button class="btn btn-outline btn-sm" onclick="leaveClub({{ club.id }})" style="color:var(--danger);border-color:var(--danger);">Leave</button>
+        {% else %}
+          <button class="btn btn-primary btn-sm" onclick="joinClub({{ club.id }})">Join</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Club Modal (owner/admin only) -->
+  {% if is_member and user_role in ('owner', 'admin') %}
+  <div id="editClubModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header"><span class="font-bold">Edit Club</span><button class="btn btn-ghost btn-sm" onclick="document.getElementById('editClubModal').classList.add('hidden')"><i data-lucide="x" style="width:20px;height:20px;"></i></button></div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="text-xs font-bold text-muted block mb-1">Name</label><input type="text" id="editClubName" value="{{ club.name }}" maxlength="200"></div>
+        <div class="mb-3"><label class="text-xs font-bold text-muted block mb-1">Description</label><textarea id="editClubDesc" rows="4" maxlength="5000">{{ club.description or '' }}</textarea></div>
+        <div class="mb-3"><label class="text-xs font-bold text-muted block mb-1">Tags</label><input type="text" id="editClubTags" value="{{ club.tags or '' }}"></div>
+        <button class="btn btn-primary w-full" onclick="saveClub({{ club.id }})">Save</button>
+        {% if user_role == 'owner' %}
+        <button class="btn btn-outline w-full mt-2" onclick="deleteClub({{ club.id }})" style="color:var(--danger);border-color:var(--danger);">Delete Club</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Members -->
+  <div class="card mb-4">
+    <h2 class="font-bold text-sm mb-3"><i data-lucide="users" style="width:16px;height:16px;display:inline;"></i> Members ({{ club.member_count }})</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(12rem,1fr));gap:0.75rem;">
+      {% for m in members %}
+      {% set u = user_map.get(m.user_id) %}
+      <a href="/profile/{{ m.user_id }}" class="flex items-center gap-2 p-2" style="border-radius:0.5rem;text-decoration:none;color:inherit;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'">
+        <div class="avatar avatar-sm" style="width:2rem;height:2rem;font-size:0.625rem;{% if u and u.avatar_url %}overflow:hidden;{% endif %}">{% if u and u.avatar_url %}<img src="{{ u.avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;">{% elif u %}{{ u.avatar or u.name[:2]|upper }}{% else %}?{% endif %}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="text-xs font-bold truncate">{{ u.name if u else 'Unknown' }}</div>
+          <div class="text-xs text-muted">{{ m.role|upper }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Club Feed -->
+  <div class="card mb-4">
+    <h2 class="font-bold text-sm mb-3"><i data-lucide="message-circle" style="width:16px;height:16px;display:inline;"></i> Posts</h2>
+    {% if is_member %}
+    <form id="clubPostForm" class="mb-4">
+      <textarea id="clubPostContent" rows="3" placeholder="Share something with the club..." class="mb-2" required></textarea>
+      <button type="submit" class="btn btn-primary btn-sm">Post</button>
+    </form>
+    {% else %}
+    <p class="text-xs text-muted mb-3">Join the club to post and interact.</p>
+    {% endif %}
+    <div id="clubFeedPosts"></div>
+    <div id="clubFeedEmpty" class="hidden text-center text-muted text-xs py-4">No posts yet.</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var CLUB_ID = {{ club.id }};
+var CURRENT_USER_ID = {{ current_user.id }};
+
+// Avatar HTML helper
+function avatarHtml(a) {
+  if (!a) return '<div class="avatar avatar-sm">?</div>';
+  if (a.avatar_url) return '<div class="avatar avatar-sm" style="overflow:hidden;"><img src="' + a.avatar_url + '" alt="" style="width:100%;height:100%;object-fit:cover;"></div>';
+  return '<div class="avatar avatar-sm">' + (a.avatar || (a.name ? a.name[0] : '?')) + '</div>';
+}
+
+// Role badge helper
+function roleBadge(role) {
+  var colors = {student:'#3b82f6',teacher:'#8b5cf6',mentor:'#f59e0b',admin:'#10b981',super_admin:'#ef4444'};
+  return '<span class="text-xs" style="color:' + (colors[role] || '#6b7280') + ';font-weight:600;margin-right:0.25rem;">' + (role ? role.replace(/_/g,' ').toUpperCase() : 'STUDENT') + '</span>';
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type) {
+  var t = document.createElement('div');
+  t.className = 'toast ' + (type || 'success');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.remove(); }, 4000);
+}
+
+// Join / Leave
+function joinClub(id) {
+  fetch('/api/club/' + id + '/join', {method:'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { showToast('Joined club!', 'success'); location.reload(); }
+      else { showToast(d.error || 'Failed', 'info'); }
+    })
+    .catch(function() { showToast('Network error', 'info'); });
+}
+
+function leaveClub(id) {
+  if (!confirm('Leave this club?')) return;
+  fetch('/api/club/' + id + '/leave', {method:'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { showToast('Left club', 'success'); location.reload(); }
+      else { showToast(d.error || 'Failed', 'info'); }
+    })
+    .catch(function() { showToast('Network error', 'info'); });
+}
+
+// Edit / Delete
+function showEditClub() { document.getElementById('editClubModal').classList.remove('hidden'); }
+
+function saveClub(id) {
+  fetch('/api/club/' + id + '/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      name: document.getElementById('editClubName').value.trim(),
+      description: document.getElementById('editClubDesc').value.trim(),
+      tags: document.getElementById('editClubTags').value.trim()
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) { showToast('Club updated', 'success'); location.reload(); }
+    else { showToast(d.error || 'Failed', 'info'); }
+  })
+  .catch(function() { showToast('Network error', 'info'); });
+}
+
+function deleteClub(id) {
+  if (!confirm('Delete this club permanently? This cannot be undone.')) return;
+  fetch('/api/club/' + id + '/delete', {method:'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { showToast('Club deleted', 'success'); window.location.href = '/clubs'; }
+      else { showToast(d.error || 'Failed', 'info'); }
+    })
+    .catch(function() { showToast('Network error', 'info'); });
+}
+
+// Club Posts
+function loadClubPosts() {
+  fetch('/api/club/' + CLUB_ID + '/posts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var container = document.getElementById('clubFeedPosts');
+      var empty = document.getElementById('clubFeedEmpty');
+      container.innerHTML = '';
+      if (!data.posts || data.posts.length === 0) {
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+      data.posts.forEach(function(p) {
+        var div = document.createElement('div');
+        div.className = 'card mb-3 fade-in';
+        div.innerHTML =
+          '<div class="post-header">' +
+            '<a href="/profile/' + p.author_id + '" class="flex items-center gap-2" style="text-decoration:none;color:inherit;">' +
+              avatarHtml(p.author) +
+              '<div><div class="font-bold text-xs">' + escapeHtml(p.author_name || 'Unknown') + '</div>' +
+              '<div class="text-xs text-muted">' + escapeHtml(p.author_school || '') + '</div></div>' +
+            '</a>' +
+          '</div>' +
+          (p.title ? '<div class="font-bold text-sm mt-2">' + escapeHtml(p.title) + '</div>' : '') +
+          (p.content ? '<div class="text-xs text-muted mt-1" style="line-height:1.6;">' + escapeHtml(p.content) + '</div>' : '') +
+          '<div class="text-xs text-muted mt-2">' + (p.timestamp || '') + '</div>';
+        container.appendChild(div);
+      });
+    })
+    .catch(function() {});
+}
+
+// Create club post
+document.getElementById('clubPostForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var content = document.getElementById('clubPostContent').value.trim();
+  if (!content) return;
+  fetch('/api/post/create', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({content: content, type: 'club_post', club_id: CLUB_ID})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      document.getElementById('clubPostContent').value = '';
+      showToast('Posted!', 'success');
+      loadClubPosts();
+    } else {
+      showToast(d.error || 'Failed to post', 'info');
+    }
+  })
+  .catch(function() { showToast('Network error', 'info'); });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  loadClubPosts();
+});
+</script>
+{% endblock %}

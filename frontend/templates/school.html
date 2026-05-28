@@ -15,7 +15,7 @@
     <div class="flex items-center gap-4 mt-3 text-sm">
       <span><span class="font-bold" id="schoolStudents">0</span> <span class="text-muted">Students</span></span>
       <span><span class="font-bold" id="schoolAchievements">0</span> <span class="text-muted">Achievements</span></span>
-      <span><span class="font-bold" id="schoolPending">0</span> <span class="text-muted">Pending Verifications</span></span>
+      <span><span class="font-bold" id="schoolPending">{{ verification_requests|selectattr('status', 'equalto', 'pending')|list|length }}</span> <span class="text-muted">Pending Verifications</span></span>
     </div>
   </div>
 
@@ -26,12 +26,8 @@
       <span class="font-bold text-sm">Create Announcement</span>
     </div>
     <form id="announcementForm">
-      <div class="mb-2">
-        <input type="text" id="annTitle" placeholder="Announcement title" required>
-      </div>
-      <div class="mb-2">
-        <textarea id="annContent" rows="3" placeholder="Announcement content..." required></textarea>
-      </div>
+      <div class="mb-2"><input type="text" id="annTitle" placeholder="Announcement title" required></div>
+      <div class="mb-2"><textarea id="annContent" rows="3" placeholder="Announcement content..." required></textarea></div>
       <div class="grid gap-2 mb-3 school-form-grid" style="grid-template-columns:1fr 1fr;">
         <input type="text" id="annBadge" placeholder="Badge text (e.g. IMPORTANT)">
         <select id="annType">
@@ -45,39 +41,53 @@
     </form>
   </div>
 
-  <!-- Announcements List -->
+  <!-- Announcements -->
   <div class="card mb-3">
     <div class="flex items-center gap-2 mb-3">
       <i data-lucide="list" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
-      <span class="font-bold text-sm">School Announcements</span>
+      <span class="font-bold text-sm">Announcements</span>
     </div>
     <div id="announcementsList"></div>
   </div>
 
   <!-- Verification Desk -->
-  <div class="card">
+  <div class="card mb-3">
     <div class="flex items-center gap-2 mb-3">
       <i data-lucide="shield-check" style="width:1.25rem;height:1.25rem;color:var(--success);"></i>
       <span class="font-bold text-sm">Verification Desk</span>
     </div>
-    <div id="verificationList"></div>
+    <div id="verificationList">
+      {% set pending = verification_requests|selectattr('status', 'equalto', 'pending')|list %}
+      {% if pending %}
+        {% for v in pending %}
+        <div class="p-3 rounded-xl mb-2" style="background:var(--bg-hover);" id="vreq-{{ v.id }}">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="avatar avatar-sm">{{ v.student_name[:2]|upper }}</div>
+            <span class="font-bold text-sm">{{ v.student_name }}</span>
+            <span class="text-xs text-muted">({{ v.student_school }})</span>
+          </div>
+          <div class="text-xs font-bold mb-1">{{ v.achievement_title }}</div>
+          <div class="text-xs text-muted mb-2">
+            {% if v.category %}Category: {{ v.category }} &middot; {% endif %}
+            {% if v.year %}Year: {{ v.year }}{% endif %}
+            {% if v.requested_at %} &middot; {{ v.requested_at }}{% endif %}
+          </div>
+          {% if v.details %}<div class="text-xs text-muted mb-2">{{ v.details[:200] }}</div>{% endif %}
+          <div class="flex gap-2">
+            <button class="btn btn-sm btn-success verify-action" data-id="{{ v.id }}" data-action="approve">Approve</button>
+            <button class="btn btn-sm btn-danger verify-action" data-id="{{ v.id }}" data-action="reject">Reject</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="text-center text-muted text-sm py-4">No pending verification requests</div>
+      {% endif %}
+    </div>
   </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Load school data
-  function loadSchoolData() {
-    fetch('/api/school/dashboard')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        document.getElementById('schoolStudents').textContent = data.students_count || 0;
-        document.getElementById('schoolAchievements').textContent = data.achievements_count || 0;
-        document.getElementById('schoolPending').textContent = data.pending_verifications || 0;
-      })
-      .catch(function() {});
-  }
-
   // Load announcements
   function loadAnnouncements() {
     fetch('/api/school/announcements')
@@ -103,103 +113,63 @@ document.addEventListener('DOMContentLoaded', function() {
               '<button class="btn btn-danger btn-sm delete-ann" data-id="' + a.id + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>';
             list.appendChild(el);
           });
-          lucide.createIcons();
+          if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
           list.innerHTML = '<div class="text-center text-muted text-sm py-4">No announcements yet</div>';
         }
-
-        // Delete announcements
         document.querySelectorAll('.delete-ann').forEach(function(btn) {
           btn.addEventListener('click', function() {
             var id = this.getAttribute('data-id');
             if (!confirm('Delete this announcement?')) return;
-            fetch('/api/school/announcement/' + id + '/delete', { method: 'DELETE' })
+            fetch('/api/announcement/' + id + '/delete', { method: 'DELETE' })
               .then(function(r) { return r.json(); })
               .then(function(data) {
-                if (data.success) {
-                  showToast('Announcement deleted', 'success');
-                  loadAnnouncements();
-                } else {
-                  showToast(data.error || 'Error', 'info');
-                }
+                if (data.success) { showToast('Deleted', 'success'); loadAnnouncements(); }
+                else { showToast(data.error || 'Error', 'info'); }
               })
-              .catch(function() { showToast('Error deleting', 'info'); });
+              .catch(function() { showToast('Error', 'info'); });
           });
         });
       })
       .catch(function() {});
   }
 
-  // Load verification requests
-  function loadVerifications() {
-    fetch('/api/school/verifications')
+  // Verification actions (works with server-rendered list)
+  document.querySelectorAll('.verify-action').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = this.getAttribute('data-id');
+      var action = this.getAttribute('data-action');
+      fetch('/api/verification/' + id + '/action', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: action})
+      })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        var list = document.getElementById('verificationList');
-        list.innerHTML = '';
-        if (data.requests && data.requests.length > 0) {
-          data.requests.forEach(function(v) {
-            var el = document.createElement('div');
-            el.className = 'p-3 rounded-xl mb-2';
-            el.style.background = 'var(--bg-hover)';
-            el.innerHTML =
-              '<div class="flex items-center gap-2 mb-1">' +
-                '<div class="avatar avatar-sm">' + (v.student ? v.student.name.slice(0,2).toUpperCase() : '??') + '</div>' +
-                '<span class="font-bold text-sm">' + escapeHtml(v.student ? v.student.name : 'Unknown') + '</span>' +
-              '</div>' +
-              '<div class="text-xs font-bold mb-1">' + escapeHtml(v.achievement_title || 'Achievement') + '</div>' +
-              (v.attachment ? '<div class="text-xs text-muted mb-2">Attachment: ' + escapeHtml(v.attachment) + '</div>' : '') +
-              '<div class="flex gap-2">' +
-                '<button class="btn btn-sm btn-success verify-action" data-id="' + v.id + '" data-action="approve">Approve</button>' +
-                '<button class="btn btn-sm btn-danger verify-action" data-id="' + v.id + '" data-action="reject">Reject</button>' +
-              '</div>';
-            list.appendChild(el);
-          });
-          lucide.createIcons();
+        if (data.success) {
+          showToast('Verification ' + action + 'd!', 'success');
+          var el = document.getElementById('vreq-' + id);
+          if (el) el.style.display = 'none';
         } else {
-          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No pending verification requests</div>';
+          showToast(data.error || 'Error', 'info');
         }
-
-        // Verify action
-        document.querySelectorAll('.verify-action').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            var action = this.getAttribute('data-action');
-            fetch('/api/verification/' + id + '/action', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({action: action})
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-              if (data.success) {
-                showToast('Verification ' + action + 'd!', 'success');
-                loadVerifications();
-                loadSchoolData();
-              } else {
-                showToast(data.error || 'Error', 'info');
-              }
-            })
-            .catch(function() { showToast('Error processing', 'info'); });
-          });
-        });
       })
-      .catch(function() {});
-  }
+      .catch(function() { showToast('Error', 'info'); });
+    });
+  });
 
   // Create announcement
   document.getElementById('announcementForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    var body = {
-      title: document.getElementById('annTitle').value,
-      content: document.getElementById('annContent').value,
-      badge: document.getElementById('annBadge').value,
-      type: document.getElementById('annType').value
-    };
-    fetch('/api/school/announcement/create', {
+    fetch('/api/announcement/create', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        title: document.getElementById('annTitle').value,
+        content: document.getElementById('annContent').value,
+        badge: document.getElementById('annBadge').value,
+        type: document.getElementById('annType').value
+      })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -211,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast(data.error || 'Error', 'info');
       }
     })
-    .catch(function() { showToast('Error creating', 'info'); });
+    .catch(function() { showToast('Error', 'info'); });
   });
 
   function escapeHtml(text) {
@@ -221,9 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return d.innerHTML;
   }
 
-  loadSchoolData();
   loadAnnouncements();
-  loadVerifications();
 });
 </script>
 {% endblock %}
