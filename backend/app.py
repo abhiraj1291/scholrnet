@@ -12,7 +12,7 @@ from markupsafe import escape as escape_html
 from config import Config
 from models import db, User, Achievement, Project, Post, Comment, Ad, Opportunity, TeamRequest
 from models import TeamApplicant, VerificationRequest, Mentor, MentorshipRequest, MentorInteraction
-from models import Notification, ChatMessage, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience
+from models import Notification, ChatMessage, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience, Club, ClubMember
 
 MAX_STRING_LEN = 5000
 MAX_CONTENT_LEN = 50000
