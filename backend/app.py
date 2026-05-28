@@ -1492,7 +1492,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_user_stats():
         v_count = Achievement.query.filter_by(user_id=current_user.id, verification_status='Verified').count()
         p_count = Project.query.filter_by(user_id=current_user.id).count()
-        return jsonify({'verified_achievements': v_count, 'projects': p_count, 'collaborations': 0})
+        f_count = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').count() + Connection.query.filter_by(user_id=current_user.id, status='accepted').count()
+        return jsonify({'verified_achievements': v_count, 'projects': p_count, 'collaborations': 0, 'friends': f_count})
 
     @app.route('/api/user/<int:user_id>/profile')
     @login_required
