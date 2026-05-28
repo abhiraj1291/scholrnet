@@ -67,6 +67,8 @@ input:focus, textarea:focus, select:focus {
 
 /* ===== Utility ===== */
 .hidden { display: none !important; }
+@media (min-width: 640px) { .sm\:block { display: block !important; } }
+@media (max-width: 639px) { .sm\:hidden { display: none !important; } }
 .flex { display: flex; }
 .flex-1 { flex: 1; }
 .items-center { align-items: center; }

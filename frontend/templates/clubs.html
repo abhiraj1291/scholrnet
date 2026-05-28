@@ -65,13 +65,19 @@ function showCreateClubModal() {
   document.getElementById('createClubModal').classList.remove('hidden');
 }
 
-document.getElementById('closeCreateClub').addEventListener('click', function() {
-  document.getElementById('createClubModal').classList.add('hidden');
-});
+var closeCreateBtn = document.getElementById('closeCreateClub');
+if (closeCreateBtn) {
+  closeCreateBtn.addEventListener('click', function() {
+    document.getElementById('createClubModal').classList.add('hidden');
+  });
+}
 
-document.getElementById('createClubModal').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.add('hidden');
-});
+var createModal = document.getElementById('createClubModal');
+if (createModal) {
+  createModal.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+  });
+}
 
 document.getElementById('createClubForm').addEventListener('submit', function(e) {
   e.preventDefault();

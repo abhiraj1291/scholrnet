@@ -328,27 +328,30 @@ function loadClubPosts() {
 }
 
 // Create club post
-document.getElementById('clubPostForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  var content = document.getElementById('clubPostContent').value.trim();
-  if (!content) return;
-  fetch('/api/post/create', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({content: content, type: 'club_post', club_id: CLUB_ID})
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.success) {
-      document.getElementById('clubPostContent').value = '';
-      showToast('Posted!', 'success');
-      loadClubPosts();
-    } else {
-      showToast(d.error || 'Failed to post', 'info');
-    }
-  })
-  .catch(function() { showToast('Network error', 'info'); });
-});
+var clubPostForm = document.getElementById('clubPostForm');
+if (clubPostForm) {
+  clubPostForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var content = document.getElementById('clubPostContent').value.trim();
+    if (!content) return;
+    fetch('/api/post/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({content: content, type: 'club_post', club_id: CLUB_ID})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        document.getElementById('clubPostContent').value = '';
+        showToast('Posted!', 'success');
+        loadClubPosts();
+      } else {
+        showToast(d.error || 'Failed to post', 'info');
+      }
+    })
+    .catch(function() { showToast('Network error', 'info'); });
+  });
+}
 
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
