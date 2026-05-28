@@ -63,19 +63,7 @@ function copyToClipboard(text) {
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
-  // Theme toggle (also handled in base.html inline, safe to double-bind)
-  try {
-    const themeToggle = document.getElementById('themeToggle');
-    const settingsThemeToggle = document.getElementById('settingsThemeToggle');
-    function setTheme(dark) {
-      document.documentElement.classList.toggle('dark', dark);
-      document.cookie = 'theme=' + (dark ? 'dark' : 'light') + '; path=/; max-age=' + 60*60*24*365;
-      if (themeToggle) themeToggle.checked = dark;
-      if (settingsThemeToggle) settingsThemeToggle.checked = dark;
-    }
-    if (themeToggle) themeToggle.addEventListener('change', function() { setTheme(this.checked); });
-    if (settingsThemeToggle) settingsThemeToggle.addEventListener('change', function() { setTheme(this.checked); });
-  } catch(e) {}
+  // Theme toggle now handled via inline onchange in base.html
 
   // Settings modal controls
   const settingsBtn = document.getElementById('settings-btn');

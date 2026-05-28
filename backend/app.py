@@ -158,7 +158,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             method="POST",
         )
         try:
-            urllib.request.urlopen(req, timeout=15)
+            urllib.request.urlopen(req, timeout=25)
             return f"{supabase_url}/storage/v1/object/public/{bucket}/{path}"
         except Exception:
             return None
@@ -1095,7 +1095,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         existing = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
         if existing:
             return jsonify({'error': 'Already a member'}), 400
-        if club.is_private or False:
+        if club.is_private:
             pending = ClubJoinRequest.query.filter_by(club_id=club_id, user_id=current_user.id, status='pending').first()
             if pending:
                 return jsonify({'error': 'Join request already pending'}), 400

@@ -69,7 +69,7 @@
         </a>
         <!-- Dark Mode Toggle -->
         <label class="toggle hidden sm:block">
-          <input type="checkbox" id="themeToggle" {{ 'checked' if request.cookies.get('theme') == 'dark' else '' }}>
+          <input type="checkbox" id="themeToggle" onchange="toggleTheme(this)" {{ 'checked' if request.cookies.get('theme') == 'dark' else '' }}>
           <span class="toggle-slider"></span>
         </label>
 
@@ -211,7 +211,7 @@
         <div class="flex items-center justify-between mb-4">
           <div><div class="font-bold text-sm">Dark Mode</div><div class="text-xs text-muted">Toggle dark theme</div></div>
           <label class="toggle">
-            <input type="checkbox" id="settingsThemeToggle" {{ 'checked' if request.cookies.get('theme') == 'dark' else '' }}>
+            <input type="checkbox" id="settingsThemeToggle" onchange="toggleSettingsTheme(this)" {{ 'checked' if request.cookies.get('theme') == 'dark' else '' }}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -266,19 +266,21 @@
   <script src="{{ url_for('static', filename='js/search.js') }}"></script>
 
   <script>
-  // Theme toggle (separate from Lucide to avoid JS errors breaking it)
-  (function(){
-    var tt = document.getElementById('themeToggle');
+  // Theme toggle (inline onclick to avoid any JS event listener issues)
+  function toggleTheme(cb) {
+    var dark = cb.checked;
+    document.documentElement.classList.toggle('dark', dark);
+    document.cookie = 'theme=' + (dark ? 'dark' : 'light') + '; path=/; max-age=' + 60*60*24*365;
     var st = document.getElementById('settingsThemeToggle');
-    function setTheme(dark) {
-      document.documentElement.classList.toggle('dark', dark);
-      document.cookie = 'theme=' + (dark ? 'dark' : 'light') + '; path=/; max-age=' + 60*60*24*365;
-      if (tt) tt.checked = dark;
-      if (st) st.checked = dark;
-    }
-    if (tt) tt.addEventListener('change', function() { setTheme(this.checked); });
-    if (st) st.addEventListener('change', function() { setTheme(this.checked); });
-  })();
+    if (st) st.checked = dark;
+  }
+  function toggleSettingsTheme(cb) {
+    var dark = cb.checked;
+    document.documentElement.classList.toggle('dark', dark);
+    document.cookie = 'theme=' + (dark ? 'dark' : 'light') + '; path=/; max-age=' + 60*60*24*365;
+    var tt = document.getElementById('themeToggle');
+    if (tt) tt.checked = dark;
+  }
   </script>
   {% block scripts %}{% endblock %}
 </body>
