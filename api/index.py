@@ -60,7 +60,7 @@ def add_security_headers(response):
     )
     response.headers.pop("Server", None)
     if request.path.startswith('/static/'):
-        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        response.headers['Cache-Control'] = 'public, max-age=86400'
     return response
 
 from app import register_routes

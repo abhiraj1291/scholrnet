@@ -1095,7 +1095,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         existing = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
         if existing:
             return jsonify({'error': 'Already a member'}), 400
-        if club.is_private:
+        if club.is_private or False:
             pending = ClubJoinRequest.query.filter_by(club_id=club_id, user_id=current_user.id, status='pending').first()
             if pending:
                 return jsonify({'error': 'Join request already pending'}), 400

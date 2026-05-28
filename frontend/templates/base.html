@@ -7,7 +7,7 @@
   <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://www.gstatic.com">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
   <script src="https://unpkg.com/lucide@0.468.0" defer></script>
   {% set palettes = {
     'navy': {'--primary':'#1a2744','--primary-hover':'#2d4a7a','--accent':'#c9a84c','--accent-soft':'#e8d48b','--bg':'#ebf4ff','--bg-card':'#ffffff','--bg-hover':'#fdf0f0','--border':'#cbd5e1','--text-muted':'#5a6a7a','--danger':'#e86565'},
@@ -266,20 +266,19 @@
   <script src="{{ url_for('static', filename='js/search.js') }}"></script>
 
   <script>
-  // Theme toggle (needed early; rest of init is in main.js)
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-    const themeToggle = document.getElementById('themeToggle');
-    const settingsThemeToggle = document.getElementById('settingsThemeToggle');
+  // Theme toggle (separate from Lucide to avoid JS errors breaking it)
+  (function(){
+    var tt = document.getElementById('themeToggle');
+    var st = document.getElementById('settingsThemeToggle');
     function setTheme(dark) {
       document.documentElement.classList.toggle('dark', dark);
       document.cookie = 'theme=' + (dark ? 'dark' : 'light') + '; path=/; max-age=' + 60*60*24*365;
-      if (themeToggle) themeToggle.checked = dark;
-      if (settingsThemeToggle) settingsThemeToggle.checked = dark;
+      if (tt) tt.checked = dark;
+      if (st) st.checked = dark;
     }
-    if (themeToggle) themeToggle.addEventListener('change', function() { setTheme(this.checked); });
-    if (settingsThemeToggle) settingsThemeToggle.addEventListener('change', function() { setTheme(this.checked); });
-  });
+    if (tt) tt.addEventListener('change', function() { setTheme(this.checked); });
+    if (st) st.addEventListener('change', function() { setTheme(this.checked); });
+  })();
   </script>
   {% block scripts %}{% endblock %}
 </body>
