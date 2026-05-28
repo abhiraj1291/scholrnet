@@ -207,6 +207,8 @@ class Club(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, default="")
+    bio = db.Column(db.Text, default="")
+    is_private = db.Column(db.Boolean, default=False)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     avatar = db.Column(db.String(300), default="")
     cover_url = db.Column(db.String(500), default="")
@@ -223,6 +225,15 @@ class ClubMember(db.Model):
     joined_at = db.Column(db.String(30), default="")
 
     __table_args__ = (db.Index('idx_club_member', 'club_id', 'user_id', unique=True),)
+
+class ClubJoinRequest(db.Model):
+    __tablename__ = 'club_join_requests'
+    id = db.Column(db.Integer, primary_key=True)
+    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    status = db.Column(db.String(20), default='pending')
+    requested_at = db.Column(db.String(30), default="")
+    responded_at = db.Column(db.String(30), default="")
 
 class School(db.Model):
     __tablename__ = 'schools'

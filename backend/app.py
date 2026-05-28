@@ -12,7 +12,7 @@ from markupsafe import escape as escape_html
 from config import Config
 from models import db, User, Achievement, Project, Post, Comment, Ad, Opportunity, TeamRequest
 from models import TeamApplicant, VerificationRequest, Mentor, MentorshipRequest, MentorInteraction
-from models import Notification, ChatMessage, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience, Club, ClubMember
+from models import Notification, ChatMessage, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience, Club, ClubMember, ClubJoinRequest
 
 MAX_STRING_LEN = 5000
 MAX_CONTENT_LEN = 50000
@@ -96,12 +96,21 @@ def register_routes(app, bcrypt, login_manager, limiter):
             except Exception:
                 print("AUTO-MIGRATE: posts table migration failed, continuing")
             conn.commit()
-            conn.execute(text("CREATE TABLE IF NOT EXISTS clubs (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT DEFAULT '', owner_id INTEGER REFERENCES users(id) NOT NULL, avatar VARCHAR(300) DEFAULT '', cover_url VARCHAR(500) DEFAULT '', created_at VARCHAR(30) DEFAULT '', member_count INTEGER DEFAULT 1, tags VARCHAR(500) DEFAULT '')"))
+            conn.execute(text("CREATE TABLE IF NOT EXISTS clubs (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT DEFAULT '', bio TEXT DEFAULT '', is_private BOOLEAN DEFAULT FALSE, owner_id INTEGER REFERENCES users(id) NOT NULL, avatar VARCHAR(300) DEFAULT '', cover_url VARCHAR(500) DEFAULT '', created_at VARCHAR(30) DEFAULT '', member_count INTEGER DEFAULT 1, tags VARCHAR(500) DEFAULT '')"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS club_members (id SERIAL PRIMARY KEY, club_id INTEGER REFERENCES clubs(id) NOT NULL, user_id INTEGER REFERENCES users(id) NOT NULL, role VARCHAR(20) DEFAULT 'member', joined_at VARCHAR(30) DEFAULT '')"))
+            conn.execute(text("CREATE TABLE IF NOT EXISTS club_join_requests (id SERIAL PRIMARY KEY, club_id INTEGER REFERENCES clubs(id) NOT NULL, user_id INTEGER REFERENCES users(id) NOT NULL, status VARCHAR(20) DEFAULT 'pending', requested_at VARCHAR(30) DEFAULT '', responded_at VARCHAR(30) DEFAULT '')"))
             try:
                 conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_club_member ON club_members(club_id, user_id)"))
             except Exception:
                 pass
+            try:
+                clubs_cols2 = [c['name'] for c in inspector.get_columns('clubs')]
+                if 'is_private' not in clubs_cols2:
+                    conn.execute(text("ALTER TABLE clubs ADD COLUMN is_private BOOLEAN DEFAULT FALSE"))
+                if 'bio' not in clubs_cols2:
+                    conn.execute(text("ALTER TABLE clubs ADD COLUMN bio TEXT DEFAULT ''"))
+            except Exception:
+                print("AUTO-MIGRATE: clubs columns migration, continuing")
             conn.commit()
     except Exception:
         print("AUTO-MIGRATE: columns may already exist, continuing")
@@ -578,9 +587,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
         owner = User.query.get(club.owner_id)
         is_member = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first() is not None
         user_role = None
+        join_request_pending = False
         if is_member:
             mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
             user_role = mem.role if mem else None
+        else:
+            pending_req = ClubJoinRequest.query.filter_by(club_id=club_id, user_id=current_user.id, status='pending').first()
+            join_request_pending = pending_req is not None
         members = ClubMember.query.filter_by(club_id=club_id).order_by(ClubMember.id.asc()).all()
         member_ids = [m.user_id for m in members]
         user_map = {}
@@ -589,6 +602,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             user_map = {u.id: u for u in users}
         return render_template('club_detail.html',
             club=club, owner=owner, is_member=is_member, user_role=user_role,
+            join_request_pending=join_request_pending,
             members=members, user_map=user_map,
             user=current_user,
             notifications=get_user_notifications(current_user.id)
@@ -1023,15 +1037,18 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not name:
             return jsonify({'error': 'Club name is required'}), 400
         description = sanitize_text(data.get('description', ''), 5000)
+        bio = sanitize_text(data.get('bio', ''), 5000)
         tags = sanitize_text(data.get('tags', ''), 500)
-        club = Club(name=name, description=description, owner_id=current_user.id,
+        is_private = data.get('is_private', False)
+        club = Club(name=name, description=description, bio=bio, is_private=bool(is_private),
+                    owner_id=current_user.id,
                     tags=tags, created_at=jnow(), member_count=1)
         db.session.add(club)
         db.session.flush()
         membership = ClubMember(club_id=club.id, user_id=current_user.id, role='owner', joined_at=jnow())
         db.session.add(membership)
         db.session.commit()
-        return jsonify({'success': True, 'club': {'id': club.id, 'name': club.name, 'member_count': club.member_count}})
+        return jsonify({'success': True, 'club': {'id': club.id, 'name': club.name, 'member_count': club.member_count, 'is_private': club.is_private}})
 
     @app.route('/api/clubs')
     def api_clubs():
@@ -1042,7 +1059,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
             query = query.filter(Club.name.ilike(f'%{search}%'))
         clubs = query.order_by(Club.id.desc()).paginate(page=page, per_page=20, error_out=False)
         return jsonify({'clubs': [{'id': c.id, 'name': c.name, 'description': c.description[:200] if c.description else '',
-            'owner_id': c.owner_id, 'member_count': c.member_count, 'tags': c.tags, 'created_at': c.created_at} for c in clubs.items],
+            'owner_id': c.owner_id, 'member_count': c.member_count, 'tags': c.tags, 'created_at': c.created_at,
+            'is_private': c.is_private, 'avatar': c.avatar, 'cover_url': c.cover_url} for c in clubs.items],
             'total': clubs.total, 'pages': clubs.pages, 'page': page})
 
     @app.route('/api/club/<int:club_id>')
@@ -1063,6 +1081,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             users = User.query.filter(User.id.in_(member_ids)).all()
             user_map = {u.id: {'name': u.name, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'role': u.role} for u in users}
         return jsonify({'club': {'id': club.id, 'name': club.name, 'description': club.description,
+            'bio': club.bio or '', 'is_private': club.is_private, 'avatar': club.avatar or '', 'cover_url': club.cover_url or '',
             'owner_id': club.owner_id, 'owner_name': owner.name if owner else 'Unknown',
             'member_count': club.member_count, 'tags': club.tags, 'created_at': club.created_at},
             'members': [{'id': m.id, 'user_id': m.user_id, 'role': m.role, 'joined_at': m.joined_at,
@@ -1076,6 +1095,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
         existing = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
         if existing:
             return jsonify({'error': 'Already a member'}), 400
+        if club.is_private:
+            pending = ClubJoinRequest.query.filter_by(club_id=club_id, user_id=current_user.id, status='pending').first()
+            if pending:
+                return jsonify({'error': 'Join request already pending'}), 400
+            req = ClubJoinRequest(club_id=club_id, user_id=current_user.id, status='pending', requested_at=jnow())
+            db.session.add(req)
+            db.session.commit()
+            return jsonify({'success': True, 'pending': True, 'message': 'Join request sent. Waiting for approval.'})
         mem = ClubMember(club_id=club_id, user_id=current_user.id, role='member', joined_at=jnow())
         db.session.add(mem)
         club.member_count = (club.member_count or 0) + 1
@@ -1121,8 +1148,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
             club.name = sanitize_text(data['name'], 200)
         if 'description' in data:
             club.description = sanitize_text(data['description'], 5000)
+        if 'bio' in data:
+            club.bio = sanitize_text(data['bio'], 5000)
         if 'tags' in data:
             club.tags = sanitize_text(data['tags'], 500)
+        if 'is_private' in data:
+            club.is_private = bool(data['is_private'])
         db.session.commit()
         return jsonify({'success': True})
 
@@ -1149,7 +1180,99 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'clubs': [{'id': m.club_id, 'name': club_map[m.club_id].name if m.club_id in club_map else 'Unknown',
             'description': (club_map[m.club_id].description or '')[:200] if m.club_id in club_map else '',
             'member_count': club_map[m.club_id].member_count if m.club_id in club_map else 0,
+            'is_private': club_map[m.club_id].is_private if m.club_id in club_map else False,
+            'avatar': club_map[m.club_id].avatar or '' if m.club_id in club_map else '',
             'role': m.role, 'joined_at': m.joined_at} for m in memberships]})
+
+    @app.route('/api/club/<int:club_id>/join-requests')
+    @login_required
+    def api_club_join_requests(club_id):
+        club = Club.query.get_or_404(club_id)
+        mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+        if not mem or mem.role not in ('owner', 'admin'):
+            return jsonify({'error': 'Unauthorized'}), 403
+        reqs = ClubJoinRequest.query.filter_by(club_id=club_id, status='pending').order_by(ClubJoinRequest.id.asc()).all()
+        user_ids = [r.user_id for r in reqs]
+        user_map = {}
+        if user_ids:
+            users = User.query.filter(User.id.in_(user_ids)).all()
+            user_map = {u.id: {'name': u.name, 'avatar': u.avatar_url or u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url or '', 'role': u.role, 'school': u.school} for u in users}
+        return jsonify({'requests': [{'id': r.id, 'user_id': r.user_id, 'status': r.status, 'requested_at': r.requested_at, 'user': user_map.get(r.user_id, {})} for r in reqs]})
+
+    @app.route('/api/club/<int:club_id>/join-request/<int:req_id>/approve', methods=['POST'])
+    @login_required
+    def api_approve_join_request(club_id, req_id):
+        club = Club.query.get_or_404(club_id)
+        mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+        if not mem or mem.role not in ('owner', 'admin'):
+            return jsonify({'error': 'Unauthorized'}), 403
+        req = ClubJoinRequest.query.get_or_404(req_id)
+        if req.club_id != club_id or req.status != 'pending':
+            return jsonify({'error': 'Invalid request'}), 400
+        req.status = 'approved'
+        req.responded_at = jnow()
+        existing = ClubMember.query.filter_by(club_id=club_id, user_id=req.user_id).first()
+        if not existing:
+            new_mem = ClubMember(club_id=club_id, user_id=req.user_id, role='member', joined_at=jnow())
+            db.session.add(new_mem)
+            club.member_count = (club.member_count or 0) + 1
+        db.session.commit()
+        return jsonify({'success': True, 'member_count': club.member_count})
+
+    @app.route('/api/club/<int:club_id>/join-request/<int:req_id>/reject', methods=['POST'])
+    @login_required
+    def api_reject_join_request(club_id, req_id):
+        club = Club.query.get_or_404(club_id)
+        mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+        if not mem or mem.role not in ('owner', 'admin'):
+            return jsonify({'error': 'Unauthorized'}), 403
+        req = ClubJoinRequest.query.get_or_404(req_id)
+        if req.club_id != club_id or req.status != 'pending':
+            return jsonify({'error': 'Invalid request'}), 400
+        req.status = 'rejected'
+        req.responded_at = jnow()
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/club/<int:club_id>/avatar', methods=['POST'])
+    @login_required
+    def api_club_upload_avatar(club_id):
+        club = Club.query.get_or_404(club_id)
+        if club.owner_id != current_user.id and current_user.role != 'super_admin':
+            return jsonify({'error': 'Only the owner can change the avatar'}), 403
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        f = request.files['file']
+        if not f.filename:
+            return jsonify({'error': 'No file selected'}), 400
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'png'
+        path = f"club_avatars/{club.id}/{uuid.uuid4().hex}.{ext}"
+        url = _save_to_supabase(f.read(), 'uploads', path)
+        if not url:
+            return jsonify({'error': 'Upload failed'}), 500
+        club.avatar = url
+        db.session.commit()
+        return jsonify({'success': True, 'url': url})
+
+    @app.route('/api/club/<int:club_id>/cover', methods=['POST'])
+    @login_required
+    def api_club_upload_cover(club_id):
+        club = Club.query.get_or_404(club_id)
+        if club.owner_id != current_user.id and current_user.role != 'super_admin':
+            return jsonify({'error': 'Only the owner can change the cover'}), 403
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        f = request.files['file']
+        if not f.filename:
+            return jsonify({'error': 'No file selected'}), 400
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'jpg'
+        path = f"club_covers/{club.id}/{uuid.uuid4().hex}.{ext}"
+        url = _save_to_supabase(f.read(), 'uploads', path)
+        if not url:
+            return jsonify({'error': 'Upload failed'}), 500
+        club.cover_url = url
+        db.session.commit()
+        return jsonify({'success': True, 'url': url})
 
     @app.route('/api/opportunity/<int:opp_id>/apply', methods=['POST'])
     @login_required
