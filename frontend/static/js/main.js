@@ -50,11 +50,6 @@ function switchTab(tabId) {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function toggleDark(enable) {
-  document.documentElement.classList.toggle('dark', enable);
-  document.cookie = `theme=${enable ? 'dark' : 'light'}; path=/; max-age=31536000`;
-}
-
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!'));
 }
@@ -62,8 +57,6 @@ function copyToClipboard(text) {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
-
-  // Theme toggle now handled via inline onchange in base.html
 
   // Settings modal controls
   const settingsBtn = document.getElementById('settings-btn');

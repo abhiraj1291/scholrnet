@@ -110,91 +110,94 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     import traceback, sys
 
-    # Auto-migrate missing columns on startup
-    try:
-        from sqlalchemy import text, inspect
-        inspector = inspect(db.engine)
-        users_cols = [c['name'] for c in inspector.get_columns('users')]
-        schools_cols = [c['name'] for c in inspector.get_columns('schools')]
-        with db.engine.connect() as conn:
-            if 'school_verified' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE"))
-            if 'verified_school_id' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
-            if 'verification_code' not in schools_cols:
-                conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''"))
-            if 'verified_by_email' not in schools_cols:
-                conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''"))
-            try:
-                ads_cols = [c['name'] for c in inspector.get_columns('ads')]
-                if 'active' not in ads_cols:
-                    conn.execute(text("ALTER TABLE ads ADD COLUMN active BOOLEAN DEFAULT TRUE"))
-                if 'target_role' not in ads_cols:
-                    conn.execute(text("ALTER TABLE ads ADD COLUMN target_role VARCHAR(30) DEFAULT ''"))
-                if 'created_at' not in ads_cols:
-                    conn.execute(text("ALTER TABLE ads ADD COLUMN created_at TIMESTAMP DEFAULT NOW()"))
-            except Exception:
-                print("AUTO-MIGRATE: ads table or columns may already exist, continuing")
-            try:
-                chat_cols = [c['name'] for c in inspector.get_columns('chat_messages')]
-                if 'is_read' not in chat_cols:
-                    conn.execute(text("ALTER TABLE chat_messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE"))
-            except Exception:
-                print("AUTO-MIGRATE: chat_messages table may not exist yet, continuing")
-            try:
-                vreq_cols = [c['name'] for c in inspector.get_columns('verification_requests')]
-                if 'school_id' not in vreq_cols:
-                    conn.execute(text("ALTER TABLE verification_requests ADD COLUMN school_id INTEGER REFERENCES schools(id)"))
-            except Exception:
-                print("AUTO-MIGRATE: verification_requests table may not exist yet, continuing")
-            try:
-                posts_cols = [c['name'] for c in inspector.get_columns('posts')]
-                if 'club_id' not in posts_cols:
-                    conn.execute(text("ALTER TABLE posts ADD COLUMN club_id INTEGER REFERENCES clubs(id)"))
-            except Exception:
-                print("AUTO-MIGRATE: posts table migration failed, continuing")
-            conn.commit()
-            conn.execute(text("CREATE TABLE IF NOT EXISTS clubs (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT DEFAULT '', bio TEXT DEFAULT '', is_private BOOLEAN DEFAULT FALSE, owner_id INTEGER REFERENCES users(id) NOT NULL, avatar VARCHAR(300) DEFAULT '', cover_url VARCHAR(500) DEFAULT '', created_at VARCHAR(30) DEFAULT '', member_count INTEGER DEFAULT 1, tags VARCHAR(500) DEFAULT '')"))
-            conn.execute(text("CREATE TABLE IF NOT EXISTS club_members (id SERIAL PRIMARY KEY, club_id INTEGER REFERENCES clubs(id) NOT NULL, user_id INTEGER REFERENCES users(id) NOT NULL, role VARCHAR(20) DEFAULT 'member', joined_at VARCHAR(30) DEFAULT '')"))
-            conn.execute(text("CREATE TABLE IF NOT EXISTS club_join_requests (id SERIAL PRIMARY KEY, club_id INTEGER REFERENCES clubs(id) NOT NULL, user_id INTEGER REFERENCES users(id) NOT NULL, status VARCHAR(20) DEFAULT 'pending', requested_at VARCHAR(30) DEFAULT '', responded_at VARCHAR(30) DEFAULT '')"))
-            try:
-                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_club_member ON club_members(club_id, user_id)"))
-            except Exception:
-                pass
-            try:
-                clubs_cols2 = [c['name'] for c in inspector.get_columns('clubs')]
-                if 'is_private' not in clubs_cols2:
-                    conn.execute(text("ALTER TABLE clubs ADD COLUMN is_private BOOLEAN DEFAULT FALSE"))
-                if 'bio' not in clubs_cols2:
-                    conn.execute(text("ALTER TABLE clubs ADD COLUMN bio TEXT DEFAULT ''"))
-            except Exception:
-                print("AUTO-MIGRATE: clubs columns migration, continuing")
-            conn.commit()
-            try:
-                conn.execute(text("CREATE TABLE IF NOT EXISTS audit_logs (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), user_name VARCHAR(100) DEFAULT '', action VARCHAR(50) NOT NULL, target_type VARCHAR(50) DEFAULT '', target_id INTEGER, detail TEXT DEFAULT '', ip_address VARCHAR(45) DEFAULT '', timestamp VARCHAR(30) DEFAULT '')"))
-            except Exception:
-                print("AUTO-MIGRATE: audit_logs table creation, continuing")
-            if 'totp_secret' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(32) DEFAULT ''"))
-            if 'totp_enabled' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT FALSE"))
-            if 'totp_backup_codes' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN totp_backup_codes TEXT DEFAULT ''"))
-            if 'email_verified' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"))
-            if 'email_verify_token' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(128) DEFAULT ''"))
-            if 'reset_password_token' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(128) DEFAULT ''"))
-            if 'reset_password_token_expires' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token_expires VARCHAR(30) DEFAULT ''"))
-            conn.commit()
-    except Exception as e:
-        print(f"AUTO-MIGRATE: {e}, continuing")
+    # Auto-migrate missing columns on startup (only if RUN_MIGRATIONS=true)
+    if os.environ.get('RUN_MIGRATIONS', '').lower() == 'true':
+        try:
+            from sqlalchemy import text, inspect
+            inspector = inspect(db.engine)
+            users_cols = [c['name'] for c in inspector.get_columns('users')]
+            schools_cols = [c['name'] for c in inspector.get_columns('schools')]
+            with db.engine.connect() as conn:
+                if 'school_verified' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE"))
+                if 'verified_school_id' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
+                if 'verification_code' not in schools_cols:
+                    conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''"))
+                if 'verified_by_email' not in schools_cols:
+                    conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''"))
+                try:
+                    ads_cols = [c['name'] for c in inspector.get_columns('ads')]
+                    if 'active' not in ads_cols:
+                        conn.execute(text("ALTER TABLE ads ADD COLUMN active BOOLEAN DEFAULT TRUE"))
+                    if 'target_role' not in ads_cols:
+                        conn.execute(text("ALTER TABLE ads ADD COLUMN target_role VARCHAR(30) DEFAULT ''"))
+                    if 'created_at' not in ads_cols:
+                        conn.execute(text("ALTER TABLE ads ADD COLUMN created_at TIMESTAMP DEFAULT NOW()"))
+                except Exception:
+                    print("AUTO-MIGRATE: ads table or columns may already exist, continuing")
+                try:
+                    chat_cols = [c['name'] for c in inspector.get_columns('chat_messages')]
+                    if 'is_read' not in chat_cols:
+                        conn.execute(text("ALTER TABLE chat_messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE"))
+                except Exception:
+                    print("AUTO-MIGRATE: chat_messages table may not exist yet, continuing")
+                try:
+                    vreq_cols = [c['name'] for c in inspector.get_columns('verification_requests')]
+                    if 'school_id' not in vreq_cols:
+                        conn.execute(text("ALTER TABLE verification_requests ADD COLUMN school_id INTEGER REFERENCES schools(id)"))
+                except Exception:
+                    print("AUTO-MIGRATE: verification_requests table may not exist yet, continuing")
+                try:
+                    posts_cols = [c['name'] for c in inspector.get_columns('posts')]
+                    if 'club_id' not in posts_cols:
+                        conn.execute(text("ALTER TABLE posts ADD COLUMN club_id INTEGER REFERENCES clubs(id)"))
+                except Exception:
+                    print("AUTO-MIGRATE: posts table migration failed, continuing")
+                conn.commit()
+                conn.execute(text("CREATE TABLE IF NOT EXISTS clubs (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT DEFAULT '', bio TEXT DEFAULT '', is_private BOOLEAN DEFAULT FALSE, owner_id INTEGER REFERENCES users(id) NOT NULL, avatar VARCHAR(300) DEFAULT '', cover_url VARCHAR(500) DEFAULT '', created_at VARCHAR(30) DEFAULT '', member_count INTEGER DEFAULT 1, tags VARCHAR(500) DEFAULT '')"))
+                conn.execute(text("CREATE TABLE IF NOT EXISTS club_members (id SERIAL PRIMARY KEY, club_id INTEGER REFERENCES clubs(id) NOT NULL, user_id INTEGER REFERENCES users(id) NOT NULL, role VARCHAR(20) DEFAULT 'member', joined_at VARCHAR(30) DEFAULT '')"))
+                conn.execute(text("CREATE TABLE IF NOT EXISTS club_join_requests (id SERIAL PRIMARY KEY, club_id INTEGER REFERENCES clubs(id) NOT NULL, user_id INTEGER REFERENCES users(id) NOT NULL, status VARCHAR(20) DEFAULT 'pending', requested_at VARCHAR(30) DEFAULT '', responded_at VARCHAR(30) DEFAULT '')"))
+                try:
+                    conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_club_member ON club_members(club_id, user_id)"))
+                except Exception:
+                    pass
+                try:
+                    clubs_cols2 = [c['name'] for c in inspector.get_columns('clubs')]
+                    if 'is_private' not in clubs_cols2:
+                        conn.execute(text("ALTER TABLE clubs ADD COLUMN is_private BOOLEAN DEFAULT FALSE"))
+                    if 'bio' not in clubs_cols2:
+                        conn.execute(text("ALTER TABLE clubs ADD COLUMN bio TEXT DEFAULT ''"))
+                except Exception:
+                    print("AUTO-MIGRATE: clubs columns migration, continuing")
+                conn.commit()
+                try:
+                    conn.execute(text("CREATE TABLE IF NOT EXISTS audit_logs (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), user_name VARCHAR(100) DEFAULT '', action VARCHAR(50) NOT NULL, target_type VARCHAR(50) DEFAULT '', target_id INTEGER, detail TEXT DEFAULT '', ip_address VARCHAR(45) DEFAULT '', timestamp VARCHAR(30) DEFAULT '')"))
+                except Exception:
+                    print("AUTO-MIGRATE: audit_logs table creation, continuing")
+                if 'totp_secret' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(32) DEFAULT ''"))
+                if 'totp_enabled' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT FALSE"))
+                if 'totp_backup_codes' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN totp_backup_codes TEXT DEFAULT ''"))
+                if 'email_verified' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"))
+                if 'email_verify_token' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(128) DEFAULT ''"))
+                if 'reset_password_token' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(128) DEFAULT ''"))
+                if 'reset_password_token_expires' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token_expires VARCHAR(30) DEFAULT ''"))
+                conn.commit()
+        except Exception as e:
+            print(f"AUTO-MIGRATE: {e}, continuing")
 
     @app.context_processor
     def inject_globals():
-        return {'schools': get_all_schools()}
+        if current_user.is_authenticated and (current_user.role in ('admin', 'super_admin') or not current_user.school_verified):
+            return {'schools': get_all_schools()}
+        return {'schools': []}
 
     @app.errorhandler(404)
     def not_found(e):

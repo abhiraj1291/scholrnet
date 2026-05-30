@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="{{ 'dark' if request.cookies.get('theme') == 'dark' else '' }}">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -58,8 +58,7 @@
     <div class="header-inner">
       <div class="flex items-center gap-3">
         <a href="{{ url_for('dashboard') }}" class="logo">
-          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28" class="logo-light">
-          <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="28" class="logo-dark">
+          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
         </a>
       </div>
 
@@ -73,12 +72,6 @@
         <a href="{{ url_for('search_page') }}" class="btn btn-ghost btn-sm sm:hidden" title="Search">
           <i data-lucide="search" style="width:1.25rem;height:1.25rem;"></i>
         </a>
-        <!-- Dark Mode Toggle -->
-        <label class="toggle hidden sm:block">
-          <input type="checkbox" id="themeToggle" onchange="toggleDark(this)" {{ 'checked' if request.cookies.get('theme') == 'dark' else '' }}>
-          <span class="toggle-slider"></span>
-        </label>
-
         <!-- Notification Bell -->
         <div class="relative">
           <button id="notif-btn" class="btn btn-ghost btn-sm relative">
@@ -214,13 +207,6 @@
         <button id="close-settings-btn" class="btn btn-ghost btn-sm"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
       </div>
       <div class="modal-body">
-        <div class="flex items-center justify-between mb-4">
-          <div><div class="font-bold text-sm">Dark Mode</div><div class="text-xs text-muted">Toggle dark theme</div></div>
-          <label class="toggle">
-            <input type="checkbox" id="settingsThemeToggle" onchange="toggleDark(this)" {{ 'checked' if request.cookies.get('theme') == 'dark' else '' }}>
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
         <div class="border-t" style="border-color:var(--border);padding-top:1rem;">
           <div class="font-bold text-sm mb-2">Verify My School</div>
           {% if user.school_verified %}
@@ -272,13 +258,6 @@
   <script src="{{ url_for('static', filename='js/search.js') }}"></script>
 
   <script>
-  function toggleDark(cb) {
-    var on = cb.checked;
-    document.documentElement.classList.toggle('dark', on);
-    document.cookie = 'theme=' + (on ? 'dark' : 'light') + '; path=/; max-age=31536000';
-    var other = document.getElementById(cb.id === 'themeToggle' ? 'settingsThemeToggle' : 'themeToggle');
-    if (other) other.checked = on;
-  }
   function avatarHtml(obj, size) {
     var s = size || 'sm';
     if (obj && obj.avatar_url) {

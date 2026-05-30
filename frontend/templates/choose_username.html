@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="{{ 'dark' if request.cookies.get('theme') == 'dark' else '' }}">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,12 +12,11 @@
 <body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
   <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
     <style>@media (max-width: 30rem) { .card { padding: 1.25rem !important; } }</style>
-    <div class="flex items-center gap-2 mb-4">
-      <div class="logo">
-        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28" class="logo-light">
-        <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="28" class="logo-dark">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="logo">
+          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
+        </div>
       </div>
-    </div>
     <h1 class="text-lg font-black mb-1">Choose your username</h1>
     <p class="text-sm text-muted mb-4">This will be your public profile URL: <strong>scholrnet.in/u/<span id="usernamePreview">username</span></strong></p>
 
