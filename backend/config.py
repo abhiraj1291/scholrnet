@@ -25,6 +25,7 @@ class Config:
     # Session security
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = True
     SESSION_PERMANENT = True
 
     # Rate limiting storage

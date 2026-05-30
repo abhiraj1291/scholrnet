@@ -4,6 +4,7 @@ import random
 import re
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from flask import render_template, request, jsonify, redirect, url_for, session as flask_session, abort, Response
 from flask_login import login_user, logout_user, login_required, current_user
@@ -49,6 +50,24 @@ def register_routes(app, bcrypt, login_manager, limiter):
     supabase_url = app.config.get("SUPABASE_URL", "").rstrip("/")
     supabase_key = app.config.get("SUPABASE_STORAGE_KEY", "")
     supabase_bucket = "uploads"
+
+    @app.before_request
+    def csrf_protect():
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+            origin = request.headers.get('Origin', '')
+            referer = request.headers.get('Referer', '')
+            allowed_hosts = ['scholrnet.in', 'www.scholrnet.in', 'localhost', '127.0.0.1']
+            valid = False
+            if origin:
+                parsed = urlparse(origin)
+                if parsed.hostname in allowed_hosts or (parsed.hostname and parsed.hostname.endswith('.vercel.app')):
+                    valid = True
+            if referer:
+                parsed = urlparse(referer)
+                if parsed.hostname in allowed_hosts or (parsed.hostname and parsed.hostname.endswith('.vercel.app')):
+                    valid = True
+            if not valid and (origin or referer):
+                return jsonify({'error': 'Forbidden'}), 403
 
     import traceback, sys
 
@@ -2086,7 +2105,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({"uploadUrl": "", "publicUrl": public_url})
 
     @app.route('/api/seed')
+    @login_required
     def api_seed():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
         if User.query.first():
             return jsonify({"message": "Already seeded"})
         from seed import _run_seed
@@ -2094,13 +2116,19 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({"message": "Database seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
 
     @app.route('/api/reset-db')
+    @login_required
     def api_reset_db():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
         from seed import _run_seed
         _run_seed(bcrypt)
         return jsonify({"message": "Database reset and re-seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
 
     @app.route('/api/clean-data')
+    @login_required
     def api_clean_data():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
         EventRegistration.query.delete()
         UserLike.query.delete()
         Connection.query.delete()
@@ -2268,11 +2296,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/health')
     def api_health():
-        return jsonify({
-            "status": "healthy",
-            "supabase_url_set": bool(supabase_url),
-            "supabase_key_set": bool(supabase_key)
-        })
+        return jsonify({"status": "healthy"})
 
     @app.route('/robots.txt')
     def robots_txt():
@@ -2310,7 +2334,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return Response(xml, mimetype='application/xml')
 
     @app.route('/api/migrate')
+    @login_required
     def api_migrate():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
         """Add missing columns to existing tables."""
         from sqlalchemy import text, inspect
         mig = []
@@ -2416,7 +2443,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({"success": True, "post_id": post.id, "image_url": url, "public_readable": True})
 
     @app.route('/api/diag-storage')
+    @login_required
     def api_diag_storage():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
         import urllib.request, urllib.error
         import io, struct, zlib
         # Create a real 1x1 red PNG pixel
