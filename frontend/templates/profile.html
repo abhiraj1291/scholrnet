@@ -734,7 +734,7 @@ document.addEventListener('DOMContentLoaded', function() {
             el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
             el.style.background = 'var(--bg-hover)';
             el.innerHTML =
-              '<div class="avatar avatar-sm">' + (f.avatar || '?') + '</div>' +
+              avatarHtml(f, 'sm') +
               '<div><a href="' + nameLink + '" class="font-bold text-xs hover:underline">' + escapeHtml(f.name) + '</a><div class="text-xs text-muted">' + escapeHtml(f.school || '') + ' ' + mutualText + '</div></div>';
             list.appendChild(el);
           });
@@ -785,7 +785,7 @@ document.addEventListener('DOMContentLoaded', function() {
             el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
             el.style.background = 'var(--bg-hover)';
             el.innerHTML =
-              '<div class="avatar avatar-sm">' + (req.user.avatar || '?') + '</div>' +
+              avatarHtml(req.user, 'sm') +
               '<span class="font-bold text-sm flex-1">' + escapeHtml(req.user.name) + '</span>' +
               '<button class="btn btn-sm btn-primary friend-accept" data-id="' + req.id + '">Accept</button>' +
               '<button class="btn btn-sm btn-ghost friend-reject" data-id="' + req.id + '"><i data-lucide="x" style="width:14px;height:14px;"></i></button>';
@@ -874,6 +874,94 @@ document.addEventListener('DOMContentLoaded', function() {
       if (typeof lucide !== 'undefined') lucide.createIcons();
     });
   }
+
+  // Edit profile toggle
+  var editToggle = document.getElementById('toggleEditProfile');
+  var editForm = document.getElementById('editProfileForm');
+  var editChevron = document.getElementById('editChevron');
+  if (editToggle && editForm) {
+    editToggle.addEventListener('click', function() {
+      editForm.classList.toggle('hidden');
+      editChevron.style.transform = editForm.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+      lucide.createIcons();
+    });
+  }
+
+  // Edit profile form submit
+  if (editForm) {
+    editForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var body = {
+        name: document.getElementById('editName').value,
+        school: document.getElementById('editSchool').value,
+        grade: document.getElementById('editGrade').value,
+        bio: document.getElementById('editBio').value
+      };
+      fetch('/api/profile/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) { showToast('Profile updated!', 'success'); location.reload(); }
+        else { showToast(data.error || 'Error', 'info'); }
+      })
+      .catch(function() { showToast('Error updating profile', 'info'); });
+    });
+  }
+
+  // Avatar upload
+  var avatarWrap = document.getElementById('profileAvatarWrap');
+  var avatarInput = document.getElementById('avatarUploadInput');
+  if (avatarWrap && avatarInput) {
+    avatarWrap.addEventListener('click', function() { avatarInput.click(); });
+  }
+  if (avatarInput) {
+    avatarInput.addEventListener('change', function() {
+      var file = this.files[0];
+      if (!file) return;
+      var fd = new FormData();
+      fd.append('avatar', file);
+      fetch('/api/profile/avatar', { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) { showToast('Avatar updated!', 'success'); location.reload(); }
+          else { showToast(d.error || 'Upload failed', 'info'); }
+        })
+        .catch(function() { showToast('Error uploading avatar', 'info'); });
+    });
+  }
+
+  // Color palette picker
+  var paletteMap = {
+    'navy': {'--primary':'#1a2744','--primary-hover':'#2d4a7a','--accent':'#c9a84c','--accent-soft':'#e8d48b','--bg':'#ebf4ff','--bg-card':'#ffffff','--bg-hover':'#fdf0f0','--border':'#cbd5e1','--text-muted':'#5a6a7a','--danger':'#e86565'},
+    'coral': {'--primary':'#e86565','--primary-hover':'#d45050','--accent':'#f4b84a','--accent-soft':'#f8d48a','--bg':'#fff5f5','--bg-card':'#ffffff','--bg-hover':'#fef0f0','--border':'#f0d0d0','--text-muted':'#8a6a6a','--danger':'#c0392b'},
+    'blush': {'--primary':'#d48a8a','--primary-hover':'#c07070','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#fef7f7','--bg-card':'#ffffff','--bg-hover':'#faecec','--border':'#e8d0d0','--text-muted':'#8a7a7a','--danger':'#e86565'},
+    'gold': {'--primary':'#b8942e','--primary-hover':'#9a7a20','--accent':'#1a2744','--accent-soft':'#4a6a8a','--bg':'#fefcf0','--bg-card':'#ffffff','--bg-hover':'#f8f4e0','--border':'#e0d8b8','--text-muted':'#7a7260','--danger':'#c0392b'},
+    'slate': {'--primary':'#4a5568','--primary-hover':'#5a6a7a','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#f8fafc','--bg-card':'#ffffff','--bg-hover':'#eef2f6','--border':'#cbd5e1','--text-muted':'#64748b','--danger':'#e86565'},
+    'ice-blue': {'--primary':'#5a9fd4','--primary-hover':'#4a8ac0','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#f0f8ff','--bg-card':'#ffffff','--bg-hover':'#e6f0fa','--border':'#c8dce8','--text-muted':'#5a7a8a','--danger':'#e86565'}
+  };
+  document.querySelectorAll('.palette-option').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var palette = this.getAttribute('data-palette');
+      var theme = paletteMap[palette];
+      if (theme) {
+        Object.keys(theme).forEach(function(k) { document.documentElement.style.setProperty(k, theme[k]); });
+        fetch('/api/profile/update', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({theme_color: palette})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) { showToast('Theme updated!', 'success'); }
+          else { showToast(d.error || 'Error', 'info'); }
+        })
+        .catch(function() { showToast('Error saving theme', 'info'); });
+      }
+    });
+  });
 
   load2FAStatus();
 

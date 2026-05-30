@@ -2101,7 +2101,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
         return jsonify({'requests': [{
             'id': r.id, 'user_id': r.user_id,
-            'user': {'name': users[r.user_id].name, 'avatar': users[r.user_id].avatar_url or users[r.user_id].avatar or users[r.user_id].name[:2].upper()}
+            'user': {'name': users[r.user_id].name, 'avatar': users[r.user_id].avatar, 'avatar_url': users[r.user_id].avatar_url}
         } for r in reqs if r.user_id in users]})
 
     @app.route('/api/friend/list')
@@ -2113,7 +2113,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         for c in sent: ids.add(c.connected_user_id)
         for c in received: ids.add(c.user_id)
         users = User.query.filter(User.id.in_(ids)).all() if ids else []
-        return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar_url or u.avatar or u.name[:2].upper(), 'school': u.school} for u in users]})
+        return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school} for u in users]})
 
     @app.route('/api/user/<int:user_id>/connections')
     @login_required
@@ -2131,7 +2131,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         for c in my_received: my_ids.add(c.user_id)
         users = User.query.filter(User.id.in_(ids)).all() if ids else []
         return jsonify({'connections': [{
-            'id': u.id, 'name': u.name, 'avatar': u.avatar_url or u.avatar or u.name[:2].upper(),
+            'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url,
             'school': u.school, 'username': u.username,
             'mutual': len(my_ids & {u.id})
         } for u in users]})
