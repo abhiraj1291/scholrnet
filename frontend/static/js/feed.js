@@ -1,5 +1,7 @@
 /* Feed interactions */
 
+function esc(s) { return (typeof s === 'string') ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') : (s || ''); }
+
 function likePost(postId, btn) {
   apiPost('/api/post/' + postId + '/like', {}, function(data) {
     const countEl = btn.querySelector('.like-count');
@@ -18,7 +20,9 @@ function toggleComments(postId) {
       if (!list) return;
       list.innerHTML = '';
       data.comments.forEach(function(c) {
-        list.innerHTML += '<div class="comment"><div class="avatar avatar-sm">' + (c.avatar || c.author[0]) + '</div><div class="comment-body"><div class="comment-author">' + c.author + '</div><div class="comment-text">' + c.text + '</div></div></div>';
+        var authorName = (typeof c.author === 'object') ? (c.author.name || '') : (c.author || '');
+        var authorAv = (typeof c.author === 'object') ? (c.author.avatar || authorName[0] || '?') : (c.avatar || authorName[0] || '?');
+        list.innerHTML += '<div class="comment"><div class="avatar avatar-sm">' + esc(authorAv) + '</div><div class="comment-body"><div class="comment-author">' + esc(authorName) + '</div><div class="comment-text">' + esc(c.text || '') + '</div></div></div>';
       });
       if (typeof lucide !== 'undefined') lucide.createIcons();
     });
@@ -31,7 +35,10 @@ function submitComment(postId, input) {
   apiPost('/api/post/' + postId + '/comment', { text: text }, function(data) {
     const list = document.querySelector('#comments-' + postId + ' .comments-list');
     if (list) {
-      list.innerHTML += '<div class="comment"><div class="avatar avatar-sm">' + (data.comment.avatar || data.comment.author[0]) + '</div><div class="comment-body"><div class="comment-author">' + data.comment.author + '</div><div class="comment-text">' + data.comment.text + '</div></div></div>';
+      var c = data.comment;
+      var authorName = (typeof c.author === 'object') ? (c.author.name || '') : (c.author || '');
+      var authorAv = (typeof c.author === 'object') ? (c.author.avatar || authorName[0] || '?') : (c.avatar || authorName[0] || '?');
+      list.innerHTML += '<div class="comment"><div class="avatar avatar-sm">' + esc(authorAv) + '</div><div class="comment-body"><div class="comment-author">' + esc(authorName) + '</div><div class="comment-text">' + esc(c.text || '') + '</div></div></div>';
     }
     input.value = '';
     if (typeof lucide !== 'undefined') lucide.createIcons();

@@ -43,3 +43,6 @@ class Config:
 
     SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
     SUPABASE_STORAGE_KEY = os.environ.get("SUPABASE_STORAGE_KEY", "")
+
+    TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
+    TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY", "")

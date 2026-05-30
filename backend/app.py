@@ -53,6 +53,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.before_request
     def csrf_protect():
+        if request.is_json and request.content_length and request.content_length > 1024 * 1024:
+            return jsonify({'error': 'Request too large'}), 413
         if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
             origin = request.headers.get('Origin', '')
             referer = request.headers.get('Referer', '')
@@ -244,6 +246,18 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def get_user_notifications(user_id):
         return Notification.query.filter_by(user_id=user_id).order_by(Notification.id.desc()).limit(20).all()
 
+    def audit_log(action, target_type=None, target_id=None, detail=''):
+        from flask import request
+        log = AuditLog(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            user_name=current_user.name if current_user.is_authenticated else 'anonymous',
+            action=action, target_type=target_type, target_id=target_id,
+            detail=detail, ip_address=request.remote_addr or '',
+            timestamp=short_ts()
+        )
+        db.session.add(log)
+        db.session.flush()
+
     # ---- AUTH ROUTES ----
     @app.route('/')
     def index():
@@ -253,6 +267,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/login', methods=['GET', 'POST'])
     @limiter.limit("30 per 15 minutes", methods=['POST'])
+    @limiter.limit("5 per 15 minutes", key_func=lambda: request.form.get('email', '').strip().lower(), methods=['POST'])
     def login():
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
@@ -333,7 +348,23 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def register():
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
+        turnstile_key = app.config.get('TURNSTILE_SECRET_KEY', '')
         if request.method == 'POST':
+            if turnstile_key:
+                token = request.form.get('cf-turnstile-response', '')
+                if not token:
+                    return render_template('auth/register.html', error="Please complete the security check", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                try:
+                    import urllib.request, urllib.parse, json
+                    verify = urllib.request.Request('https://challenges.cloudflare.com/turnstile/v0/siteverify',
+                        data=urllib.parse.urlencode({'secret': turnstile_key, 'response': token}).encode(),
+                        headers={'Content-Type': 'application/x-www-form-urlencoded'})
+                    with urllib.request.urlopen(verify, timeout=10) as resp:
+                        result = json.loads(resp.read())
+                        if not result.get('success'):
+                            return render_template('auth/register.html', error="Security check failed. Please try again.", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                except Exception:
+                    return render_template('auth/register.html', error="Security check unavailable. Please try again.", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
             name = sanitize_text(request.form.get('name', ''), 100)
             email = request.form.get('email', '').strip().lower()
             password = request.form.get('password', '')
@@ -342,22 +373,22 @@ def register_routes(app, bcrypt, login_manager, limiter):
             username = request.form.get('username', '').strip().lower()
 
             if not name or not email or not password:
-                return render_template('auth/register.html', error="All fields are required")
+                return render_template('auth/register.html', error="All fields are required", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
             if len(email) > 254:
-                return render_template('auth/register.html', error="Email too long")
+                return render_template('auth/register.html', error="Email too long", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
             if len(password) < 8:
-                return render_template('auth/register.html', error="Password must be at least 8 characters")
+                return render_template('auth/register.html', error="Password must be at least 8 characters", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
             if len(password) > 128:
-                return render_template('auth/register.html', error="Password too long")
+                return render_template('auth/register.html', error="Password too long", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
             if role not in ('student', 'teacher', 'mentor', 'counselor'):
                 role = 'student'
             if User.query.filter_by(email=email).first():
-                return render_template('auth/register.html', error="Email already registered")
+                return render_template('auth/register.html', error="Email already registered", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
             if username:
                 if not re.match(r'^[a-z0-9_]{3,30}$', username):
-                    return render_template('auth/register.html', error="Username: 3-30 chars, letters, numbers, underscores only")
+                    return render_template('auth/register.html', error="Username: 3-30 chars, letters, numbers, underscores only", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
                 if User.query.filter_by(username=username).first():
-                    return render_template('auth/register.html', error="Username already taken")
+                    return render_template('auth/register.html', error="Username already taken", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
             hashed = bcrypt.generate_password_hash(password).decode('utf-8')
             avatar = "".join(p[0] for p in name.strip().split() if p)[:2].upper() or "ST"
             user = User(name=name, email=email, password_hash=hashed, school=school, role=role,
@@ -370,7 +401,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             if not user.username:
                 return redirect(url_for('choose_username'))
             return redirect(url_for('dashboard'))
-        return render_template('auth/register.html')
+        return render_template('auth/register.html', turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
 
     @app.route('/choose-role')
     @login_required
@@ -714,7 +745,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             likes=0,
             tags=json.dumps(tags_raw[:20]),
             timestamp=short_ts(),
-            video_url=sanitize_text(data.get('video_url', data.get('videoUrl', '')), 500),
+            video_url=sanitize_text(data.get('video_url', data.get('videoUrl', '')), 500) if (data.get('video_url') or data.get('videoUrl', '')).startswith(('http://','https://')) else '',
             image_url=image_url,
             club_id=club_id
         )
@@ -790,6 +821,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         }})
 
     @app.route('/api/post/<int:post_id>/comments', methods=['GET'])
+    @login_required
     def api_get_comments(post_id):
         comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.id.asc()).all()
         return jsonify({'comments': [{'id': c.id, 'author': {'name': c.author, 'avatar': c.avatar}, 'text': c.text, 'timestamp': c.timestamp} for c in comments]})
@@ -804,6 +836,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         UserLike.query.filter_by(post_id=post_id).delete()
         db.session.delete(post)
         db.session.commit()
+        audit_log('delete_post', 'post', post_id)
         return jsonify({'success': True})
 
     @app.route('/api/achievement/create', methods=['POST'])
@@ -827,10 +860,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/achievement/<int:ach_id>/delete', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_delete_achievement(ach_id):
         ach = Achievement.query.get_or_404(ach_id)
         if ach.user_id != current_user.id and current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
+        audit_log('delete_achievement', 'achievement', ach_id, f'title={ach.title}')
         db.session.delete(ach)
         db.session.commit()
         return jsonify({'success': True})
@@ -886,15 +921,18 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/project/<int:proj_id>/delete', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_delete_project(proj_id):
         proj = Project.query.get_or_404(proj_id)
         if proj.user_id != current_user.id and current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
+        audit_log('delete_project', 'project', proj_id, f'title={proj.title}')
         db.session.delete(proj)
         db.session.commit()
         return jsonify({'success': True})
 
     @app.route('/api/user/<int:user_id>/experiences', methods=['GET'])
+    @login_required
     def api_get_experiences(user_id):
         exps = Experience.query.filter_by(user_id=user_id).order_by(Experience.is_current.desc(), Experience.id.desc()).all()
         return jsonify({'experiences': [{
@@ -926,6 +964,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/experience/<int:exp_id>/edit', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_edit_experience(exp_id):
         exp = Experience.query.get_or_404(exp_id)
         if exp.user_id != current_user.id:
@@ -943,6 +982,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/experience/<int:exp_id>/delete', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_delete_experience(exp_id):
         exp = Experience.query.get_or_404(exp_id)
         if exp.user_id != current_user.id and current_user.role != 'super_admin':
@@ -993,6 +1033,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'success': True, 'request': {'id': vreq.id, 'status': vreq.status}})
 
     @app.route('/api/achievements')
+    @login_required
     def api_achievements():
         user_id = request.args.get('user_id', type=int)
         if not user_id:
@@ -1001,6 +1042,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'achievements': [{'id': a.id, 'title': a.title, 'description': a.description, 'category': a.category, 'institution': a.institution, 'year': a.year, 'verification_status': a.verification_status, 'verified_by': a.verified_by, 'verified_at': a.verified_at, 'verification_hash': a.verification_hash} for a in achs]})
 
     @app.route('/api/projects')
+    @login_required
     def api_projects():
         user_id = request.args.get('user_id', type=int)
         if not user_id:
@@ -1043,6 +1085,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                                type='success', timestamp=short_ts(), unread=True)
             db.session.add(notif)
         db.session.commit()
+        audit_log('verify_achievement', 'verification_request', req_id, f'action={action} achievement={vreq.achievement_title}')
         return jsonify({'success': True, 'status': vreq.status})
 
     # ===== Clubs API =====
@@ -1070,6 +1113,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'success': True, 'club': {'id': club.id, 'name': club.name, 'member_count': club.member_count, 'is_private': club.is_private}})
 
     @app.route('/api/clubs')
+    @login_required
     def api_clubs():
         page = request.args.get('page', 1, type=int)
         search = request.args.get('q', '').strip()
@@ -1083,6 +1127,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             'total': clubs.total, 'pages': clubs.pages, 'page': page})
 
     @app.route('/api/club/<int:club_id>')
+    @login_required
     def api_club_detail(club_id):
         club = Club.query.get_or_404(club_id)
         owner = User.query.get(club.owner_id)
@@ -1109,6 +1154,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/club/<int:club_id>/join', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_join_club(club_id):
         club = Club.query.get_or_404(club_id)
         existing = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
@@ -1130,6 +1176,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/club/<int:club_id>/leave', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_leave_club(club_id):
         club = Club.query.get_or_404(club_id)
         mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
@@ -1143,6 +1190,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'success': True, 'member_count': club.member_count})
 
     @app.route('/api/club/<int:club_id>/posts')
+    @login_required
     def api_club_posts(club_id):
         club = Club.query.get_or_404(club_id)
         page = request.args.get('page', 1, type=int)
@@ -1157,6 +1205,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/club/<int:club_id>/update', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_update_club(club_id):
         club = Club.query.get_or_404(club_id)
         mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
@@ -1178,17 +1227,20 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/club/<int:club_id>/delete', methods=['POST'])
     @login_required
+    @limiter.limit("10 per minute")
     def api_delete_club(club_id):
         club = Club.query.get_or_404(club_id)
         if club.owner_id != current_user.id and current_user.role != 'super_admin':
             return jsonify({'error': 'Only the owner can delete the club'}), 403
         ClubMember.query.filter_by(club_id=club_id).delete()
         Post.query.filter_by(club_id=club_id).update({'club_id': None})
+        audit_log('delete_club', 'club', club_id)
         db.session.delete(club)
         db.session.commit()
         return jsonify({'success': True})
 
     @app.route('/api/user/<int:user_id>/clubs')
+    @login_required
     def api_user_clubs(user_id):
         memberships = ClubMember.query.filter_by(user_id=user_id).all()
         if not memberships:
@@ -1220,6 +1272,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/club/<int:club_id>/join-request/<int:req_id>/approve', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_approve_join_request(club_id, req_id):
         club = Club.query.get_or_404(club_id)
         mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
@@ -1240,6 +1293,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/club/<int:club_id>/join-request/<int:req_id>/reject', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_reject_join_request(club_id, req_id):
         club = Club.query.get_or_404(club_id)
         mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
@@ -1255,6 +1309,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/club/<int:club_id>/avatar', methods=['POST'])
     @login_required
+    @limiter.limit("5 per minute")
     def api_club_upload_avatar(club_id):
         club = Club.query.get_or_404(club_id)
         if club.owner_id != current_user.id and current_user.role != 'super_admin':
@@ -1264,6 +1319,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
         f = request.files['file']
         if not f.filename:
             return jsonify({'error': 'No file selected'}), 400
+        allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        valid, err = validate_file_type(f, allowed_ext, ['image/'])
+        if not valid:
+            return jsonify({'error': err or 'Invalid file type'}), 400
         ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'png'
         path = f"club_avatars/{club.id}/{uuid.uuid4().hex}.{ext}"
         url = _save_to_supabase(f.read(), 'uploads', path)
@@ -1275,6 +1334,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/club/<int:club_id>/cover', methods=['POST'])
     @login_required
+    @limiter.limit("5 per minute")
     def api_club_upload_cover(club_id):
         club = Club.query.get_or_404(club_id)
         if club.owner_id != current_user.id and current_user.role != 'super_admin':
@@ -1284,6 +1344,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
         f = request.files['file']
         if not f.filename:
             return jsonify({'error': 'No file selected'}), 400
+        allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        valid, err = validate_file_type(f, allowed_ext, ['image/'])
+        if not valid:
+            return jsonify({'error': err or 'Invalid file type'}), 400
         ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'jpg'
         path = f"club_covers/{club.id}/{uuid.uuid4().hex}.{ext}"
         url = _save_to_supabase(f.read(), 'uploads', path)
@@ -1321,6 +1385,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         post = Post.query.get_or_404(post_id)
         Comment.query.filter_by(post_id=post_id).delete()
         UserLike.query.filter_by(post_id=post_id).delete()
+        audit_log('delete_post_admin', 'post', post_id, f'title={post.title}')
         db.session.delete(post)
         db.session.commit()
         return jsonify({'success': True})
@@ -1370,6 +1435,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
         ad = Ad.query.get_or_404(ad_id)
+        audit_log('delete_ad', 'ad', ad_id, f'title={ad.title}')
         db.session.delete(ad)
         db.session.commit()
         return jsonify({'success': True})
@@ -1455,6 +1521,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/mentorship/<int:mreq_id>/complete', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_complete_mentorship(mreq_id):
         mreq = MentorshipRequest.query.get_or_404(mreq_id)
         if mreq.student_id != current_user.id and mreq.mentor_id != current_user.id:
@@ -1465,6 +1532,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/mentorship/<int:mreq_id>/respond', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_respond_mentorship(mreq_id):
         data = request.json or {}
         mreq = MentorshipRequest.query.get_or_404(mreq_id)
@@ -1479,6 +1547,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/announcement/create', methods=['POST'])
     @login_required
+    @limiter.limit("10 per minute")
     def api_create_school_announcement_auto():
         if current_user.role not in ('admin', 'super_admin') or not current_user.verified_school_id:
             return jsonify({'error': 'Unauthorized'}), 403
@@ -1497,11 +1566,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/announcement/<int:ann_id>/delete', methods=['DELETE'])
     @login_required
+    @limiter.limit("10 per minute")
     def api_delete_announcement_auto(ann_id):
         ann = SchoolAnnouncement.query.get_or_404(ann_id)
         school = School.query.get(ann.school_id)
         if current_user.role != 'super_admin' and (not school or current_user.verified_school_id != ann.school_id):
             return jsonify({'error': 'Unauthorized'}), 403
+        audit_log('delete_announcement', 'announcement', ann_id, f'title={ann.title}')
         db.session.delete(ann)
         db.session.commit()
         return jsonify({'success': True})
@@ -1516,6 +1587,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/school/<int:school_id>/announcement', methods=['POST'])
     @login_required
+    @limiter.limit("10 per minute")
     def api_create_school_announcement(school_id):
         if current_user.role not in ('admin', 'super_admin'):
             return jsonify({'error': 'Unauthorized'}), 403
@@ -1536,10 +1608,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/school/<int:school_id>/announcement/<int:ann_id>/delete', methods=['POST'])
     @login_required
+    @limiter.limit("10 per minute")
     def api_delete_announcement(school_id, ann_id):
         if current_user.role not in ('admin', 'super_admin'):
             return jsonify({'error': 'Unauthorized'}), 403
         ann = SchoolAnnouncement.query.get_or_404(ann_id)
+        audit_log('delete_announcement', 'announcement', ann_id, f'title={ann.title}')
         db.session.delete(ann)
         db.session.commit()
         return jsonify({'success': True})
@@ -1704,6 +1778,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/switch-role', methods=['POST'])
     @login_required
+    @limiter.limit("20 per minute")
     def api_switch_role():
         data = request.json or {}
         new_role = data.get('role', 'student')
@@ -1858,6 +1933,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/friend/respond', methods=['POST'])
     @login_required
+    @limiter.limit("30 per minute")
     def api_friend_respond():
         data = request.json or {}
         req_id = data.get('request_id')
@@ -1921,6 +1997,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/connection/toggle', methods=['POST'])
     @login_required
+    @limiter.limit("30 per minute")
     def api_toggle_connection():
         data = request.json or {}
         other_id = data.get('user_id')
@@ -1955,6 +2032,26 @@ def register_routes(app, bcrypt, login_manager, limiter):
             if data['theme_color'] in allowed:
                 current_user.theme_color = data['theme_color']
         db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/profile/change-password', methods=['POST'])
+    @login_required
+    @limiter.limit("5 per hour")
+    def api_change_password():
+        data = request.json or {}
+        current_pw = data.get('current_password', '')
+        new_pw = data.get('new_password', '')
+        if not current_pw or not new_pw:
+            return jsonify({'error': 'Current and new password required'}), 400
+        if len(new_pw) < 8 or len(new_pw) > 128:
+            return jsonify({'error': 'New password must be 8-128 characters'}), 400
+        if current_user.password_hash == '*firebase*':
+            return jsonify({'error': 'Cannot change password for Firebase accounts'}), 400
+        if not bcrypt.check_password_hash(current_user.password_hash, current_pw):
+            return jsonify({'error': 'Current password is incorrect'}), 403
+        current_user.password_hash = bcrypt.generate_password_hash(new_pw).decode('utf-8')
+        db.session.commit()
+        session.regenerate()
         return jsonify({'success': True})
 
     @app.route('/api/gemini/status')
@@ -2058,13 +2155,20 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if ext not in allowed_ext:
             return jsonify({"success": False, "error": f"File type .{ext} not allowed"}), 400
         if ext in ('png', 'jpg', 'jpeg', 'gif', 'webp'):
+            valid, err = validate_file_type(f, allowed_ext, ['image/'])
+            if not valid:
+                return jsonify({"success": False, "error": err}), 400
+            from PIL import Image
             try:
-                from PIL import Image
                 img = Image.open(f)
                 img.verify()
                 f.seek(0)
             except Exception:
                 return jsonify({"success": False, "error": "Invalid image file"}), 400
+        else:
+            valid, err = validate_file_type(f, {'mp4', 'mov'}, ['video/'])
+            if not valid:
+                return jsonify({"success": False, "error": err}), 400
         safe_name = f"{uuid.uuid4().hex[:16]}_{current_user.id}.{ext}"
         url = _save_to_supabase(f.read(), 'uploads', safe_name)
         if not url:
@@ -2112,6 +2216,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if User.query.first():
             return jsonify({"message": "Already seeded"})
         from seed import _run_seed
+        audit_log('seed_db', 'database', detail='Seeded database with test data')
         _run_seed(bcrypt)
         return jsonify({"message": "Database seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
 
@@ -2121,6 +2226,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
         from seed import _run_seed
+        audit_log('reset_db', 'database', detail='Database reset and re-seeded')
         _run_seed(bcrypt)
         return jsonify({"message": "Database reset and re-seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
 
@@ -2129,6 +2235,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_clean_data():
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
+        audit_log('clean_data', 'database', detail='Removed all seed data')
         EventRegistration.query.delete()
         UserLike.query.delete()
         Connection.query.delete()
@@ -2197,6 +2304,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         user = User(name=name + ' Admin', email=email, password_hash=bcrypt.generate_password_hash(pwd).decode('utf-8'), school=name, role='admin', avatar='SC', username=username or None)
         db.session.add(user)
         db.session.commit()
+        audit_log('create_school', 'school', school.id, f'name={name} email={email}')
         return jsonify({'success': True, 'email': email, 'password': pwd, 'verification_code': school.verification_code})
 
     @app.route('/api/admin/school/<int:school_id>/edit', methods=['POST'])
@@ -2232,6 +2340,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         new_pwd = 'school' + str(school.id) + secrets.choice(string.ascii_lowercase)
         admin.password_hash = bcrypt.generate_password_hash(new_pwd).decode('utf-8')
         db.session.commit()
+        audit_log('reset_school_password', 'school', school_id, f'admin_email={admin.email}')
         return jsonify({'success': True, 'email': admin.email, 'password': new_pwd})
 
     @app.route('/api/admin/school/<int:school_id>/delete', methods=['DELETE'])
@@ -2244,9 +2353,39 @@ def register_routes(app, bcrypt, login_manager, limiter):
         User.query.filter_by(verified_school_id=school_id).update({'verified_school_id': None, 'school_verified': False})
         User.query.filter_by(school=school.name).update({'school': ''})
         SchoolAnnouncement.query.filter_by(school_id=school_id).delete()
+        audit_log('delete_school', 'school', school_id, f'name={school.name}')
         db.session.delete(school)
         db.session.commit()
         return jsonify({'success': True})
+
+    @app.route('/api/admin/audit-logs')
+    @login_required
+    def api_admin_audit_logs():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        page = request.args.get('page', 1, type=int)
+        if page < 1:
+            page = 1
+        days = request.args.get('days', 7, type=int)
+        action_filter = request.args.get('action', '').strip()
+        from datetime import datetime, timezone, timedelta
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff_str = cutoff.strftime('%Y-%m-%d')
+        query = AuditLog.query.filter(AuditLog.timestamp >= cutoff_str)
+        if action_filter:
+            query = query.filter(AuditLog.action == action_filter)
+        logs = query.order_by(AuditLog.id.desc()).paginate(page=page, per_page=50, error_out=False)
+        actions = db.session.query(AuditLog.action).distinct().order_by(AuditLog.action).all()
+        return jsonify({
+            'logs': [{
+                'id': l.id, 'user_id': l.user_id, 'user_name': l.user_name,
+                'action': l.action, 'target_type': l.target_type,
+                'target_id': l.target_id, 'detail': l.detail,
+                'ip_address': l.ip_address, 'timestamp': l.timestamp
+            } for l in logs.items],
+            'total': logs.total, 'pages': logs.pages, 'page': page,
+            'actions': [a[0] for a in actions]
+        })
 
     @app.route('/api/schools/list')
     @login_required
@@ -2259,6 +2398,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/school/verify', methods=['POST'])
     @login_required
+    @limiter.limit("10 per minute")
     def api_school_verify():
         data = request.json or {}
         code = data.get('code', '').strip().upper()
@@ -2407,6 +2547,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 mig.append("added users.verified_school_id")
         except Exception as e:
             return jsonify({"error": str(e), "ran": mig}), 500
+        audit_log('migrate_db', 'database', detail=f'changes={len(mig)}')
         return jsonify({"message": "Migration complete", "changes": mig})
 
     @app.route('/api/test-image-post')

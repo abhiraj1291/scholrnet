@@ -183,7 +183,7 @@ function searchNewChatUsers(q) {
     data.users.forEach(function(u) {
       var div = document.createElement('div');
       div.className = 'chat-contact';
-      div.innerHTML = avatarHtml(u) + '<div><div class="font-bold text-xs">' + u.name + ' ' + roleBadge(u.role) + (u.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + (u.school || '') + '</div></div>';
+      div.innerHTML = avatarHtml(u) + '<div><div class="font-bold text-xs">' + escapeHtml(u.name || '') + ' ' + roleBadge(u.role) + (u.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + escapeHtml(u.school || '') + '</div></div>';
       div.addEventListener('click', function() {
         openChat(u.id, u.name, u.avatar, u.avatar_url, u.role);
       });
@@ -221,7 +221,7 @@ function loadPageChatContacts() {
     contacts.forEach(function(c) {
       var div = document.createElement('div');
       div.className = 'chat-contact';
-      div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + c.name + ' ' + roleBadge(c.role) + (c.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + (c.school || '') + '</div></div>';
+    div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + escapeHtml(c.name || '') + ' ' + roleBadge(c.role) + (c.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + escapeHtml(c.school || '') + '</div></div>';
       div.addEventListener('click', function() { openPageChat(c.id, c.name, c.avatar, c.avatar_url, c.role); });
       list.appendChild(div);
     });

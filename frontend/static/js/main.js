@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var d = document.createElement('div');
             d.className = 'notif-item' + (n.unread ? ' unread' : '');
             d.style.cssText = 'padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);font-size:0.8rem;cursor:pointer;transition:background 0.15s;' + (n.unread ? 'background:rgba(37,99,235,0.04);' : '');
-            d.innerHTML = '<div style="font-weight:' + (n.unread ? '600' : '400') + ';color:var(--text);">' + n.title + '</div><div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.15rem;">' + (n.timestamp || '') + '</div>';
+            d.innerHTML = '<div style="font-weight:' + (n.unread ? '600' : '400') + ';color:var(--text);">' + escapeHtml(n.title || '') + '</div><div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.15rem;">' + escapeHtml(n.timestamp || '') + '</div>';
             panel.appendChild(d);
           });
           // Add mark-read button at bottom

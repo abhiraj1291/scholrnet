@@ -295,3 +295,17 @@ class Experience(db.Model):
     end_date = db.Column(db.String(20), default="")
     is_current = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    user_name = db.Column(db.String(100), default="")
+    action = db.Column(db.String(50), nullable=False, index=True)
+    target_type = db.Column(db.String(50), default="")
+    target_id = db.Column(db.Integer, nullable=True)
+    detail = db.Column(db.Text, default="")
+    ip_address = db.Column(db.String(45), default="")
+    timestamp = db.Column(db.String(30), default="")
+
+    __table_args__ = (db.Index('idx_audit_action_time', 'action', 'timestamp'),)
