@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ 'dark' if request.cookies.get('theme') == 'dark' else '' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Two-Factor Authentication - ScholrNet</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
+  <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28" class="logo-light">
+        <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="28" class="logo-dark">
+      </div>
+    </div>
+    <h1 class="text-lg font-black mb-1">Two-Factor Auth</h1>
+    <p class="text-sm text-muted mb-4">Enter the code from your authenticator app</p>
+    <div id="errorMsg" class="toast success" style="position: static; margin-bottom: 1rem; display: none;"></div>
+    <input type="text" id="codeInput" placeholder="000 000" maxlength="6" inputmode="numeric" pattern="[0-9]*"
+      class="text-center text-2xl tracking-widest" style="padding: 0.75rem; width: 100%; margin-bottom: 1rem; letter-spacing: 0.5em;">
+    <button onclick="verify2FA()" class="btn btn-primary w-full" style="padding: 0.75rem;">Verify</button>
+    <p class="text-xs text-muted text-center mt-4">
+      <a href="{{ url_for('logout') }}" class="font-bold">Back to login</a>
+    </p>
+  </div>
+  <script>
+  document.getElementById('codeInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') verify2FA();
+  });
+  document.getElementById('codeInput').focus();
+  async function verify2FA() {
+    const code = document.getElementById('codeInput').value.trim();
+    if (!code || code.length < 6) {
+      document.getElementById('errorMsg').textContent = 'Enter a 6-digit code';
+      document.getElementById('errorMsg').style.display = 'block';
+      return;
+    }
+    const btn = document.querySelector('button');
+    btn.disabled = true; btn.textContent = 'Verifying...';
+    try {
+      const r = await fetch('/api/2fa/verify-login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code}) });
+      const d = await r.json();
+      if (d.success) { window.location.href = d.redirect || '/dashboard'; }
+      else {
+        document.getElementById('errorMsg').textContent = d.error || 'Invalid code';
+        document.getElementById('errorMsg').style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Verify';
+      }
+    } catch(e) {
+      document.getElementById('errorMsg').textContent = 'Network error. Try again.';
+      document.getElementById('errorMsg').style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Verify';
+    }
+  }
+  </script>
+</body>
+</html>

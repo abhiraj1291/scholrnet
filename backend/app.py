@@ -71,6 +71,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
             if not valid and (origin or referer):
                 return jsonify({'error': 'Forbidden'}), 403
 
+    @app.before_request
+    def check_2fa():
+        if current_user.is_authenticated and session.get('2fa_required'):
+            endpoint = request.endpoint or ''
+            allowed = ('verify_2fa', 'api_2fa_verify_login', 'logout', 'static')
+            if not any(endpoint == a or endpoint.endswith('.' + a) for a in allowed):
+                if request.is_json or request.path.startswith('/api/'):
+                    return jsonify({'error': '2FA verification required'}), 401
+                return redirect(url_for('verify_2fa'))
+
     import traceback, sys
 
     # Auto-migrate missing columns on startup
@@ -133,8 +143,19 @@ def register_routes(app, bcrypt, login_manager, limiter):
             except Exception:
                 print("AUTO-MIGRATE: clubs columns migration, continuing")
             conn.commit()
-    except Exception:
-        print("AUTO-MIGRATE: columns may already exist, continuing")
+            try:
+                conn.execute(text("CREATE TABLE IF NOT EXISTS audit_logs (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), user_name VARCHAR(100) DEFAULT '', action VARCHAR(50) NOT NULL, target_type VARCHAR(50) DEFAULT '', target_id INTEGER, detail TEXT DEFAULT '', ip_address VARCHAR(45) DEFAULT '', timestamp VARCHAR(30) DEFAULT '')"))
+            except Exception:
+                print("AUTO-MIGRATE: audit_logs table creation, continuing")
+            if 'totp_secret' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(32) DEFAULT ''"))
+            if 'totp_enabled' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT FALSE"))
+            if 'totp_backup_codes' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN totp_backup_codes TEXT DEFAULT ''"))
+            conn.commit()
+    except Exception as e:
+        print(f"AUTO-MIGRATE: {e}, continuing")
 
     @app.context_processor
     def inject_globals():
@@ -282,6 +303,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     if bcrypt.check_password_hash(user.password_hash, password):
                         login_user(user)
                         flask_session.permanent = True
+                        if user.totp_enabled:
+                            session['2fa_required'] = True
+                            return redirect(url_for('verify_2fa'))
                         return redirect(url_for('dashboard'))
                 except Exception:
                     print("LOGIN ERROR: bcrypt check failed for user", email)
@@ -2053,6 +2077,101 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         session.regenerate()
         return jsonify({'success': True})
+
+    # ---- 2FA ROUTES ----
+
+    @app.route('/verify-2fa')
+    @login_required
+    def verify_2fa():
+        if not session.get('2fa_required'):
+            return redirect(url_for('dashboard'))
+        return render_template('2fa_login.html', user=current_user,
+            notifications=get_user_notifications(current_user.id))
+
+    @app.route('/api/2fa/setup', methods=['GET'])
+    @login_required
+    def api_2fa_setup():
+        import pyotp, qrcode, io, base64
+        if current_user.totp_enabled:
+            return jsonify({'error': '2FA already enabled'}), 400
+        secret = current_user.totp_secret or pyotp.random_base32()
+        if not current_user.totp_secret:
+            current_user.totp_secret = secret
+            db.session.commit()
+        issuer = 'ScholrNet'
+        uri = pyotp.totp.TOTP(secret).provisioning_uri(name=current_user.email, issuer_name=issuer)
+        img = qrcode.make(uri)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+        import secrets, string
+        backup_codes = [''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(10)) for _ in range(5)]
+        current_user.totp_backup_codes = json.dumps([bcrypt.generate_password_hash(c).decode('utf-8') for c in backup_codes])
+        db.session.commit()
+        return jsonify({'secret': secret, 'uri': uri, 'qr': f'data:image/png;base64,{qr_b64}',
+            'backup_codes': backup_codes})
+
+    @app.route('/api/2fa/enable', methods=['POST'])
+    @login_required
+    def api_2fa_enable():
+        import pyotp
+        data = request.json or {}
+        code = data.get('code', '').strip()
+        if not code:
+            return jsonify({'error': 'Verification code required'}), 400
+        if not current_user.totp_secret:
+            return jsonify({'error': '2FA not initialized. Call GET /api/2fa/setup first.'}), 400
+        totp = pyotp.TOTP(current_user.totp_secret)
+        if not totp.verify(code, valid_window=1):
+            return jsonify({'error': 'Invalid code. Try again.'}), 400
+        current_user.totp_enabled = True
+        db.session.commit()
+        return jsonify({'success': True})
+
+    @app.route('/api/2fa/disable', methods=['POST'])
+    @login_required
+    @limiter.limit("5 per hour")
+    def api_2fa_disable():
+        data = request.json or {}
+        password = data.get('password', '')
+        if not password:
+            return jsonify({'error': 'Password required to disable 2FA'}), 400
+        if current_user.password_hash == '*firebase*':
+            return jsonify({'error': 'Cannot disable 2FA for Firebase accounts via API'}), 400
+        if not bcrypt.check_password_hash(current_user.password_hash, password):
+            return jsonify({'error': 'Incorrect password'}), 403
+        current_user.totp_enabled = False
+        current_user.totp_secret = ''
+        current_user.totp_backup_codes = ''
+        db.session.commit()
+        session.pop('2fa_required', None)
+        return jsonify({'success': True})
+
+    @app.route('/api/2fa/verify-login', methods=['POST'])
+    @limiter.limit("10 per minute")
+    def api_2fa_verify_login():
+        if not current_user.is_authenticated or not session.get('2fa_required'):
+            return jsonify({'error': 'No 2FA pending'}), 401
+        import pyotp
+        data = request.json or {}
+        code = data.get('code', '').strip()
+        if not code:
+            return jsonify({'error': 'Verification code required'}), 400
+        totp = pyotp.TOTP(current_user.totp_secret)
+        if totp.verify(code, valid_window=1):
+            session.pop('2fa_required', None)
+            return jsonify({'success': True, 'redirect': url_for('dashboard')})
+        if current_user.totp_backup_codes:
+            import json as _json
+            backup_list = _json.loads(current_user.totp_backup_codes)
+            for i, h in enumerate(backup_list):
+                if bcrypt.check_password_hash(h, code):
+                    backup_list.pop(i)
+                    current_user.totp_backup_codes = _json.dumps(backup_list)
+                    db.session.commit()
+                    session.pop('2fa_required', None)
+                    return jsonify({'success': True, 'redirect': url_for('dashboard'), 'used_backup': True})
+        return jsonify({'error': 'Invalid code'}), 400
 
     @app.route('/api/gemini/status')
     @login_required

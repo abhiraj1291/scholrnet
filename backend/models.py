@@ -22,6 +22,9 @@ class User(UserMixin, db.Model):
     school_verified = db.Column(db.Boolean, default=False, nullable=True)
     verified_school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    totp_secret = db.Column(db.String(32), default="")
+    totp_enabled = db.Column(db.Boolean, default=False)
+    totp_backup_codes = db.Column(db.Text, default="")
 
     achievements = db.relationship('Achievement', backref='user', lazy=True)
     projects = db.relationship('Project', backref='user', lazy=True)

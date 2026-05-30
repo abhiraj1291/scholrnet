@@ -161,6 +161,40 @@
     </form>
   </div>
 
+  <!-- Two-Factor Authentication -->
+  <div class="card mb-3" id="2faSection">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="shield" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
+      <span class="font-bold text-sm">Two-Factor Authentication</span>
+    </div>
+    <p class="text-xs text-muted mb-3">Add an extra layer of security to your account using an authenticator app like Google Authenticator or Authy.</p>
+    <div id="2faStatus" class="text-sm font-bold mb-2"></div>
+    <div id="2faSetupArea" style="display:none;">
+      <div class="mb-2 text-center">
+        <p class="text-xs text-muted mb-2">Scan this QR code with your authenticator app:</p>
+        <img id="2faQR" src="" alt="QR Code" style="width:180px;height:180px;margin:0 auto 0.75rem;border-radius:8px;border:2px solid var(--border);">
+        <p class="text-xs text-muted mb-1">Or enter this secret key manually: <code id="2faSecret" class="font-bold" style="color:var(--primary);"></code></p>
+        <details class="text-xs text-muted mt-2" style="text-align:left;">
+          <summary style="cursor:pointer;font-weight:bold;">Backup codes (save these!)</summary>
+          <div id="2faBackupCodes" class="mt-1 p-2" style="background:var(--bg);border-radius:6px;font-family:monospace;font-size:0.75rem;"></div>
+        </details>
+      </div>
+      <div class="flex items-center gap-2">
+        <input type="text" id="2faCodeInput" placeholder="Enter 6-digit code" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="flex:1;text-align:center;letter-spacing:0.3em;">
+        <button onclick="enable2FA()" class="btn btn-primary" style="white-space:nowrap;">Enable</button>
+      </div>
+      <p id="2faError" class="text-xs mt-1" style="color:var(--danger);display:none;"></p>
+    </div>
+    <div id="2faDisableArea" style="display:none;">
+      <p class="text-xs text-muted mb-2">2FA is currently enabled. To disable, enter your password.</p>
+      <div class="flex items-center gap-2">
+        <input type="password" id="2faPasswordInput" placeholder="Enter your password" style="flex:1;">
+        <button onclick="disable2FA()" class="btn btn-outline" style="white-space:nowrap;color:var(--danger);border-color:var(--danger);">Disable</button>
+      </div>
+      <p id="2faDisableError" class="text-xs mt-1" style="color:var(--danger);display:none;"></p>
+    </div>
+  </div>
+
   <!-- Friend Requests -->
   <div class="card mb-3">
     <div class="flex items-center gap-2 mb-3">
@@ -612,276 +646,83 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Avatar upload
-  var avatarWrap = document.getElementById('profileAvatarWrap');
-  var avatarInput = document.getElementById('avatarUploadInput');
-  if (avatarWrap && avatarInput) {
-    avatarWrap.addEventListener('click', function() { avatarInput.click(); });
-    avatarInput.addEventListener('change', function() {
-      var fd = new FormData();
-      fd.append('file', this.files[0]);
-      fetch('/api/profile/avatar', { method: 'POST', body: fd })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.success) {
-            avatarWrap.innerHTML = '<img src="' + d.url + '?t=' + Date.now() + '" alt="Avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"><div style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-card);"><i data-lucide="camera" style="width:12px;height:12px;color:#fff;"></i></div>';
-            lucide.createIcons();
-            showToast('Avatar updated!', 'success');
-          } else { showToast(d.error || 'Upload failed', 'info'); }
-        })
-        .catch(function() { showToast('Upload error', 'info'); });
-    });
-  }
-
-  // Friend request: accept/reject
-  function loadFriendRequests() {
-    fetch('/api/friend/requests')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        var list = document.getElementById('friendRequestsList');
-        var badge = document.getElementById('friendReqBadge');
-        if (!list) return;
-        list.innerHTML = '';
-        if (d.requests && d.requests.length > 0) {
-          if (badge) { badge.classList.remove('hidden'); badge.textContent = d.requests.length; }
-          d.requests.forEach(function(req) {
-            var el = document.createElement('div');
-            el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
-            el.style.background = 'var(--bg-hover)';
-            el.innerHTML =
-              '<div class="avatar avatar-sm"' + (req.user.avatar && req.user.avatar.indexOf('http') === 0 ? ' style="overflow:hidden;"' : '') + '>' + (req.user.avatar && req.user.avatar.indexOf('http') === 0 ? '<img src="' + req.user.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;">' : (req.user.avatar || '?')) + '</div>' +
-              '<span class="font-bold text-sm flex-1">' + escapeHtml(req.user.name) + '</span>' +
-              '<button class="btn btn-sm btn-primary friend-accept" data-id="' + req.id + '">Accept</button>' +
-              '<button class="btn btn-sm btn-ghost friend-reject" data-id="' + req.id + '"><i data-lucide="x" style="width:14px;height:14px;"></i></button>';
-            list.appendChild(el);
-          });
-          lucide.createIcons();
-          document.querySelectorAll('.friend-accept').forEach(function(b) {
-            b.addEventListener('click', function() {
-              var id = this.getAttribute('data-id');
-              fetch('/api/friend/respond', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({request_id: parseInt(id), action:'accept'}) })
-                .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Friend request accepted!','success');loadFriendRequests();loadFriends();loadProfile();}});
-            });
-          });
-          document.querySelectorAll('.friend-reject').forEach(function(b) {
-            b.addEventListener('click', function() {
-              var id = this.getAttribute('data-id');
-              fetch('/api/friend/respond', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({request_id: parseInt(id), action:'reject'}) })
-                .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Request declined','success');loadFriendRequests();}});
-            });
-          });
-        } else {
-          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No pending requests</p>';
-          if (badge) badge.classList.add('hidden');
-        }
-      });
-  }
-
-  // Clubs list
-  function loadClubs() {
-    fetch('/api/user/' + puserId + '/clubs')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        var list = document.getElementById('profileClubsList');
-        if (!list) return;
-        list.innerHTML = '';
-        if (d.clubs && d.clubs.length > 0) {
-          d.clubs.forEach(function(c) {
-            var el = document.createElement('a');
-            el.href = '/club/' + c.id;
-            el.style.textDecoration = 'none';
-            el.style.color = 'inherit';
-            el.className = 'flex items-center justify-between p-2 rounded-xl mb-2';
-            el.style.background = 'var(--bg-hover)';
-            var avatarEl = '';
-            if (c.avatar) {
-              avatarEl = '<div style="width:1.5rem;height:1.5rem;border-radius:50%;overflow:hidden;flex-shrink:0;margin-right:0.375rem;"><img src="' + c.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;"></div>';
-            }
-            var privateIcon = c.is_private ? '<i data-lucide="lock" style="width:10px;height:10px;color:var(--primary);display:inline;"></i> ' : '';
-            el.innerHTML = '<div class="flex items-center gap-1">' + avatarEl + '<div><div class="font-bold text-xs">' + privateIcon + escapeHtml(c.name) + '</div><div class="text-xs text-muted">' + c.member_count + ' members &middot; ' + c.role.toUpperCase() + '</div></div></div><i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted);"></i>';
-            list.appendChild(el);
-          });
-          if (typeof lucide !== 'undefined') lucide.createIcons();
-        } else {
-          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No clubs joined yet</p>';
-        }
-      });
-  }
-
-  function loadFriends() {
-    var url = isOwn ? '/api/friend/list' : '/api/user/' + puserId + '/connections';
-    fetch(url)
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        var list = document.getElementById('friendsList');
-        var count = document.getElementById('friendsCount');
-        if (!list) return;
-        list.innerHTML = '';
-        var items = d.friends || d.connections || [];
-        if (items.length > 0) {
-          if (count) count.textContent = items.length;
-          items.forEach(function(f) {
-            var mutualText = (f.mutual > 0) ? '<span class="text-xs text-muted">' + f.mutual + ' mutual</span>' : '';
-            var nameLink = f.username ? '/u/' + f.username : '/profile/' + f.id;
-            var el = document.createElement('div');
-            el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
-            el.style.background = 'var(--bg-hover)';
-            el.innerHTML =
-              '<div class="avatar avatar-sm"' + (f.avatar && f.avatar.indexOf('http') === 0 ? ' style="overflow:hidden;"' : '') + '>' + (f.avatar && f.avatar.indexOf('http') === 0 ? '<img src="' + f.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;">' : (f.avatar || '?')) + '</div>' +
-              '<div><a href="' + nameLink + '" class="font-bold text-xs hover:underline">' + escapeHtml(f.name) + '</a><div class="text-xs text-muted">' + escapeHtml(f.school || '') + ' ' + mutualText + '</div></div>';
-            list.appendChild(el);
-          });
-        } else {
-          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No connections yet</p>';
-          if (count) count.textContent = '0';
-        }
-      });
-  }
-
-  // Toggle edit profile
-  document.getElementById('toggleEditProfile').addEventListener('click', function() {
-    var form = document.getElementById('editProfileForm');
-    var chevron = document.getElementById('editChevron');
-    form.classList.toggle('hidden');
-    chevron.style.transform = form.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
-    lucide.createIcons();
-  });
-
-  // Edit profile form submit
-  document.getElementById('editProfileForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    var body = {
-      name: document.getElementById('editName').value,
-      school: document.getElementById('editSchool').value,
-      grade: document.getElementById('editGrade').value,
-      bio: document.getElementById('editBio').value
-    };
-    fetch('/api/profile/update', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.success) {
-        showToast('Profile updated!', 'success');
-        location.reload();
+  // ---- 2FA Functions ----
+  async function load2FAStatus() {
+    var status = document.getElementById('2faStatus');
+    var setupArea = document.getElementById('2faSetupArea');
+    var disableArea = document.getElementById('2faDisableArea');
+    if (!status) return;
+    try {
+      var isEnabled = {{ 'true' if current_user.totp_enabled else 'false' }};
+      if (isEnabled) {
+        status.textContent = '2FA is enabled';
+        status.style.color = 'var(--success)';
+        setupArea.style.display = 'none';
+        disableArea.style.display = 'block';
       } else {
-        showToast(data.error || 'Error', 'info');
+        status.textContent = '2FA is not enabled';
+        status.style.color = 'var(--text-muted)';
+        setupArea.style.display = 'none';
+        disableArea.style.display = 'none';
       }
-    })
-    .catch(function() { showToast('Error updating profile', 'info'); });
-  });
-
-  // Color palette picker
-  var paletteMap = {
-    'navy': {'--primary':'#1a2744','--primary-hover':'#2d4a7a','--accent':'#c9a84c','--accent-soft':'#e8d48b','--bg':'#ebf4ff','--bg-card':'#ffffff','--bg-hover':'#fdf0f0','--border':'#cbd5e1','--text-muted':'#5a6a7a','--danger':'#e86565'},
-    'coral': {'--primary':'#e86565','--primary-hover':'#d45050','--accent':'#f4b84a','--accent-soft':'#f8d48a','--bg':'#fff5f5','--bg-card':'#ffffff','--bg-hover':'#fef0f0','--border':'#f0d0d0','--text-muted':'#8a6a6a','--danger':'#c0392b'},
-    'blush': {'--primary':'#d48a8a','--primary-hover':'#c07070','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#fef7f7','--bg-card':'#ffffff','--bg-hover':'#faecec','--border':'#e8d0d0','--text-muted':'#8a7a7a','--danger':'#e86565'},
-    'gold': {'--primary':'#b8942e','--primary-hover':'#9a7a20','--accent':'#1a2744','--accent-soft':'#4a6a8a','--bg':'#fefcf0','--bg-card':'#ffffff','--bg-hover':'#f8f4e0','--border':'#e0d8b8','--text-muted':'#7a7260','--danger':'#c0392b'},
-    'slate': {'--primary':'#4a5568','--primary-hover':'#5a6a7a','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#f8fafc','--bg-card':'#ffffff','--bg-hover':'#eef2f6','--border':'#cbd5e1','--text-muted':'#64748b','--danger':'#e86565'},
-    'ice-blue': {'--primary':'#5a9fd4','--primary-hover':'#4a8ac0','--accent':'#c9a84c','--accent-soft':'#e0c878','--bg':'#f0f8ff','--bg-card':'#ffffff','--bg-hover':'#e6f0fa','--border':'#c8dce8','--text-muted':'#5a7a8a','--danger':'#e86565'}
-  };
-  document.querySelectorAll('.palette-option').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var palette = this.getAttribute('data-palette');
-      fetch('/api/profile/update', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({theme_color: palette})
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.success) {
-          document.querySelectorAll('.palette-option').forEach(function(b) {
-            b.style.borderColor = 'transparent';
-            b.style.boxShadow = 'none';
-          });
-          this.style.borderColor = paletteMap[palette]['--primary'];
-          this.style.boxShadow = '0 0 0 2px var(--bg-card), 0 0 0 4px ' + paletteMap[palette]['--primary'];
-          var colors = paletteMap[palette];
-          for (var key in colors) {
-            document.documentElement.style.setProperty(key, colors[key]);
-          }
-          showToast('Theme updated!', 'success');
-        }
-      }.bind(this))
-      .catch(function() { showToast('Error setting theme', 'info'); });
-    });
-  });
-  {% endif %}
-
-  // Message button — open chat drawer with this user
-  var msgBtn = document.getElementById('messageUserBtn');
-  if (msgBtn) {
-    msgBtn.addEventListener('click', function() {
-      var drawer = document.getElementById('chat-drawer');
-      var body = document.getElementById('chat-body');
-      if (drawer) drawer.classList.remove('minimized');
-      if (body) body.classList.remove('hidden');
-      if (typeof openChat === 'function') {
-        openChat(puserId, puserName, puserAvatar, puserAvatarUrl);
-      }
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    });
+    } catch(e) { console.error('2FA status error', e); }
   }
 
-  // Friend action button (for other users' profiles)
-  var friendBtn = document.getElementById('friendActionBtn');
-  if (friendBtn && !isOwn) {
-    friendBtn.addEventListener('click', function() {
-      var status = this.getAttribute('data-friend-status');
-      if (status === 'none') {
-        fetch('/api/friend/request', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({user_id: puserId})
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.success) {
-            showToast('Friend request sent!', 'success');
-            friendBtn.innerHTML = 'Request Sent <i data-lucide="clock" style="width:14px;height:14px;"></i>';
-            friendBtn.setAttribute('data-friend-status', 'pending_sent');
-            lucide.createIcons();
-          } else { showToast(d.error || 'Error', 'info'); }
-        })
-        .catch(function() { showToast('Error sending request', 'info'); });
-      } else if (status === 'pending_sent') {
-        showToast('Request already sent', 'info');
-      } else if (status === 'pending_received') {
-        // Accept the incoming request - find the connection ID
-        fetch('/api/friend/requests')
-          .then(function(r) { return r.json(); })
-          .then(function(d) {
-            var found = d.requests.find(function(r) { return r.user_id === puserId; });
-            if (found) {
-              fetch('/api/friend/respond', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({request_id: found.id, action: 'accept'})
-              })
-              .then(function(r) { return r.json(); })
-              .then(function(d2) {
-                if (d2.success) {
-                  showToast('Friend request accepted!', 'success');
-                  friendBtn.innerHTML = 'Friends <i data-lucide="check" style="width:14px;height:14px;"></i>';
-                  friendBtn.setAttribute('data-friend-status', 'friends');
-                  lucide.createIcons();
-                }
-              });
-            }
-          });
-      }
-    });
+  async function setup2FA() {
+    var status = document.getElementById('2faStatus');
+    var setupArea = document.getElementById('2faSetupArea');
+    try {
+      var r = await fetch('/api/2fa/setup');
+      var d = await r.json();
+      if (d.error) { showToast(d.error, 'info'); return; }
+      document.getElementById('2faQR').src = d.qr;
+      document.getElementById('2faSecret').textContent = d.secret;
+      var codesHtml = d.backup_codes.map(function(c) { return '<div>' + c + '</div>'; }).join('');
+      document.getElementById('2faBackupCodes').innerHTML = codesHtml;
+      setupArea.style.display = 'block';
+      status.textContent = '1. Scan QR with authenticator app  2. Enter code below';
+      status.style.color = 'var(--primary)';
+      window._2faBackupCodes = d.backup_codes;
+    } catch(e) { showToast('Error loading 2FA setup', 'info'); }
   }
 
-  function escapeHtml(text) {
-    if (!text) return '';
-    var d = document.createElement('div');
-    d.textContent = text;
-    return d.innerHTML;
+  async function enable2FA() {
+    var code = document.getElementById('2faCodeInput').value.trim();
+    if (!code || code.length < 6) { document.getElementById('2faError').textContent = 'Enter a 6-digit code'; document.getElementById('2faError').style.display = 'block'; return; }
+    document.getElementById('2faError').style.display = 'none';
+    try {
+      var r = await fetch('/api/2fa/enable', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: code}) });
+      var d = await r.json();
+      if (d.success) {
+        if (window._2faBackupCodes) {
+          showToast('2FA enabled! Save your backup codes.', 'success');
+        } else { showToast('2FA enabled!', 'success'); }
+        load2FAStatus();
+      } else { document.getElementById('2faError').textContent = d.error || 'Invalid code'; document.getElementById('2faError').style.display = 'block'; }
+    } catch(e) { document.getElementById('2faError').textContent = 'Network error'; document.getElementById('2faError').style.display = 'block'; }
   }
+
+  async function disable2FA() {
+    var pw = document.getElementById('2faPasswordInput').value;
+    if (!pw) { document.getElementById('2faDisableError').textContent = 'Enter your password'; document.getElementById('2faDisableError').style.display = 'block'; return; }
+    document.getElementById('2faDisableError').style.display = 'none';
+    try {
+      var r = await fetch('/api/2fa/disable', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: pw}) });
+      var d = await r.json();
+      if (d.success) { showToast('2FA disabled', 'info'); load2FAStatus(); }
+      else { document.getElementById('2faDisableError').textContent = d.error || 'Error'; document.getElementById('2faDisableError').style.display = 'block'; }
+    } catch(e) { document.getElementById('2faDisableError').textContent = 'Network error'; document.getElementById('2faDisableError').style.display = 'block'; }
+  }
+
+  load2FAStatus();
+
+  // Setup button for 2FA
+  var setupBtn = document.createElement('button');
+  setupBtn.className = 'btn btn-outline text-sm mt-2';
+  setupBtn.textContent = 'Set up 2FA';
+  setupBtn.onclick = setup2FA;
+  var statusEl = document.getElementById('2faStatus');
+  if (statusEl) statusEl.after(setupBtn);
 
   loadAchievements();
   loadProjects();
