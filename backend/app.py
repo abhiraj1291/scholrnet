@@ -100,7 +100,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.before_request
     def check_2fa():
-        if current_user.is_authenticated and flask_flask_session.get('2fa_required'):
+        if current_user.is_authenticated and flask_session.get('2fa_required'):
             endpoint = request.endpoint or ''
             allowed = ('verify_2fa', 'api_2fa_verify_login', 'logout', 'static')
             if not any(endpoint == a or endpoint.endswith('.' + a) for a in allowed):
