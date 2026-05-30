@@ -31,6 +31,33 @@ def sanitize_text(text, max_len=MAX_STRING_LEN):
 def sanitize_html_escape(text, max_len=MAX_STRING_LEN):
     return escape_html(sanitize_text(text, max_len))
 
+def send_email(to_email, subject, html_body):
+    api_key = app.config.get('RESEND_API_KEY', '')
+    if api_key:
+        try:
+            import urllib.request
+            body = json.dumps({
+                'from': 'ScholrNet <noreply@scholrnet.in>',
+                'to': [to_email],
+                'subject': subject,
+                'html': html_body
+            }).encode()
+            req = urllib.request.Request(
+                'https://api.resend.com/emails',
+                data=body,
+                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=15):
+                pass
+            return True
+        except Exception as e:
+            print(f"EMAIL SEND FAILED: {e}")
+    app_url = app.config.get('APP_URL', 'http://localhost:5000')
+    print(f"EMAIL ({to_email}): {subject}")
+    print(f"LINK: {html_body}")
+    return False
+
 def validate_file_type(f, allowed_extensions, allowed_mime_prefixes):
     ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
     if ext not in allowed_extensions:
@@ -153,6 +180,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT FALSE"))
             if 'totp_backup_codes' not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN totp_backup_codes TEXT DEFAULT ''"))
+            if 'email_verified' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"))
+            if 'email_verify_token' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(128) DEFAULT ''"))
+            if 'reset_password_token' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(128) DEFAULT ''"))
+            if 'reset_password_token_expires' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token_expires VARCHAR(30) DEFAULT ''"))
             conn.commit()
     except Exception as e:
         print(f"AUTO-MIGRATE: {e}, continuing")
@@ -415,17 +450,87 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     return render_template('auth/register.html', error="Username already taken", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
             hashed = bcrypt.generate_password_hash(password).decode('utf-8')
             avatar = "".join(p[0] for p in name.strip().split() if p)[:2].upper() or "ST"
+            import secrets
+            verify_token = secrets.token_urlsafe(32)
             user = User(name=name, email=email, password_hash=hashed, school=school, role=role,
                         avatar=avatar, grade="Class XII", bio="Active ScholrNet Member",
-                        username=username or None)
+                        username=username or None,
+                        email_verify_token=bcrypt.generate_password_hash(verify_token).decode('utf-8'))
             db.session.add(user)
             db.session.commit()
+            verify_link = app.config.get('APP_URL', 'http://localhost:5000') + '/verify-email/' + verify_token
+            send_email(email, 'Verify your ScholrNet email',
+                f'<p>Hi {escape_html(name)},</p><p>Click <a href="{verify_link}">here</a> to verify your email.</p><p>Or paste this link: {verify_link}</p>')
             login_user(user)
             flask_session.permanent = True
             if not user.username:
                 return redirect(url_for('choose_username'))
             return redirect(url_for('dashboard'))
         return render_template('auth/register.html', turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+
+    @app.route('/verify-email/<token>')
+    def verify_email(token):
+        user = User.query.filter(User.email_verify_token != '', User.email_verified == False).first()
+        if not user:
+            return render_template('error.html', code=400, title='Invalid Link', message='This verification link is invalid or expired.', emoji='🔗')
+        import bcrypt as bc
+        for u in User.query.filter(User.email_verify_token != '', User.email_verified == False).all():
+            try:
+                if bc.check_password_hash(u.email_verify_token, token):
+                    u.email_verified = True
+                    u.email_verify_token = ''
+                    db.session.commit()
+                    login_user(u)
+                    return render_template('auth/verify_success.html')
+            except Exception:
+                continue
+        return render_template('error.html', code=400, title='Invalid Link', message='This verification link is invalid or expired.', emoji='🔗')
+
+    @app.route('/forgot-password', methods=['GET', 'POST'])
+    @limiter.limit("5 per 15 minutes")
+    def forgot_password():
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+        if request.method == 'POST':
+            email = request.form.get('email', '').strip().lower()
+            user = User.query.filter_by(email=email).first()
+            if user and user.password_hash != '*firebase*':
+                import secrets
+                token = secrets.token_urlsafe(32)
+                user.reset_password_token = bcrypt.generate_password_hash(token).decode('utf-8')
+                from datetime import datetime, timezone, timedelta
+                user.reset_password_token_expires = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+                db.session.commit()
+                reset_link = app.config.get('APP_URL', 'http://localhost:5000') + '/reset-password/' + token
+                send_email(email, 'Reset your ScholrNet password',
+                    f'<p>Click <a href="{reset_link}">here</a> to reset your password.</p><p>Link expires in 1 hour.</p>')
+            return render_template('auth/forgot_sent.html')
+        return render_template('auth/forgot.html')
+
+    @app.route('/reset-password/<token>', methods=['GET', 'POST'])
+    @limiter.limit("5 per 15 minutes")
+    def reset_password(token):
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+        if request.method == 'POST':
+            password = request.form.get('password', '')
+            if len(password) < 8 or len(password) > 128:
+                return render_template('auth/reset.html', error='Password must be 8-128 characters', token=token)
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).isoformat()
+            for u in User.query.filter(User.reset_password_token != '').all():
+                try:
+                    if bcrypt.check_password_hash(u.reset_password_token, token):
+                        if u.reset_password_token_expires and u.reset_password_token_expires > now:
+                            u.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+                            u.reset_password_token = ''
+                            u.reset_password_token_expires = ''
+                            db.session.commit()
+                            return render_template('auth/reset_success.html')
+                except Exception:
+                    continue
+            return render_template('auth/reset.html', error='Invalid or expired reset link', token=token)
+        return render_template('auth/reset.html', token=token)
 
     @app.route('/choose-role')
     @login_required

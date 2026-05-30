@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ 'dark' if request.cookies.get('theme') == 'dark' else '' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check Your Email - ScholrNet</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
+  <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem; text-align: center;">
+    <div class="flex items-center justify-center gap-2 mb-4">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28" class="logo-light">
+        <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="28" class="logo-dark">
+      </div>
+    </div>
+    <div style="font-size: 3rem; margin-bottom: 0.5rem;">📧</div>
+    <h1 class="text-lg font-black mb-1">Check Your Email</h1>
+    <p class="text-sm text-muted mb-4">If an account with that email exists, we've sent a password reset link.</p>
+    <a href="{{ url_for('login') }}" class="btn btn-primary w-full" style="padding: 0.75rem; display: block; text-align: center;">Back to Login</a>
+  </div>
+</body>
+</html>

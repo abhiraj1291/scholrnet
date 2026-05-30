@@ -48,3 +48,6 @@ class Config:
 
     TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
     TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY", "")
+
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+    APP_URL = os.environ.get("APP_URL", "http://localhost:5000")

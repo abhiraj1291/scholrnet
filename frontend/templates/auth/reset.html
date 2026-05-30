@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ 'dark' if request.cookies.get('theme') == 'dark' else '' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set New Password - ScholrNet</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
+  <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28" class="logo-light">
+        <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="28" class="logo-dark">
+      </div>
+    </div>
+    <h1 class="text-lg font-black mb-1">Set New Password</h1>
+    <p class="text-sm text-muted mb-4">Choose a new password for your account.</p>
+    {% if error %}
+      <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
+    {% endif %}
+    <form method="POST">
+      <div style="margin-bottom: 1rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">New Password</label>
+        <input type="password" name="password" placeholder="Min. 8 characters" required minlength="8">
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding: 0.75rem;">Reset Password</button>
+    </form>
+  </div>
+</body>
+</html>

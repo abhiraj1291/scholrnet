@@ -25,6 +25,10 @@ class User(UserMixin, db.Model):
     totp_secret = db.Column(db.String(32), default="")
     totp_enabled = db.Column(db.Boolean, default=False)
     totp_backup_codes = db.Column(db.Text, default="")
+    email_verified = db.Column(db.Boolean, default=False)
+    email_verify_token = db.Column(db.String(128), default="")
+    reset_password_token = db.Column(db.String(128), default="")
+    reset_password_token_expires = db.Column(db.String(30), default="")
 
     achievements = db.relationship('Achievement', backref='user', lazy=True)
     projects = db.relationship('Project', backref='user', lazy=True)

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" class="{{ 'dark' if request.cookies.get('theme') == 'dark' else '' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forgot Password - ScholrNet</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
+  <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28" class="logo-light">
+        <img src="{{ url_for('static', filename='logo-dark.svg') }}" alt="ScholrNet" height="28" class="logo-dark">
+      </div>
+    </div>
+    <h1 class="text-lg font-black mb-1">Reset Password</h1>
+    <p class="text-sm text-muted mb-4">Enter your email and we'll send you a reset link.</p>
+    {% if error %}
+      <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
+    {% endif %}
+    <form method="POST">
+      <div style="margin-bottom: 1rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Email</label>
+        <input type="email" name="email" placeholder="your@email.com" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding: 0.75rem;">Send Reset Link</button>
+    </form>
+    <p class="text-xs text-muted text-center mt-4">
+      <a href="{{ url_for('login') }}" class="font-bold">Back to login</a>
+    </p>
+  </div>
+</body>
+</html>
