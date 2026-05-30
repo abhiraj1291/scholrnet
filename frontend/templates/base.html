@@ -281,6 +281,14 @@
     var tt = document.getElementById('themeToggle');
     if (tt) tt.checked = dark;
   }
+  function avatarHtml(obj, size) {
+    var s = size || 'sm';
+    if (obj && obj.avatar_url) {
+      return '<div class="avatar avatar-' + s + '" style="overflow:hidden;"><img src="' + obj.avatar_url + '" alt="" style="width:100%;height:100%;object-fit:cover;"></div>';
+    }
+    var txt = (obj && obj.avatar) ? obj.avatar : ((obj && obj.name) ? obj.name.slice(0,2).toUpperCase() : '?');
+    return '<div class="avatar avatar-' + s + '">' + txt + '</div>';
+  }
   </script>
   {% block scripts %}{% endblock %}
 </body>

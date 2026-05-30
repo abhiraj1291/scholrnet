@@ -59,7 +59,7 @@ function doSearch(q, callback) {
       if (data.users && data.users.length) {
         html += '<div class="p-3" style="border-bottom:1px solid var(--border);"><div class="text-xs font-bold text-muted mb-2">People</div>';
         data.users.forEach(function(u) {
-          html += '<a href="/profile/' + u.id + '" class="flex items-center gap-2 p-2" style="text-decoration:none;color:inherit;border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'"><div class="avatar avatar-sm">' + (u.avatar || u.name[0]) + '</div><div><div class="text-xs font-bold">' + u.name + '</div><div class="text-xs text-muted">' + (u.school || '') + '</div></div></a>';
+          html += '<a href="/profile/' + u.id + '" class="flex items-center gap-2 p-2" style="text-decoration:none;color:inherit;border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'"><div class="avatar avatar-sm" style="' + (u.avatar_url ? 'overflow:hidden;' : '') + '">' + (u.avatar_url ? '<img src="' + u.avatar_url + '" alt="" style="width:100%;height:100%;object-fit:cover;">' : (u.avatar || u.name[0])) + '</div><div><div class="text-xs font-bold">' + u.name + '</div><div class="text-xs text-muted">' + (u.school || '') + '</div></div></a>';
         });
         html += '</div>';
       }

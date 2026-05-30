@@ -649,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function() {
             el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
             el.style.background = 'var(--bg-hover)';
             el.innerHTML =
-              '<div class="avatar avatar-sm">' + (req.user.avatar || '?') + '</div>' +
+              '<div class="avatar avatar-sm"' + (req.user.avatar && req.user.avatar.indexOf('http') === 0 ? ' style="overflow:hidden;"' : '') + '>' + (req.user.avatar && req.user.avatar.indexOf('http') === 0 ? '<img src="' + req.user.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;">' : (req.user.avatar || '?')) + '</div>' +
               '<span class="font-bold text-sm flex-1">' + escapeHtml(req.user.name) + '</span>' +
               '<button class="btn btn-sm btn-primary friend-accept" data-id="' + req.id + '">Accept</button>' +
               '<button class="btn btn-sm btn-ghost friend-reject" data-id="' + req.id + '"><i data-lucide="x" style="width:14px;height:14px;"></i></button>';
@@ -727,7 +727,7 @@ document.addEventListener('DOMContentLoaded', function() {
             el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
             el.style.background = 'var(--bg-hover)';
             el.innerHTML =
-              '<div class="avatar avatar-sm">' + (f.avatar || '?') + '</div>' +
+              '<div class="avatar avatar-sm"' + (f.avatar && f.avatar.indexOf('http') === 0 ? ' style="overflow:hidden;"' : '') + '>' + (f.avatar && f.avatar.indexOf('http') === 0 ? '<img src="' + f.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;">' : (f.avatar || '?')) + '</div>' +
               '<div><a href="' + nameLink + '" class="font-bold text-xs hover:underline">' + escapeHtml(f.name) + '</a><div class="text-xs text-muted">' + escapeHtml(f.school || '') + ' ' + mutualText + '</div></div>';
             list.appendChild(el);
           });
