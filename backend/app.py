@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 import bleach
 
-from flask import render_template, request, jsonify, redirect, url_for, session as flask_session, abort, Response
+from flask import render_template, request, jsonify, redirect, url_for, session, abort, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from markupsafe import escape as escape_html
 
@@ -100,7 +100,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.before_request
     def check_2fa():
-        if current_user.is_authenticated and flask_session.get('2fa_required'):
+        if current_user.is_authenticated and session.get('2fa_required'):
             endpoint = request.endpoint or ''
             allowed = ('verify_2fa', 'api_2fa_verify_login', 'logout', 'static')
             if not any(endpoint == a or endpoint.endswith('.' + a) for a in allowed):
@@ -343,9 +343,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 try:
                     if bcrypt.check_password_hash(user.password_hash, password):
                         login_user(user)
-                        flask_session.permanent = True
+                        session.permanent = True
                         if user.totp_enabled:
-                            flask_session['2fa_required'] = True
+                            session['2fa_required'] = True
                             return redirect(url_for('verify_2fa'))
                         return redirect(url_for('dashboard'))
                 except Exception:
@@ -398,14 +398,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
             db.session.add(user)
             db.session.commit()
             login_user(user)
-            flask_session.permanent = True
+            session.permanent = True
             return jsonify({'success': True, 'redirect': '/choose-role', 'new_user': True})
         else:
             if photo and not user.avatar_url:
                 user.avatar_url = photo
                 db.session.commit()
         login_user(user)
-        flask_session.permanent = True
+        session.permanent = True
         return jsonify({'success': True, 'redirect': '/dashboard'})
 
     @app.route('/register', methods=['GET', 'POST'])
@@ -468,7 +468,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             send_email(email, 'Verify your ScholrNet email',
                 f'<p>Hi {escape_html(name)},</p><p>Click <a href="{verify_link}">here</a> to verify your email.</p><p>Or paste this link: {verify_link}</p>')
             login_user(user)
-            flask_session.permanent = True
+            session.permanent = True
             if not user.username:
                 return redirect(url_for('choose_username'))
             return redirect(url_for('dashboard'))
@@ -1925,7 +1925,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         new_role = data.get('role', 'student')
         if new_role not in ('student', 'teacher', 'mentor', 'admin'):
             return jsonify({'error': 'Invalid role'}), 400
-        flask_session['view_role'] = new_role
+        session['view_role'] = new_role
         return jsonify({'success': True})
 
     @app.route('/api/search')
@@ -2192,14 +2192,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({'error': 'Current password is incorrect'}), 403
         current_user.password_hash = bcrypt.generate_password_hash(new_pw).decode('utf-8')
         db.session.commit()
-        flask_session.regenerate()
+        session.regenerate()
         return jsonify({'success': True})
 
     @app.route('/api/profile/logout-all', methods=['POST'])
     @login_required
     @limiter.limit("5 per hour")
     def api_logout_all():
-        flask_session.regenerate()
+        session.regenerate()
         import secrets
         app.secret_key = secrets.token_hex(32)
         return jsonify({'success': True, 'message': 'All sessions invalidated. Please log in again.'})
@@ -2209,7 +2209,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/verify-2fa')
     @login_required
     def verify_2fa():
-        if not flask_session.get('2fa_required'):
+        if not session.get('2fa_required'):
             return redirect(url_for('dashboard'))
         return render_template('2fa_login.html', user=current_user,
             notifications=get_user_notifications(current_user.id))
@@ -2270,13 +2270,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
         current_user.totp_secret = ''
         current_user.totp_backup_codes = ''
         db.session.commit()
-        flask_session.pop('2fa_required', None)
+        session.pop('2fa_required', None)
         return jsonify({'success': True})
 
     @app.route('/api/2fa/verify-login', methods=['POST'])
     @limiter.limit("10 per minute")
     def api_2fa_verify_login():
-        if not current_user.is_authenticated or not flask_session.get('2fa_required'):
+        if not current_user.is_authenticated or not session.get('2fa_required'):
             return jsonify({'error': 'No 2FA pending'}), 401
         import pyotp
         data = request.json or {}
@@ -2285,7 +2285,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({'error': 'Verification code required'}), 400
         totp = pyotp.TOTP(current_user.totp_secret)
         if totp.verify(code, valid_window=1):
-            flask_session.pop('2fa_required', None)
+            session.pop('2fa_required', None)
             return jsonify({'success': True, 'redirect': url_for('dashboard')})
         if current_user.totp_backup_codes:
             import json as _json
@@ -2295,7 +2295,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     backup_list.pop(i)
                     current_user.totp_backup_codes = _json.dumps(backup_list)
                     db.session.commit()
-                    flask_session.pop('2fa_required', None)
+                    session.pop('2fa_required', None)
                     return jsonify({'success': True, 'redirect': url_for('dashboard'), 'used_backup': True})
         return jsonify({'error': 'Invalid code'}), 400
 
