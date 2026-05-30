@@ -6,6 +6,8 @@ import uuid
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+import bleach
+
 from flask import render_template, request, jsonify, redirect, url_for, session as flask_session, abort, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from markupsafe import escape as escape_html
@@ -22,10 +24,8 @@ def sanitize_text(text, max_len=MAX_STRING_LEN):
     if not text:
         return ''
     text = str(text).strip()
-    # Strip control characters except newlines
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
-    # Strip HTML tags to prevent XSS
-    text = re.sub(r'<[^>]*>', '', text)
+    text = bleach.clean(text, tags=[], strip=True)
     return text[:max_len]
 
 def sanitize_html_escape(text, max_len=MAX_STRING_LEN):
@@ -2077,6 +2077,15 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         session.regenerate()
         return jsonify({'success': True})
+
+    @app.route('/api/profile/logout-all', methods=['POST'])
+    @login_required
+    @limiter.limit("5 per hour")
+    def api_logout_all():
+        session.regenerate()
+        import secrets
+        app.secret_key = secrets.token_hex(32)
+        return jsonify({'success': True, 'message': 'All sessions invalidated. Please log in again.'})
 
     # ---- 2FA ROUTES ----
 

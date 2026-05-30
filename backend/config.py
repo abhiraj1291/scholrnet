@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -27,6 +28,7 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = True
     SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
     # Rate limiting storage
     RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
