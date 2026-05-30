@@ -195,8 +195,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.context_processor
     def inject_globals():
-        if current_user.is_authenticated and (current_user.role in ('admin', 'super_admin') or not current_user.school_verified):
-            return {'schools': get_all_schools()}
+        try:
+            if current_user.is_authenticated and (current_user.role in ('admin', 'super_admin') or not current_user.school_verified):
+                return {'schools': get_all_schools()}
+        except Exception:
+            pass
         return {'schools': []}
 
     @app.errorhandler(404)
