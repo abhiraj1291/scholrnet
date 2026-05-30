@@ -715,6 +715,166 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   {% endif %}
 
+  function loadFriends() {
+    var url = isOwn ? '/api/friend/list' : '/api/user/' + puserId + '/connections';
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var list = document.getElementById('friendsList');
+        var count = document.getElementById('friendsCount');
+        if (!list) return;
+        list.innerHTML = '';
+        var items = d.friends || d.connections || [];
+        if (items.length > 0) {
+          if (count) count.textContent = items.length;
+          items.forEach(function(f) {
+            var mutualText = (f.mutual > 0) ? '<span class="text-xs text-muted">' + f.mutual + ' mutual</span>' : '';
+            var nameLink = f.username ? '/u/' + f.username : '/profile/' + f.id;
+            var el = document.createElement('div');
+            el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div class="avatar avatar-sm">' + (f.avatar || '?') + '</div>' +
+              '<div><a href="' + nameLink + '" class="font-bold text-xs hover:underline">' + escapeHtml(f.name) + '</a><div class="text-xs text-muted">' + escapeHtml(f.school || '') + ' ' + mutualText + '</div></div>';
+            list.appendChild(el);
+          });
+        } else {
+          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No connections yet</p>';
+          if (count) count.textContent = '0';
+        }
+      });
+  }
+
+  function loadClubs() {
+    fetch('/api/user/' + puserId + '/clubs')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var list = document.getElementById('profileClubsList');
+        if (!list) return;
+        list.innerHTML = '';
+        if (d.clubs && d.clubs.length > 0) {
+          d.clubs.forEach(function(c) {
+            var el = document.createElement('a');
+            el.href = '/club/' + c.id;
+            el.style.textDecoration = 'none';
+            el.style.color = 'inherit';
+            el.className = 'flex items-center justify-between p-2 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML = '<div><div class="font-bold text-xs">' + escapeHtml(c.name) + '</div><div class="text-xs text-muted">' + c.member_count + ' members &middot; ' + c.role.toUpperCase() + '</div></div><i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted);"></i>';
+            list.appendChild(el);
+          });
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No clubs joined yet</p>';
+        }
+      });
+  }
+
+  function loadFriendRequests() {
+    fetch('/api/friend/requests')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var list = document.getElementById('friendRequestsList');
+        var badge = document.getElementById('friendReqBadge');
+        if (!list) return;
+        list.innerHTML = '';
+        if (d.requests && d.requests.length > 0) {
+          if (badge) { badge.classList.remove('hidden'); badge.textContent = d.requests.length; }
+          d.requests.forEach(function(req) {
+            var el = document.createElement('div');
+            el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div class="avatar avatar-sm">' + (req.user.avatar || '?') + '</div>' +
+              '<span class="font-bold text-sm flex-1">' + escapeHtml(req.user.name) + '</span>' +
+              '<button class="btn btn-sm btn-primary friend-accept" data-id="' + req.id + '">Accept</button>' +
+              '<button class="btn btn-sm btn-ghost friend-reject" data-id="' + req.id + '"><i data-lucide="x" style="width:14px;height:14px;"></i></button>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+          document.querySelectorAll('.friend-accept').forEach(function(b) {
+            b.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              fetch('/api/friend/respond', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({request_id: parseInt(id), action:'accept'}) })
+                .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Friend request accepted!','success');loadFriendRequests();loadFriends();loadProfile();}});
+            });
+          });
+          document.querySelectorAll('.friend-reject').forEach(function(b) {
+            b.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              fetch('/api/friend/respond', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({request_id: parseInt(id), action:'reject'}) })
+                .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Request declined','success');loadFriendRequests();}});
+            });
+          });
+        } else {
+          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No pending requests</p>';
+          if (badge) badge.classList.add('hidden');
+        }
+      });
+  }
+
+  var friendBtn = document.getElementById('friendActionBtn');
+  if (friendBtn && !isOwn) {
+    friendBtn.addEventListener('click', function() {
+      var status = this.getAttribute('data-friend-status');
+      if (status === 'none') {
+        fetch('/api/friend/request', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({user_id: puserId})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) {
+            showToast('Friend request sent!', 'success');
+            friendBtn.innerHTML = 'Request Sent <i data-lucide="clock" style="width:14px;height:14px;"></i>';
+            friendBtn.setAttribute('data-friend-status', 'pending_sent');
+            lucide.createIcons();
+          } else { showToast(d.error || 'Error', 'info'); }
+        })
+        .catch(function() { showToast('Error sending request', 'info'); });
+      } else if (status === 'pending_sent') {
+        showToast('Request already sent', 'info');
+      } else if (status === 'pending_received') {
+        fetch('/api/friend/requests')
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var found = d.requests.find(function(r) { return r.user_id === puserId; });
+            if (found) {
+              fetch('/api/friend/respond', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({request_id: found.id, action: 'accept'})
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(d2) {
+                if (d2.success) {
+                  showToast('Friend request accepted!', 'success');
+                  friendBtn.innerHTML = 'Friends <i data-lucide="check" style="width:14px;height:14px;"></i>';
+                  friendBtn.setAttribute('data-friend-status', 'friends');
+                  lucide.createIcons();
+                }
+              });
+            }
+          });
+      }
+    });
+  }
+
+  var msgBtn = document.getElementById('messageUserBtn');
+  if (msgBtn) {
+    msgBtn.addEventListener('click', function() {
+      var drawer = document.getElementById('chat-drawer');
+      var body = document.getElementById('chat-body');
+      if (drawer) drawer.classList.remove('minimized');
+      if (body) body.classList.remove('hidden');
+      if (typeof openChat === 'function') {
+        openChat(puserId, puserName, puserAvatar, puserAvatarUrl);
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+  }
+
   load2FAStatus();
 
   // Setup button for 2FA
