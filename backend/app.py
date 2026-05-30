@@ -569,21 +569,27 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        return render_template('feed.html',
-            user=current_user,
-            posts=get_all_posts(),
-            ads=active_ads(),
-            schools=get_all_schools(),
-            opportunities=get_all_opportunities(),
-            team_requests=get_all_team_requests(),
-            mentors=get_all_mentors(),
-            achievements=Achievement.query.filter_by(user_id=current_user.id).order_by(Achievement.id.desc()).all(),
-            projects=Project.query.filter_by(user_id=current_user.id).order_by(Project.id.desc()).all(),
-            verification_requests=VerificationRequest.query.order_by(VerificationRequest.id.desc()).limit(200).all() if current_user.role in ('admin', 'super_admin') else [],
-            notifications=get_user_notifications(current_user.id),
-            registered_event_ids=[r.announce_id for r in EventRegistration.query.filter_by(user_id=current_user.id).all()],
-            connections=[c.connected_user_id for c in Connection.query.filter_by(user_id=current_user.id).all()]
-        )
+        import traceback
+        try:
+            return render_template('feed.html',
+                user=current_user,
+                posts=get_all_posts(),
+                ads=active_ads(),
+                schools=get_all_schools(),
+                opportunities=get_all_opportunities(),
+                team_requests=get_all_team_requests(),
+                mentors=get_all_mentors(),
+                achievements=Achievement.query.filter_by(user_id=current_user.id).order_by(Achievement.id.desc()).all(),
+                projects=Project.query.filter_by(user_id=current_user.id).order_by(Project.id.desc()).all(),
+                verification_requests=VerificationRequest.query.order_by(VerificationRequest.id.desc()).limit(200).all() if current_user.role in ('admin', 'super_admin') else [],
+                notifications=get_user_notifications(current_user.id),
+                registered_event_ids=[r.announce_id for r in EventRegistration.query.filter_by(user_id=current_user.id).all()],
+                connections=[c.connected_user_id for c in Connection.query.filter_by(user_id=current_user.id).all()]
+            )
+        except Exception as e:
+            print(f"DASHBOARD ERROR: {e}")
+            traceback.print_exc()
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/profile')
     @login_required
