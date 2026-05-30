@@ -713,6 +713,7 @@ document.addEventListener('DOMContentLoaded', function() {
       else { document.getElementById('2faDisableError').textContent = d.error || 'Error'; document.getElementById('2faDisableError').style.display = 'block'; }
     } catch(e) { document.getElementById('2faDisableError').textContent = 'Network error'; document.getElementById('2faDisableError').style.display = 'block'; }
   }
+  {% endif %}
 
   load2FAStatus();
 
