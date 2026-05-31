@@ -594,10 +594,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
             user = User.query.filter_by(email=email).first()
             if user and user.password_hash != '*firebase*':
                 import random
-                from datetime import datetime, timezone, timedelta
+                from datetime import datetime, timedelta
                 otp = str(random.randint(100000, 999999))
                 user.reset_otp = otp
-                user.reset_otp_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+                user.reset_otp_expires = datetime.utcnow() + timedelta(minutes=10)
                 db.session.commit()
                 send_email(email, 'Reset your ScholrNet password',
                     f'<p>Your password reset code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
@@ -613,24 +613,31 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not email:
             return redirect(url_for('forgot_password'))
         if request.method == 'POST':
-            otp = request.form.get('otp', '').strip()
-            password = request.form.get('password', '')
-            if not otp or not otp.isdigit() or len(otp) != 6:
-                return render_template('auth/reset_otp.html', error='Enter a valid 6-digit code', email=email)
-            if len(password) < 8 or len(password) > 128:
-                return render_template('auth/reset_otp.html', error='Password must be 8-128 characters', email=email)
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                return redirect(url_for('forgot_password'))
-            from datetime import datetime, timezone
-            if user.reset_otp != otp or not user.reset_otp_expires or datetime.now(timezone.utc) > user.reset_otp_expires:
-                return render_template('auth/reset_otp.html', error='Invalid or expired code', email=email)
-            user.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-            user.reset_otp = ''
-            user.reset_otp_expires = None
-            db.session.commit()
-            session.pop('reset_email', None)
-            return render_template('auth/reset_success.html')
+            try:
+                otp = request.form.get('otp', '').strip()
+                password = request.form.get('password', '')
+                if not otp or not otp.isdigit() or len(otp) != 6:
+                    return render_template('auth/reset_otp.html', error='Enter a valid 6-digit code', email=email)
+                if len(password) < 8 or len(password) > 128:
+                    return render_template('auth/reset_otp.html', error='Password must be 8-128 characters', email=email)
+                user = User.query.filter_by(email=email).first()
+                if not user:
+                    return redirect(url_for('forgot_password'))
+                from datetime import datetime
+                expires = user.reset_otp_expires
+                if isinstance(expires, str):
+                    expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+                if user.reset_otp != otp or not expires or datetime.utcnow() > expires:
+                    return render_template('auth/reset_otp.html', error='Invalid or expired code', email=email)
+                user.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+                user.reset_otp = ''
+                user.reset_otp_expires = None
+                db.session.commit()
+                session.pop('reset_email', None)
+                return render_template('auth/reset_success.html')
+            except Exception as e:
+                import traceback; traceback.print_exc()
+                return render_template('auth/reset_otp.html', error=f'Error: {e}', email=email)
         return render_template('auth/reset_otp.html', email=email)
 
     @app.route('/reset-password/<token>', methods=['GET', 'POST'])
