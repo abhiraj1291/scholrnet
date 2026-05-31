@@ -34,25 +34,31 @@ def sanitize_html_escape(text, max_len=MAX_STRING_LEN):
 def send_email(to_email, subject, html_body):
     api_key = current_app.config.get('RESEND_API_KEY', '')
     if api_key:
-        try:
-            import urllib.request
-            body = json.dumps({
-                'from': 'ScholrNet <noreply@scholrnet.in>',
-                'to': [to_email],
-                'subject': subject,
-                'html': html_body
-            }).encode()
-            req = urllib.request.Request(
-                'https://api.resend.com/emails',
-                data=body,
-                headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-                method='POST'
-            )
-            with urllib.request.urlopen(req, timeout=15):
-                pass
-            return True
-        except Exception as e:
-            print(f"EMAIL SEND FAILED: {e}")
+            try:
+                import urllib.request
+                from urllib.error import HTTPError
+                body = json.dumps({
+                    'from': 'ScholrNet <noreply@scholrnet.in>',
+                    'to': [to_email],
+                    'subject': subject,
+                    'html': html_body
+                }).encode()
+                req = urllib.request.Request(
+                    'https://api.resend.com/emails',
+                    data=body,
+                    headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                    method='POST'
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=15) as resp:
+                        result = json.loads(resp.read())
+                        print(f"EMAIL SENT via Resend: {result.get('id', 'ok')}")
+                        return True
+                except HTTPError as e:
+                    err_body = e.read().decode()
+                    print(f"RESEND API ERROR ({e.code}): {err_body}")
+            except Exception as e:
+                print(f"EMAIL SEND FAILED: {e}")
     app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
     print(f"EMAIL ({to_email}): {subject}")
     print(f"LINK: {html_body}")
