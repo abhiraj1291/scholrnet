@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 import bleach
 
-from flask import render_template, request, jsonify, redirect, url_for, session, abort, Response
+from flask import render_template, request, jsonify, redirect, url_for, session, abort, Response, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from markupsafe import escape as escape_html
 
@@ -423,12 +423,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
         try:
             if current_user.is_authenticated:
                 return redirect(url_for('dashboard'))
-            turnstile_key = app.config.get('TURNSTILE_SECRET_KEY', '')
+            turnstile_key = current_app.config.get('TURNSTILE_SECRET_KEY', '')
             if request.method == 'POST':
                 if turnstile_key:
                     token = request.form.get('cf-turnstile-response', '')
                     if not token:
-                        return render_template('auth/register.html', error="Please complete the security check", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                        return render_template('auth/register.html', error="Please complete the security check", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                     try:
                         import urllib.request, urllib.parse, json
                         verify = urllib.request.Request('https://challenges.cloudflare.com/turnstile/v0/siteverify',
@@ -437,9 +437,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
                         with urllib.request.urlopen(verify, timeout=10) as resp:
                             result = json.loads(resp.read())
                             if not result.get('success'):
-                                return render_template('auth/register.html', error="Security check failed. Please try again.", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                                return render_template('auth/register.html', error="Security check failed. Please try again.", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                     except Exception:
-                        return render_template('auth/register.html', error="Security check unavailable. Please try again.", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                        return render_template('auth/register.html', error="Security check unavailable. Please try again.", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 name = sanitize_text(request.form.get('name', ''), 100)
                 email = request.form.get('email', '').strip().lower()
                 password = request.form.get('password', '')
@@ -448,22 +448,22 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 username = request.form.get('username', '').strip().lower()
 
                 if not name or not email or not password:
-                    return render_template('auth/register.html', error="All fields are required", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                    return render_template('auth/register.html', error="All fields are required", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 if len(email) > 254:
-                    return render_template('auth/register.html', error="Email too long", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                    return render_template('auth/register.html', error="Email too long", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 if len(password) < 8:
-                    return render_template('auth/register.html', error="Password must be at least 8 characters", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                    return render_template('auth/register.html', error="Password must be at least 8 characters", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 if len(password) > 128:
-                    return render_template('auth/register.html', error="Password too long", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                    return render_template('auth/register.html', error="Password too long", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 if role not in ('student', 'teacher', 'mentor', 'counselor'):
                     role = 'student'
                 if User.query.filter_by(email=email).first():
-                    return render_template('auth/register.html', error="Email already registered", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                    return render_template('auth/register.html', error="Email already registered", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 if username:
                     if not re.match(r'^[a-z0-9_]{3,30}$', username):
-                        return render_template('auth/register.html', error="Username: 3-30 chars, letters, numbers, underscores only", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                        return render_template('auth/register.html', error="Username: 3-30 chars, letters, numbers, underscores only", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                     if User.query.filter_by(username=username).first():
-                        return render_template('auth/register.html', error="Username already taken", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+                        return render_template('auth/register.html', error="Username already taken", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 hashed = bcrypt.generate_password_hash(password).decode('utf-8')
                 avatar = "".join(p[0] for p in name.strip().split() if p)[:2].upper() or "ST"
                 import secrets
@@ -474,7 +474,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                             email_verify_token=bcrypt.generate_password_hash(verify_token).decode('utf-8'))
                 db.session.add(user)
                 db.session.commit()
-                verify_link = app.config.get('APP_URL', 'http://localhost:5000') + '/verify-email/' + verify_token
+                verify_link = current_app.config.get('APP_URL', 'http://localhost:5000') + '/verify-email/' + verify_token
                 send_email(email, 'Verify your ScholrNet email',
                     f'<p>Hi {escape_html(name)},</p><p>Click <a href="{verify_link}">here</a> to verify your email.</p><p>Or paste this link: {verify_link}</p>')
                 login_user(user)
@@ -482,11 +482,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 if not user.username:
                     return redirect(url_for('choose_username'))
                 return redirect(url_for('dashboard'))
-            return render_template('auth/register.html', turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+            return render_template('auth/register.html', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return render_template('auth/register.html', error=f"Registration error: {e}", turnstile_site_key=app.config.get('TURNSTILE_SITE_KEY', ''))
+            return render_template('auth/register.html', error=f"Registration error: {e}", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
 
     @app.route('/verify-email/<token>')
     def verify_email(token):
