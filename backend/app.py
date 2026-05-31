@@ -518,20 +518,28 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if current_user.email_verified:
             return redirect(url_for('dashboard'))
         if request.method == 'POST':
-            otp = request.form.get('otp', '').strip()
-            if not otp or not otp.isdigit() or len(otp) != 6:
-                return render_template('auth/verify_otp.html', error='Enter a valid 6-digit code')
-            from datetime import datetime, timezone
-            if current_user.email_otp != otp or not current_user.email_otp_expires or datetime.now(timezone.utc) > current_user.email_otp_expires:
-                return render_template('auth/verify_otp.html', error='Invalid or expired code')
-            current_user.email_verified = True
-            current_user.email_otp = ''
-            current_user.email_otp_expires = None
-            db.session.commit()
-            session.pop('verify_email', None)
-            if not current_user.username:
-                return redirect(url_for('choose_username'))
-            return redirect(url_for('dashboard'))
+            try:
+                otp = request.form.get('otp', '').strip()
+                if not otp or not otp.isdigit() or len(otp) != 6:
+                    return render_template('auth/verify_otp.html', error='Enter a valid 6-digit code')
+                from datetime import datetime, timezone
+                expires = current_user.email_otp_expires
+                if isinstance(expires, str):
+                    from datetime import datetime as dt
+                    expires = dt.fromisoformat(expires.replace('Z', '+00:00'))
+                if current_user.email_otp != otp or not expires or datetime.now(timezone.utc) > expires:
+                    return render_template('auth/verify_otp.html', error='Invalid or expired code')
+                current_user.email_verified = True
+                current_user.email_otp = ''
+                current_user.email_otp_expires = None
+                db.session.commit()
+                session.pop('verify_email', None)
+                if not current_user.username:
+                    return redirect(url_for('choose_username'))
+                return redirect(url_for('dashboard'))
+            except Exception as e:
+                import traceback; traceback.print_exc()
+                return render_template('auth/verify_otp.html', error=f'Verification error: {e}')
         return render_template('auth/verify_otp.html', email=current_user.email)
 
     @app.route('/api/verify-email/resend-otp', methods=['POST'])
