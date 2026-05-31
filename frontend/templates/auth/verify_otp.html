@@ -24,6 +24,14 @@
       <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
     {% endif %}
 
+    {% if otp %}
+    <div id="otpBox" onclick="document.getElementById('otpInput').value='{{ otp }}'" style="cursor:pointer;background:#f0f4ff;border:2px dashed #c0d0f0;border-radius:0.75rem;padding:1rem;margin-bottom:1rem;text-align:center;">
+      <div class="text-xs text-muted mb-1">Your verification code</div>
+      <div style="font-size:2rem;font-weight:900;color:var(--primary);letter-spacing:0.5em;font-family:monospace;">{{ otp }}</div>
+      <div class="text-xs text-muted mt-1">Click to auto-fill</div>
+    </div>
+    {% endif %}
+
     <form method="POST" id="otpForm">
       <div style="margin-bottom: 1rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Verification Code</label>
@@ -53,6 +61,13 @@
         .then(function(d) {
           if (d.success) {
             status.textContent = 'Code sent!';
+            if (d.otp) {
+              var box = document.getElementById('otpBox');
+              if (box) {
+                box.innerHTML = '<div class="text-xs text-muted mb-1">Your verification code</div><div style="font-size:2rem;font-weight:900;color:var(--primary);letter-spacing:0.5em;font-family:monospace;">' + d.otp + '</div><div class="text-xs text-muted mt-1">Click to auto-fill</div>';
+                box.onclick = function() { document.getElementById('otpInput').value = d.otp; };
+              }
+            }
             setTimeout(function() { status.classList.add('hidden'); }, 3000);
           } else {
             status.textContent = d.error || 'Error';

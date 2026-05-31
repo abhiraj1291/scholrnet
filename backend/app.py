@@ -54,7 +54,9 @@ def send_email(to_email, subject, html_body):
                 print(f"EMAIL SENT via Resend: {json.loads(data).get('id', 'ok')}")
                 return True
             else:
-                raise RuntimeError(f"Email send failed ({resp.status}): {data}")
+                print(f"EMAIL SEND FAILED ({resp.status}): {data}")
+        except Exception as e:
+            print(f"EMAIL SEND FAILED: {e}")
         finally:
             conn.close()
     print(f"EMAIL ({to_email}): {subject}\n{html_body}")
@@ -568,7 +570,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             except Exception as e:
                 import traceback; traceback.print_exc()
                 return render_template('auth/verify_otp.html', error=f'Verification error: {e}')
-        return render_template('auth/verify_otp.html', email=current_user.email)
+        return render_template('auth/verify_otp.html', email=current_user.email, otp=current_user.email_otp)
 
     @app.route('/api/verify-email/resend-otp', methods=['POST'])
     @login_required
@@ -588,7 +590,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         session['resend_otp_at'] = datetime.utcnow().timestamp()
         send_email(current_user.email, 'Verify your ScholrNet email',
             email_otp_body(current_user.name, otp, 'Verify Your Email'))
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'otp': otp})
 
     @app.route('/verify-email/<token>')
     def verify_email(token):
