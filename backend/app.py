@@ -467,8 +467,22 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     return render_template('auth/register.html', error="Password too long", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 if role not in ('student', 'teacher', 'mentor', 'counselor'):
                     role = 'student'
-                if User.query.filter_by(email=email).first():
-                    return render_template('auth/register.html', error="Email already registered", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
+                existing = User.query.filter_by(email=email).first()
+                if existing:
+                    if existing.email_verified:
+                        return render_template('auth/register.html', error="Email already registered", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
+                    import secrets, random
+                    from datetime import datetime, timezone, timedelta
+                    otp = str(random.randint(100000, 999999))
+                    existing.email_otp = otp
+                    existing.email_otp_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+                    db.session.commit()
+                    send_email(email, 'Verify your ScholrNet email',
+                        f'<p>Hi {escape_html(existing.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
+                    login_user(existing)
+                    session.permanent = True
+                    session['verify_email'] = True
+                    return redirect(url_for('verify_email_otp'))
                 if username:
                     if not re.match(r'^[a-z0-9_]{3,30}$', username):
                         return render_template('auth/register.html', error="Username: 3-30 chars, letters, numbers, underscores only", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
