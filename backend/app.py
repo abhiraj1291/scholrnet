@@ -32,7 +32,7 @@ def sanitize_html_escape(text, max_len=MAX_STRING_LEN):
     return escape_html(sanitize_text(text, max_len))
 
 def send_email(to_email, subject, html_body):
-    api_key = app.config.get('RESEND_API_KEY', '')
+    api_key = current_app.config.get('RESEND_API_KEY', '')
     if api_key:
         try:
             import urllib.request
@@ -53,7 +53,7 @@ def send_email(to_email, subject, html_body):
             return True
         except Exception as e:
             print(f"EMAIL SEND FAILED: {e}")
-    app_url = app.config.get('APP_URL', 'http://localhost:5000')
+    app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
     print(f"EMAIL ({to_email}): {subject}")
     print(f"LINK: {html_body}")
     return False
@@ -74,8 +74,8 @@ def validate_file_type(f, allowed_extensions, allowed_mime_prefixes):
     return True, ''
 
 def register_routes(app, bcrypt, login_manager, limiter):
-    supabase_url = app.config.get("SUPABASE_URL", "").rstrip("/")
-    supabase_key = app.config.get("SUPABASE_STORAGE_KEY", "")
+    supabase_url = current_app.config.get("SUPABASE_URL", "").rstrip("/")
+    supabase_key = current_app.config.get("SUPABASE_STORAGE_KEY", "")
     supabase_bucket = "uploads"
 
     @app.before_request
