@@ -60,6 +60,30 @@ def send_email(to_email, subject, html_body):
     print(f"EMAIL ({to_email}): {subject}\n{html_body}")
     return False
 
+def email_otp_body(name, otp, purpose):
+    icon = '🔐' if 'reset' in purpose.lower() else '📧'
+    title = purpose
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
+<table role="presentation" style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
+<tr><td style="padding:40px 32px 24px;text-align:center">
+<div style="font-size:48px;margin-bottom:8px">{icon}</div>
+<h1 style="margin:0 0 4px;font-size:22px;font-weight:700;color:#1a2744">{escape_html(title)}</h1>
+<p style="margin:0 0 24px;font-size:14px;color:#5a6a7a">Hi {escape_html(name)},</p>
+<div style="background:#f0f4ff;border-radius:12px;padding:20px;margin-bottom:24px">
+<div style="font-size:12px;color:#5a6a7a;margin-bottom:8px">Your verification code</div>
+<div style="font-size:36px;font-weight:900;color:#1a2744;letter-spacing:8px">{otp}</div>
+<div style="font-size:12px;color:#5a6a7a;margin-top:8px">Expires in 10 minutes</div>
+</div>
+<p style="margin:0 0 4px;font-size:13px;color:#5a6a7a;line-height:1.5">If you didn't request this, please ignore this email.</p>
+<p style="margin:0;font-size:13px;color:#5a6a7a">— ScholrNet Team</p>
+</td></tr>
+<tr><td style="padding:16px 32px 24px;text-align:center;font-size:11px;color:#9aa6b5;border-top:1px solid #eef0f4">
+ScholrNet — Academic Trust Network
+</td></tr></table></td></tr></table></body></html>'''
+
 def validate_file_type(f, allowed_extensions, allowed_mime_prefixes):
     ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
     if ext not in allowed_extensions:
@@ -483,7 +507,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     existing.email_otp_expires = datetime.utcnow() + timedelta(minutes=10)
                     db.session.commit()
                     send_email(email, 'Verify your ScholrNet email',
-                        f'<p>Hi {escape_html(existing.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
+                        email_otp_body(existing.name, otp, 'Verify Your Email'))
                     login_user(existing)
                     session.permanent = True
                     session['verify_email'] = True
@@ -506,7 +530,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 db.session.add(user)
                 db.session.commit()
                 send_email(email, 'Verify your ScholrNet email',
-                    f'<p>Hi {escape_html(name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
+                    email_otp_body(name, otp, 'Verify Your Email'))
                 login_user(user)
                 session.permanent = True
                 session['verify_email'] = True
@@ -563,7 +587,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         session['resend_otp_at'] = datetime.utcnow().timestamp()
         send_email(current_user.email, 'Verify your ScholrNet email',
-            f'<p>Hi {escape_html(current_user.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
+            email_otp_body(current_user.name, otp, 'Verify Your Email'))
         return jsonify({'success': True})
 
     @app.route('/verify-email/<token>')
@@ -600,7 +624,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 user.reset_otp_expires = datetime.utcnow() + timedelta(minutes=10)
                 db.session.commit()
                 send_email(email, 'Reset your ScholrNet password',
-                    f'<p>Your password reset code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
+                    email_otp_body(user.name, otp, 'Reset Your Password'))
                 session['reset_email'] = email
                 return redirect(url_for('reset_password_otp'))
             return render_template('auth/forgot_sent.html')
