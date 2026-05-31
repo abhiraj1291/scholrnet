@@ -278,8 +278,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
             allowed = ['choose_role', 'api_set_role', 'logout', 'static', 'verify_email_otp', 'api_resend_verify_otp']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
                 return redirect(url_for('choose_role'))
+        # Redirect unverified users to verify page
+        if current_user.is_authenticated and current_user.email_verified is False:
+            allowed = ['verify_email_otp', 'api_resend_verify_otp', 'logout', 'static', 'api_delete_account']
+            if request.endpoint not in allowed and not request.path.startswith('/static/'):
+                return redirect(url_for('verify_email_otp'))
         # Redirect users without a username to choose-username (skip for certain endpoints)
-        if current_user.is_authenticated and not current_user.username and current_user.role != 'pending':
+        if current_user.is_authenticated and not current_user.username and current_user.role != 'pending' and current_user.email_verified:
             allowed = ['choose_username', 'api_username_check', 'api_username_set', 'verify_email_otp', 'api_resend_verify_otp', 'logout', 'static']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
                 return redirect(url_for('choose_username'))
@@ -2318,6 +2323,28 @@ def register_routes(app, bcrypt, login_manager, limiter):
         import secrets
         app.secret_key = secrets.token_hex(32)
         return jsonify({'success': True, 'message': 'All sessions invalidated. Please log in again.'})
+
+    @app.route('/api/profile/delete-account', methods=['POST'])
+    @login_required
+    @limiter.limit("3 per hour")
+    def api_delete_account():
+        data = request.json or {}
+        password = data.get('password', '')
+        if not password:
+            return jsonify({'success': False, 'error': 'Password is required'}), 400
+        if current_user.password_hash == '*firebase*':
+            return jsonify({'success': False, 'error': 'Please use your social login provider to manage your account'}), 400
+        try:
+            if not bcrypt.check_password_hash(current_user.password_hash, password):
+                return jsonify({'success': False, 'error': 'Incorrect password'}), 403
+        except Exception:
+            return jsonify({'success': False, 'error': 'Incorrect password'}), 403
+        uid = current_user.id
+        User.query.filter_by(id=uid).delete()
+        db.session.commit()
+        logout_user()
+        session.clear()
+        return jsonify({'success': True, 'redirect': '/'})
 
     # ---- 2FA ROUTES ----
 
