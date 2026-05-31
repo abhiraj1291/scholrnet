@@ -522,7 +522,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             if not current_user.username:
                 return redirect(url_for('choose_username'))
             return redirect(url_for('dashboard'))
-        return render_template('auth/verify_otp.html', email=current_user.email)
+        return render_template('auth/verify_otp.html', email=current_user.email, otp=current_user.email_otp)
 
     @app.route('/api/verify-email/resend-otp', methods=['POST'])
     @login_required
@@ -538,7 +538,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         send_email(current_user.email, 'Verify your ScholrNet email',
             f'<p>Hi {escape_html(current_user.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'otp': otp})
 
     @app.route('/verify-email/<token>')
     def verify_email(token):

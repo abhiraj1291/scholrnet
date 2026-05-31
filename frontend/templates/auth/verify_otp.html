@@ -18,11 +18,13 @@
       </div>
     </div>
     <h1 class="text-lg font-black mb-1">Verify your email</h1>
-    <p class="text-sm text-muted mb-4">We sent a 6-digit code to <strong>{{ email }}</strong></p>
+    <p class="text-sm text-muted mb-4">Enter the code sent to <strong>{{ email }}</strong></p>
 
     {% if error %}
       <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
     {% endif %}
+
+    <div id="otpDisplay" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:0.5rem;padding:1rem;margin-bottom:1rem;text-align:center;font-size:1.25rem;font-weight:700;letter-spacing:0.3em;">{{ otp }}</div>
 
     <form method="POST" id="otpForm">
       <div style="margin-bottom: 1rem;">
@@ -42,6 +44,10 @@
       this.value = this.value.replace(/\D/g, '').slice(0, 6);
     });
 
+    document.getElementById('otpDisplay').addEventListener('click', function() {
+      document.getElementById('otpInput').value = this.textContent;
+    });
+
     document.getElementById('resendBtn').addEventListener('click', function() {
       var btn = this;
       btn.disabled = true;
@@ -53,6 +59,7 @@
         .then(function(d) {
           if (d.success) {
             status.textContent = 'Code sent!';
+            if (d.otp) document.getElementById('otpDisplay').textContent = d.otp;
             setTimeout(function() { status.classList.add('hidden'); }, 3000);
           } else {
             status.textContent = d.error || 'Error';
