@@ -32,36 +32,32 @@ def sanitize_html_escape(text, max_len=MAX_STRING_LEN):
     return escape_html(sanitize_text(text, max_len))
 
 def send_email(to_email, subject, html_body):
-    api_key = current_app.config.get('RESEND_API_KEY', '')
+    api_key = os.environ.get('RESEND_API_KEY', '')
     if api_key:
-            try:
-                import urllib.request
-                from urllib.error import HTTPError
-                body = json.dumps({
-                    'from': 'ScholrNet <noreply@scholrnet.in>',
-                    'to': [to_email],
-                    'subject': subject,
-                    'html': html_body
-                }).encode()
-                req = urllib.request.Request(
-                    'https://api.resend.com/emails',
-                    data=body,
-                    headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-                    method='POST'
-                )
-                try:
-                    with urllib.request.urlopen(req, timeout=15) as resp:
-                        result = json.loads(resp.read())
-                        print(f"EMAIL SENT via Resend: {result.get('id', 'ok')}")
-                        return True
-                except HTTPError as e:
-                    err_body = e.read().decode()
-                    print(f"RESEND API ERROR ({e.code}): {err_body}")
-            except Exception as e:
-                print(f"EMAIL SEND FAILED: {e}")
-    app_url = current_app.config.get('APP_URL', 'http://localhost:5000')
-    print(f"EMAIL ({to_email}): {subject}")
-    print(f"LINK: {html_body}")
+        import urllib.request
+        from urllib.error import HTTPError
+        body = json.dumps({
+            'from': 'ScholrNet <noreply@scholrnet.in>',
+            'to': [to_email],
+            'subject': subject,
+            'html': html_body
+        }).encode()
+        req = urllib.request.Request(
+            'https://api.resend.com/emails',
+            data=body,
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            method='POST'
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read())
+                print(f"EMAIL SENT via Resend: {result.get('id', 'ok')}")
+                return True
+        except HTTPError as e:
+            err = e.read().decode()
+            print(f"RESEND API ERROR ({e.code}): {err}")
+            raise RuntimeError(f"Email send failed ({e.code}): {err}")
+    print(f"EMAIL ({to_email}): {subject}\n{html_body}")
     return False
 
 def validate_file_type(f, allowed_extensions, allowed_mime_prefixes):
@@ -522,7 +518,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             if not current_user.username:
                 return redirect(url_for('choose_username'))
             return redirect(url_for('dashboard'))
-        return render_template('auth/verify_otp.html', email=current_user.email, otp=current_user.email_otp)
+        return render_template('auth/verify_otp.html', email=current_user.email)
 
     @app.route('/api/verify-email/resend-otp', methods=['POST'])
     @login_required
@@ -538,7 +534,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         send_email(current_user.email, 'Verify your ScholrNet email',
             f'<p>Hi {escape_html(current_user.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
-        return jsonify({'success': True, 'otp': otp})
+        return jsonify({'success': True})
 
     @app.route('/verify-email/<token>')
     def verify_email(token):
