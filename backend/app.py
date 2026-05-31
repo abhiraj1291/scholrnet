@@ -2379,6 +2379,24 @@ def register_routes(app, bcrypt, login_manager, limiter):
         session.clear()
         return jsonify({'success': True, 'redirect': '/'})
 
+    @app.route('/api/debug-email', methods=['GET'])
+    @limiter.limit("3 per 10 minutes")
+    def debug_email():
+        key = os.environ.get('RESEND_API_KEY', '')
+        prefix = key[:8] + '...' if len(key) > 8 else 'NOT SET'
+        try:
+            import http.client, ssl, json
+            body = json.dumps({'from': 'ScholrNet <noreply@scholrnet.in>', 'to': ['abhiraj1291@gmail.com'], 'subject': 'Debug test', 'html': '<p>test</p>'})
+            ctx = ssl.create_default_context()
+            conn = http.client.HTTPSConnection('api.resend.com', context=ctx, timeout=15)
+            conn.request('POST', '/emails', body, {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'})
+            resp = conn.getresponse()
+            data = resp.read().decode()
+            conn.close()
+            return jsonify({'key_prefix': prefix, 'status': resp.status, 'response': data[:500]})
+        except Exception as e:
+            return jsonify({'key_prefix': prefix, 'error': str(e)}), 500
+
     # ---- 2FA ROUTES ----
 
     @app.route('/verify-2fa')
