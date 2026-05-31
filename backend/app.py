@@ -618,7 +618,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if request.method == 'POST':
             email = request.form.get('email', '').strip().lower()
             user = User.query.filter_by(email=email).first()
-            if user and user.password_hash != '*firebase*':
+            if user:
                 import random
                 from datetime import datetime, timedelta
                 otp = str(random.randint(100000, 999999))
