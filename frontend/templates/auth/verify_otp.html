@@ -56,10 +56,18 @@
             setTimeout(function() { status.classList.add('hidden'); }, 3000);
           } else {
             status.textContent = d.error || 'Error';
+            if (d.error && d.error.indexOf('30 seconds') > -1) {
+              btn.disabled = true;
+              var sec = 30;
+              var timer = setInterval(function() {
+                sec--;
+                if (sec <= 0) { clearInterval(timer); btn.disabled = false; status.classList.add('hidden'); }
+                else { status.textContent = 'Wait ' + sec + 's'; }
+              }, 1000);
+            } else { btn.disabled = false; }
           }
         })
-        .catch(function() { status.textContent = 'Network error'; })
-        .finally(function() { btn.disabled = false; });
+        .catch(function() { status.textContent = 'Network error'; btn.disabled = false; });
     });
   </script>
 </body>
