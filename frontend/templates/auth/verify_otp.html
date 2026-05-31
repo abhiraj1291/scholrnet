@@ -24,12 +24,6 @@
       <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
     {% endif %}
 
-    {% if debug_otp %}
-      <div id="debugOtp" style="background:#fef3cd;border:1px solid #f0c040;border-radius:0.5rem;padding:0.75rem;margin-bottom:1rem;font-size:0.875rem;text-align:center;">
-        Debug: Your OTP is <strong>{{ debug_otp }}</strong>
-      </div>
-    {% endif %}
-
     <form method="POST" id="otpForm">
       <div style="margin-bottom: 1rem;">
         <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Verification Code</label>
@@ -59,10 +53,6 @@
         .then(function(d) {
           if (d.success) {
             status.textContent = 'Code sent!';
-            if (d.otp) {
-              var dbg = document.getElementById('debugOtp');
-              if (dbg) dbg.innerHTML = 'Debug: Your OTP is <strong>' + d.otp + '</strong>';
-            }
             setTimeout(function() { status.classList.add('hidden'); }, 3000);
           } else {
             status.textContent = d.error || 'Error';

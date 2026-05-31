@@ -495,7 +495,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 login_user(user)
                 session.permanent = True
                 session['verify_email'] = True
-                return redirect(url_for('verify_email_otp', debug_otp=otp))
+                return redirect(url_for('verify_email_otp'))
             return render_template('auth/register.html', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
         except Exception as e:
             import traceback
@@ -507,7 +507,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def verify_email_otp():
         if current_user.email_verified:
             return redirect(url_for('dashboard'))
-        debug_otp = request.args.get('debug_otp', '')
         if request.method == 'POST':
             otp = request.form.get('otp', '').strip()
             if not otp or not otp.isdigit() or len(otp) != 6:
@@ -523,7 +522,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             if not current_user.username:
                 return redirect(url_for('choose_username'))
             return redirect(url_for('dashboard'))
-        return render_template('auth/verify_otp.html', email=current_user.email, debug_otp=debug_otp)
+        return render_template('auth/verify_otp.html', email=current_user.email)
 
     @app.route('/api/verify-email/resend-otp', methods=['POST'])
     @login_required
@@ -539,7 +538,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.commit()
         send_email(current_user.email, 'Verify your ScholrNet email',
             f'<p>Hi {escape_html(current_user.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
-        return jsonify({'success': True, 'otp': otp})
+        return jsonify({'success': True})
 
     @app.route('/verify-email/<token>')
     def verify_email(token):
