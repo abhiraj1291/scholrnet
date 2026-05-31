@@ -62,16 +62,17 @@ def send_email(to_email, subject, html_body):
     print(f"EMAIL ({to_email}): {subject}\n{html_body}")
     return False
 
+LOGO_B64 = 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgNTYiIGZpbGw9Im5vbmUiPgogIDxjaXJjbGUgY3g9IjM2IiBjeT0iMjgiIHI9IjIyIiBzdHJva2U9IiMxYTI3NDQiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgogIDxwYXRoIGQ9Ik0xNiAyMiBRMzYgMTggNTYgMjIiIHN0cm9rZT0iIzFhMjc0NCIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuMyIgZmlsbD0ibm9uZSIvPgogIDxwYXRoIGQ9Ik0xNiAzNCBRMzYgMzggNTYgMzQiIHN0cm9rZT0iIzFhMjc0NCIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuMyIgZmlsbD0ibm9uZSIvPgogIDxjaXJjbGUgY3g9IjI4IiBjeT0iMTgiIHI9IjIuNSIgZmlsbD0iI2M5YTg0YyIvPgogIDxjaXJjbGUgY3g9IjQ4IiBjeT0iMjAiIHI9IjIuNSIgZmlsbD0iI2M5YTg0YyIvPgogIDxjaXJjbGUgY3g9IjQ0IiBjeT0iMzYiIHI9IjIuNSIgZmlsbD0iI2M5YTg0YyIvPgogIDxjaXJjbGUgY3g9IjI0IiBjeT0iMzQiIHI9IjIuNSIgZmlsbD0iI2M5YTg0YyIvPgogIDxwYXRoIGQ9Ik0yOCAxOCBRMzQgMTYgNDggMjAiIHN0cm9rZT0iI2M5YTg0YyIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuNiIgZmlsbD0ibm9uZSIvPgogIDxwYXRoIGQ9Ik00OCAyMCBRNTAgMjggNDQgMzYiIHN0cm9rZT0iI2M5YTg0YyIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuNiIgZmlsbD0ibm9uZSIvPgogIDxwYXRoIGQ9Ik00NCAzNiBRMzQgMzggMjQgMzQiIHN0cm9rZT0iI2M5YTg0YyIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuNiIgZmlsbD0ibm9uZSIvPgogIDxwYXRoIGQ9Ik0yNCAzNCBRMjAgMjYgMjggMTgiIHN0cm9rZT0iI2M5YTg0YyIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuNiIgZmlsbD0ibm9uZSIvPgogIDx0ZXh0IHg9IjY4IiB5PSIyNiIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwtYXBwbGUtc3lzdGVtLHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI4MDAiIGZvbnQtc2l6ZT0iMjAiIGxldHRlci1zcGFjaW5nPSItMC4wMmVtIiBmaWxsPSIjMWEyNzQ0Ij5TY2hvbHJOZXQ8L3RleHQ+CiAgPHRleHQgeD0iNjgiIHk9IjQwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLC1hcHBsZS1zeXN0ZW0sc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjUwMCIgZm9udC1zaXplPSI5IiBmaWxsPSIjNmI3MjgwIiBsZXR0ZXItc3BhY2luZz0iMC4wNGVtIj5Zb3VyIGFjaGlldmVtZW50cywgdmVyaWZpZWQuPC90ZXh0Pgo8L3N2Zz4='
+
 def email_otp_body(name, otp, purpose):
-    icon = '🔐' if 'reset' in purpose.lower() else '📧'
     title = purpose
     return f'''<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
 <table role="presentation" style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
-<tr><td style="padding:40px 32px 24px;text-align:center">
-<div style="font-size:48px;margin-bottom:8px">{icon}</div>
+<tr><td style="padding:32px 32px 24px;text-align:center">
+<img src="data:image/svg+xml;base64,{LOGO_B64}" alt="ScholrNet" height="40" style="display:block;margin:0 auto 16px">
 <h1 style="margin:0 0 4px;font-size:22px;font-weight:700;color:#1a2744">{escape_html(title)}</h1>
 <p style="margin:0 0 24px;font-size:14px;color:#5a6a7a">Hi {escape_html(name)},</p>
 <div style="background:#f0f4ff;border-radius:12px;padding:20px;margin-bottom:24px">
