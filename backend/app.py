@@ -472,10 +472,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     if existing.email_verified:
                         return render_template('auth/register.html', error="Email already registered", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                     import secrets, random
-                    from datetime import datetime, timezone, timedelta
+                    from datetime import datetime, timedelta
                     otp = str(random.randint(100000, 999999))
                     existing.email_otp = otp
-                    existing.email_otp_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+                    existing.email_otp_expires = datetime.utcnow() + timedelta(minutes=10)
                     db.session.commit()
                     send_email(email, 'Verify your ScholrNet email',
                         f'<p>Hi {escape_html(existing.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
@@ -492,8 +492,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 avatar = "".join(p[0] for p in name.strip().split() if p)[:2].upper() or "ST"
                 import secrets, random
                 otp = str(random.randint(100000, 999999))
-                from datetime import datetime, timezone, timedelta
-                otp_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+                from datetime import datetime, timedelta
+                otp_expires = datetime.utcnow() + timedelta(minutes=10)
                 user = User(name=name, email=email, password_hash=hashed, school=school, role=role,
                             avatar=avatar, grade="Class XII", bio="Active ScholrNet Member",
                             username=username or None,
@@ -522,12 +522,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 otp = request.form.get('otp', '').strip()
                 if not otp or not otp.isdigit() or len(otp) != 6:
                     return render_template('auth/verify_otp.html', error='Enter a valid 6-digit code')
-                from datetime import datetime, timezone
+                from datetime import datetime
                 expires = current_user.email_otp_expires
                 if isinstance(expires, str):
-                    from datetime import datetime as dt
-                    expires = dt.fromisoformat(expires.replace('Z', '+00:00'))
-                if current_user.email_otp != otp or not expires or datetime.now(timezone.utc) > expires:
+                    expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+                if current_user.email_otp != otp or not expires or datetime.utcnow() > expires:
                     return render_template('auth/verify_otp.html', error='Invalid or expired code')
                 current_user.email_verified = True
                 current_user.email_otp = ''
@@ -548,12 +547,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_resend_verify_otp():
         if current_user.email_verified:
             return jsonify({'success': False, 'error': 'Already verified'}), 400
+        from datetime import datetime, timedelta
+        last = session.get('resend_otp_at', 0)
+        if isinstance(last, (int, float)) and last > 0 and datetime.utcnow().timestamp() - last < 30:
+            return jsonify({'success': False, 'error': 'Wait 30 seconds before resending'}), 429
         import random
-        from datetime import datetime, timezone, timedelta
         otp = str(random.randint(100000, 999999))
         current_user.email_otp = otp
-        current_user.email_otp_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+        current_user.email_otp_expires = datetime.utcnow() + timedelta(minutes=10)
         db.session.commit()
+        session['resend_otp_at'] = datetime.utcnow().timestamp()
         send_email(current_user.email, 'Verify your ScholrNet email',
             f'<p>Hi {escape_html(current_user.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
         return jsonify({'success': True})
