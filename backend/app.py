@@ -32,31 +32,31 @@ def sanitize_html_escape(text, max_len=MAX_STRING_LEN):
     return escape_html(sanitize_text(text, max_len))
 
 def send_email(to_email, subject, html_body):
-    api_key = os.environ.get('RESEND_API_KEY', '')
+    api_key = (os.environ.get('RESEND_API_KEY', '') or '').strip()
     if api_key:
-        import urllib.request
-        from urllib.error import HTTPError
+        import http.client, ssl, json
         body = json.dumps({
             'from': 'ScholrNet <noreply@scholrnet.in>',
             'to': [to_email],
             'subject': subject,
             'html': html_body
-        }).encode()
-        req = urllib.request.Request(
-            'https://api.resend.com/emails',
-            data=body,
-            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-            method='POST'
-        )
+        })
+        ctx = ssl.create_default_context()
+        conn = http.client.HTTPSConnection('api.resend.com', context=ctx, timeout=15)
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                result = json.loads(resp.read())
-                print(f"EMAIL SENT via Resend: {result.get('id', 'ok')}")
+            conn.request('POST', '/emails', body, {
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            })
+            resp = conn.getresponse()
+            data = resp.read().decode()
+            if resp.status == 200:
+                print(f"EMAIL SENT via Resend: {json.loads(data).get('id', 'ok')}")
                 return True
-        except HTTPError as e:
-            err = e.read().decode()
-            print(f"RESEND API ERROR ({e.code}): {err}")
-            raise RuntimeError(f"Email send failed ({e.code}): {err}")
+            else:
+                raise RuntimeError(f"Email send failed ({resp.status}): {data}")
+        finally:
+            conn.close()
     print(f"EMAIL ({to_email}): {subject}\n{html_body}")
     return False
 
