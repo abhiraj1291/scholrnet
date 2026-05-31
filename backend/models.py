@@ -29,6 +29,10 @@ class User(UserMixin, db.Model):
     email_verify_token = db.Column(db.String(128), default="")
     reset_password_token = db.Column(db.String(128), default="")
     reset_password_token_expires = db.Column(db.String(30), default="")
+    email_otp = db.Column(db.String(6), default="")
+    email_otp_expires = db.Column(db.DateTime, nullable=True)
+    reset_otp = db.Column(db.String(6), default="")
+    reset_otp_expires = db.Column(db.DateTime, nullable=True)
 
     achievements = db.relationship('Achievement', backref='user', lazy=True)
     projects = db.relationship('Project', backref='user', lazy=True)

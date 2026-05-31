@@ -134,6 +134,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(128) DEFAULT ''"))
             if 'reset_password_token_expires' not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token_expires VARCHAR(30) DEFAULT ''"))
+            if 'email_otp' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN email_otp VARCHAR(6) DEFAULT ''"))
+            if 'email_otp_expires' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN email_otp_expires TIMESTAMP"))
+            if 'reset_otp' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN reset_otp VARCHAR(6) DEFAULT ''"))
+            if 'reset_otp_expires' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN reset_otp_expires TIMESTAMP"))
             conn.commit()
     except Exception as e:
         print(f"AUTO-MIGRATE: users column migration failed: {e}")
@@ -265,12 +273,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.before_request
     def check_pending_role():
         if current_user.is_authenticated and current_user.role == 'pending':
-            allowed = ['choose_role', 'api_set_role', 'logout', 'static']
+            allowed = ['choose_role', 'api_set_role', 'logout', 'static', 'verify_email_otp', 'api_resend_verify_otp']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
                 return redirect(url_for('choose_role'))
         # Redirect users without a username to choose-username (skip for certain endpoints)
         if current_user.is_authenticated and not current_user.username and current_user.role != 'pending':
-            allowed = ['choose_username', 'api_username_check', 'api_username_set', 'logout', 'static']
+            allowed = ['choose_username', 'api_username_check', 'api_username_set', 'verify_email_otp', 'api_resend_verify_otp', 'logout', 'static']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
                 return redirect(url_for('choose_username'))
 
@@ -402,7 +410,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 name=name, email=email, password_hash='*firebase*',
                 school='', role='pending', avatar=avatar,
                 grade='', bio='Joined via ' + provider,
-                avatar_url=photo
+                avatar_url=photo, email_verified=True
             )
             db.session.add(user)
             db.session.commit()
@@ -466,27 +474,65 @@ def register_routes(app, bcrypt, login_manager, limiter):
                         return render_template('auth/register.html', error="Username already taken", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
                 hashed = bcrypt.generate_password_hash(password).decode('utf-8')
                 avatar = "".join(p[0] for p in name.strip().split() if p)[:2].upper() or "ST"
-                import secrets
-                verify_token = secrets.token_urlsafe(32)
+                import secrets, random
+                otp = str(random.randint(100000, 999999))
+                from datetime import datetime, timezone, timedelta
+                otp_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
                 user = User(name=name, email=email, password_hash=hashed, school=school, role=role,
                             avatar=avatar, grade="Class XII", bio="Active ScholrNet Member",
                             username=username or None,
-                            email_verify_token=bcrypt.generate_password_hash(verify_token).decode('utf-8'))
+                            email_otp=otp, email_otp_expires=otp_expires)
                 db.session.add(user)
                 db.session.commit()
-                verify_link = current_app.config.get('APP_URL', 'http://localhost:5000') + '/verify-email/' + verify_token
                 send_email(email, 'Verify your ScholrNet email',
-                    f'<p>Hi {escape_html(name)},</p><p>Click <a href="{verify_link}">here</a> to verify your email.</p><p>Or paste this link: {verify_link}</p>')
+                    f'<p>Hi {escape_html(name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
                 login_user(user)
                 session.permanent = True
-                if not user.username:
-                    return redirect(url_for('choose_username'))
-                return redirect(url_for('dashboard'))
+                session['verify_email'] = True
+                return redirect(url_for('verify_email_otp'))
             return render_template('auth/register.html', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
         except Exception as e:
             import traceback
             traceback.print_exc()
             return render_template('auth/register.html', error=f"Registration error: {e}", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
+
+    @app.route('/verify-email-otp', methods=['GET', 'POST'])
+    @login_required
+    def verify_email_otp():
+        if current_user.email_verified:
+            return redirect(url_for('dashboard'))
+        if request.method == 'POST':
+            otp = request.form.get('otp', '').strip()
+            if not otp or not otp.isdigit() or len(otp) != 6:
+                return render_template('auth/verify_otp.html', error='Enter a valid 6-digit code')
+            from datetime import datetime, timezone
+            if current_user.email_otp != otp or not current_user.email_otp_expires or datetime.now(timezone.utc) > current_user.email_otp_expires:
+                return render_template('auth/verify_otp.html', error='Invalid or expired code')
+            current_user.email_verified = True
+            current_user.email_otp = ''
+            current_user.email_otp_expires = None
+            db.session.commit()
+            session.pop('verify_email', None)
+            if not current_user.username:
+                return redirect(url_for('choose_username'))
+            return redirect(url_for('dashboard'))
+        return render_template('auth/verify_otp.html', email=current_user.email)
+
+    @app.route('/api/verify-email/resend-otp', methods=['POST'])
+    @login_required
+    @limiter.limit("3 per 5 minutes")
+    def api_resend_verify_otp():
+        if current_user.email_verified:
+            return jsonify({'success': False, 'error': 'Already verified'}), 400
+        import random
+        from datetime import datetime, timezone, timedelta
+        otp = str(random.randint(100000, 999999))
+        current_user.email_otp = otp
+        current_user.email_otp_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+        db.session.commit()
+        send_email(current_user.email, 'Verify your ScholrNet email',
+            f'<p>Hi {escape_html(current_user.name)},</p><p>Your verification code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
+        return jsonify({'success': True})
 
     @app.route('/verify-email/<token>')
     def verify_email(token):
@@ -515,17 +561,45 @@ def register_routes(app, bcrypt, login_manager, limiter):
             email = request.form.get('email', '').strip().lower()
             user = User.query.filter_by(email=email).first()
             if user and user.password_hash != '*firebase*':
-                import secrets
-                token = secrets.token_urlsafe(32)
-                user.reset_password_token = bcrypt.generate_password_hash(token).decode('utf-8')
+                import random
                 from datetime import datetime, timezone, timedelta
-                user.reset_password_token_expires = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+                otp = str(random.randint(100000, 999999))
+                user.reset_otp = otp
+                user.reset_otp_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
                 db.session.commit()
-                reset_link = app.config.get('APP_URL', 'http://localhost:5000') + '/reset-password/' + token
                 send_email(email, 'Reset your ScholrNet password',
-                    f'<p>Click <a href="{reset_link}">here</a> to reset your password.</p><p>Link expires in 1 hour.</p>')
+                    f'<p>Your password reset code is: <strong>{otp}</strong></p><p>This code expires in 10 minutes.</p>')
+                session['reset_email'] = email
+                return redirect(url_for('reset_password_otp'))
             return render_template('auth/forgot_sent.html')
         return render_template('auth/forgot.html')
+
+    @app.route('/reset-password-otp', methods=['GET', 'POST'])
+    @limiter.limit("10 per 15 minutes")
+    def reset_password_otp():
+        email = session.get('reset_email', '')
+        if not email:
+            return redirect(url_for('forgot_password'))
+        if request.method == 'POST':
+            otp = request.form.get('otp', '').strip()
+            password = request.form.get('password', '')
+            if not otp or not otp.isdigit() or len(otp) != 6:
+                return render_template('auth/reset_otp.html', error='Enter a valid 6-digit code', email=email)
+            if len(password) < 8 or len(password) > 128:
+                return render_template('auth/reset_otp.html', error='Password must be 8-128 characters', email=email)
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                return redirect(url_for('forgot_password'))
+            from datetime import datetime, timezone
+            if user.reset_otp != otp or not user.reset_otp_expires or datetime.now(timezone.utc) > user.reset_otp_expires:
+                return render_template('auth/reset_otp.html', error='Invalid or expired code', email=email)
+            user.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+            user.reset_otp = ''
+            user.reset_otp_expires = None
+            db.session.commit()
+            session.pop('reset_email', None)
+            return render_template('auth/reset_success.html')
+        return render_template('auth/reset_otp.html', email=email)
 
     @app.route('/reset-password/<token>', methods=['GET', 'POST'])
     @limiter.limit("5 per 15 minutes")

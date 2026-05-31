@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Password - ScholrNet</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
+  <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
+    <style>@media (max-width: 30rem) { .card { padding: 1.25rem !important; } }</style>
+    <div class="flex items-center gap-2 mb-4">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
+      </div>
+    </div>
+    <h1 class="text-lg font-black mb-1">Reset password</h1>
+    <p class="text-sm text-muted mb-4">Enter the code sent to <strong>{{ email }}</strong> and set a new password.</p>
+
+    {% if error %}
+      <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <div style="margin-bottom: 1rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Verification Code</label>
+        <input type="text" name="otp" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="text-align:center;letter-spacing:0.5em;font-size:1.5rem;font-weight:700;" required autocomplete="one-time-code">
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">New Password</label>
+        <input type="password" name="password" placeholder="Min 8 characters" minlength="8" maxlength="128" required style="width:100%;padding:0.625rem 0.75rem;border:1px solid var(--border);border-radius:0.5rem;background:var(--card-bg);color:var(--text);box-sizing:border-box;">
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding: 0.75rem;">Reset Password</button>
+    </form>
+  </div>
+</body>
+</html>

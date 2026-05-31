@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Email - ScholrNet</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+</head>
+<body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
+  <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
+    <style>@media (max-width: 30rem) { .card { padding: 1.25rem !important; } }</style>
+    <div class="flex items-center gap-2 mb-4">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
+      </div>
+    </div>
+    <h1 class="text-lg font-black mb-1">Verify your email</h1>
+    <p class="text-sm text-muted mb-4">We sent a 6-digit code to <strong>{{ email }}</strong></p>
+
+    {% if error %}
+      <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" id="otpForm">
+      <div style="margin-bottom: 1rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Verification Code</label>
+        <input type="text" id="otpInput" name="otp" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="text-align:center;letter-spacing:0.5em;font-size:1.5rem;font-weight:700;" required autocomplete="one-time-code">
+      </div>
+      <button type="submit" class="btn btn-primary w-full" style="padding: 0.75rem;">Verify Email</button>
+    </form>
+
+    <div class="text-center mt-4">
+      <button id="resendBtn" class="btn btn-ghost btn-sm" style="color:var(--primary);">Resend Code</button>
+      <p id="resendStatus" class="text-xs text-muted mt-1 hidden"></p>
+    </div>
+
+    <p class="text-xs text-muted text-center mt-4">
+      <a href="{{ url_for('dashboard') }}" class="font-bold" style="color:var(--text-muted);">Skip for now</a>
+    </p>
+  </div>
+
+  <script>
+    document.getElementById('otpInput').addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    document.getElementById('resendBtn').addEventListener('click', function() {
+      var btn = this;
+      btn.disabled = true;
+      var status = document.getElementById('resendStatus');
+      status.classList.remove('hidden');
+      status.textContent = 'Sending...';
+      fetch('/api/verify-email/resend-otp', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) {
+            status.textContent = 'Code sent!';
+            setTimeout(function() { status.classList.add('hidden'); }, 3000);
+          } else {
+            status.textContent = d.error || 'Error';
+          }
+        })
+        .catch(function() { status.textContent = 'Network error'; })
+        .finally(function() { btn.disabled = false; });
+    });
+  </script>
+</body>
+</html>
