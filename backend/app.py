@@ -231,8 +231,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.errorhandler(500)
     def server_error(e):
-        print("SERVER ERROR:", traceback.format_exc())
-        return render_template('error.html', code=500, title='Something Went Wrong', message='An unexpected error occurred. Our team has been notified.', emoji='⚠️'), 500
+        err = traceback.format_exc()
+        print("SERVER ERROR:", err)
+        return render_template('error.html', code=500, title='Something Went Wrong', message=f'{err[:500]}', emoji='⚠️'), 500
 
     MIME_TYPES = {
         'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
@@ -278,7 +279,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             allowed = ['choose_role', 'api_set_role', 'logout', 'static', 'verify_email_otp', 'api_resend_verify_otp']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
                 return redirect(url_for('choose_role'))
-        # Redirect unverified users to verify page
+        # Redirect unverified users to verify page (only if explicitly False, not NULL for old users)
         if current_user.is_authenticated and current_user.email_verified is False:
             allowed = ['verify_email_otp', 'api_resend_verify_otp', 'logout', 'static', 'api_delete_account']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
@@ -353,7 +354,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/login', methods=['GET', 'POST'])
     @limiter.limit("30 per 15 minutes", methods=['POST'])
-    @limiter.limit("5 per 15 minutes", key_func=lambda: request.form.get('email', '').strip().lower(), methods=['POST'])
     def login():
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
