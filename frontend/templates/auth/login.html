@@ -4,7 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScholrNet - Login</title>
-  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='logo-icon.png') }}">
+  <meta property="og:title" content="ScholrNet - Login">
+  <meta property="og:description" content="Academic trust network — verified achievements, connections, and opportunities.">
+  <meta property="og:url" content="https://scholrnet.in">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="{{ url_for('static', filename='logo.svg', _external=True) }}">
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://www.gstatic.com">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
