@@ -117,7 +117,15 @@
     {% if is_member %}
     <form id="clubPostForm" class="mb-4">
       <textarea id="clubPostContent" rows="3" placeholder="Share something with the club..." class="mb-2" required></textarea>
-      <button type="submit" class="btn btn-primary btn-sm">Post</button>
+      <div class="flex items-center gap-2 mb-2">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+          <i data-lucide="image" style="width:14px;height:14px;"></i> Add Media
+          <input type="file" id="clubPostMedia" accept="image/*,video/mp4,video/quicktime" style="display:none;" multiple>
+        </label>
+        <input type="url" id="clubPostVideo" placeholder="Or video URL..." style="flex:1;font-size:0.8rem;padding:0.4rem 0.6rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      </div>
+      <div id="clubMediaPreview" class="flex gap-2 flex-wrap hidden mb-2"></div>
+      <button type="submit" id="clubPostSubmit" class="btn btn-primary btn-sm">Post</button>
     </form>
     {% elif not is_member %}
     <p class="text-xs text-muted mb-3">{% if club.is_private %}Request to join{% else %}Join the club{% endif %} to post and interact.</p>
@@ -328,12 +336,33 @@ function loadClubPosts() {
           '</div>' +
           (p.title ? '<div class="font-bold text-sm mt-2">' + escapeHtml(p.title) + '</div>' : '') +
           (p.content ? '<div class="text-xs text-muted mt-1" style="line-height:1.6;">' + escapeHtml(p.content) + '</div>' : '') +
+          (p.image_url ? '<div class="mt-2">' + (p.image_url.split('|||').map(function(u) { return '<img src="' + escapeHtml(u) + '" style="max-width:100%;border-radius:0.5rem;margin-bottom:0.25rem;">'; }).join('')) + '</div>' : '') +
           '<div class="text-xs text-muted mt-2">' + (p.timestamp || '') + '</div>';
         container.appendChild(div);
       });
     })
     .catch(function() {});
 }
+
+// Club post media upload
+var clubPendingFiles = [];
+document.getElementById('clubPostMedia').addEventListener('change', function() {
+  var preview = document.getElementById('clubMediaPreview');
+  preview.innerHTML = '';
+  preview.classList.remove('hidden');
+  clubPendingFiles = [];
+  Array.from(this.files).forEach(function(file) {
+    clubPendingFiles.push(file);
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;width:80px;height:80px;border-radius:0.5rem;overflow:hidden;border:1px solid var(--border);';
+      wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
+      preview.appendChild(wrap);
+    };
+    reader.readAsDataURL(file);
+  });
+});
 
 // Create club post
 var clubPostForm = document.getElementById('clubPostForm');
@@ -342,22 +371,55 @@ if (clubPostForm) {
     e.preventDefault();
     var content = document.getElementById('clubPostContent').value.trim();
     if (!content) return;
-    fetch('/api/post/create', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({content: content, type: 'club_post', club_id: CLUB_ID})
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.success) {
-        document.getElementById('clubPostContent').value = '';
-        showToast('Posted!', 'success');
-        loadClubPosts();
-      } else {
-        showToast(d.error || 'Failed to post', 'info');
-      }
-    })
-    .catch(function() { showToast('Network error', 'info'); });
+    var submitBtn = document.getElementById('clubPostSubmit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Posting...';
+    if (clubPendingFiles.length > 0) {
+      var fd = new FormData();
+      fd.append('content', content);
+      fd.append('type', 'club_post');
+      fd.append('club_id', CLUB_ID);
+      var titleEl = document.getElementById('clubPostTitle');
+      if (titleEl && titleEl.value) fd.append('title', titleEl.value);
+      clubPendingFiles.forEach(function(f) { fd.append('files', f); });
+      fetch('/api/post/create', { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Post';
+          if (d.success) {
+            document.getElementById('clubPostContent').value = '';
+            document.getElementById('clubMediaPreview').classList.add('hidden');
+            document.getElementById('clubMediaPreview').innerHTML = '';
+            clubPendingFiles = [];
+            document.getElementById('clubPostMedia').value = '';
+            showToast('Posted!', 'success');
+            loadClubPosts();
+          } else {
+            showToast(d.error || 'Failed to post', 'info');
+          }
+        })
+        .catch(function() { submitBtn.disabled = false; submitBtn.textContent = 'Post'; showToast('Network error', 'info'); });
+    } else {
+      fetch('/api/post/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({content: content, type: 'club_post', club_id: CLUB_ID})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Post';
+        if (d.success) {
+          document.getElementById('clubPostContent').value = '';
+          showToast('Posted!', 'success');
+          loadClubPosts();
+        } else {
+          showToast(d.error || 'Failed to post', 'info');
+        }
+      })
+      .catch(function() { submitBtn.disabled = false; submitBtn.textContent = 'Post'; showToast('Network error', 'info'); });
+    }
   });
 }
 
