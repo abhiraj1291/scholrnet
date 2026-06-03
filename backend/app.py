@@ -212,6 +212,32 @@ def register_routes(app, bcrypt, login_manager, limiter):
     except Exception as e:
         print(f"AUTO-MIGRATE: super_admin promotion failed: {e}")
 
+    # Always ensure posts.club_id column exists (critical for club posts)
+    try:
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        posts_cols = [c['name'] for c in inspector.get_columns('posts')]
+        if 'club_id' not in posts_cols:
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE posts ADD COLUMN club_id INTEGER REFERENCES clubs(id)"))
+                conn.commit()
+                print("AUTO-MIGRATE: Added club_id column to posts table")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: posts.club_id migration failed: {e}")
+
+    # Always ensure image_url column is TEXT (not VARCHAR(500)) for multiple file support
+    try:
+        posts_cols2 = [c['name'] for c in inspector.get_columns('posts')]
+        if 'image_url' in posts_cols2:
+            type_info = [c for c in inspector.get_columns('posts') if c['name'] == 'image_url'][0]
+            if 'VARCHAR' in str(type_info.get('type', '')).upper():
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE posts ALTER COLUMN image_url TYPE TEXT"))
+                    conn.commit()
+                    print("AUTO-MIGRATE: Changed posts.image_url to TEXT")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: posts.image_url type change failed: {e}")
+
     # Extended migrations (gated) — schools, ads, clubs, chat, etc.
     if os.environ.get('RUN_MIGRATIONS', '').lower() == 'true':
         try:
@@ -245,12 +271,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
                         conn.execute(text("ALTER TABLE verification_requests ADD COLUMN school_id INTEGER REFERENCES schools(id)"))
                 except Exception:
                     print("AUTO-MIGRATE: verification_requests table may not exist yet, continuing")
-                try:
-                    posts_cols = [c['name'] for c in inspector.get_columns('posts')]
-                    if 'club_id' not in posts_cols:
-                        conn.execute(text("ALTER TABLE posts ADD COLUMN club_id INTEGER REFERENCES clubs(id)"))
-                except Exception:
-                    print("AUTO-MIGRATE: posts table migration failed, continuing")
                 conn.commit()
                 conn.execute(text("CREATE TABLE IF NOT EXISTS clubs (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, description TEXT DEFAULT '', bio TEXT DEFAULT '', is_private BOOLEAN DEFAULT FALSE, owner_id INTEGER REFERENCES users(id) NOT NULL, avatar VARCHAR(300) DEFAULT '', cover_url VARCHAR(500) DEFAULT '', created_at VARCHAR(30) DEFAULT '', member_count INTEGER DEFAULT 1, tags VARCHAR(500) DEFAULT '')"))
                 conn.execute(text("CREATE TABLE IF NOT EXISTS club_members (id SERIAL PRIMARY KEY, club_id INTEGER REFERENCES clubs(id) NOT NULL, user_id INTEGER REFERENCES users(id) NOT NULL, role VARCHAR(20) DEFAULT 'member', joined_at VARCHAR(30) DEFAULT '')"))
@@ -1060,7 +1080,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
             tags_raw = [sanitize_text(t, 50) for t in tags_raw.split(',') if t.strip()]
         elif isinstance(tags_raw, list):
             tags_raw = [sanitize_text(str(t), 50) for t in tags_raw if t]
-        club_id = data.get('club_id', type=int) if isinstance(data, dict) else None
+        try:
+            club_id = int(data.get('club_id'))
+        except (TypeError, ValueError):
+            club_id = None
         if club_id:
             is_member = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
             if not is_member:

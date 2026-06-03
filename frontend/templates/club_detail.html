@@ -116,6 +116,7 @@
     <h2 class="font-bold text-sm mb-3"><i data-lucide="message-circle" style="width:16px;height:16px;display:inline;"></i> Posts</h2>
     {% if is_member %}
     <form id="clubPostForm" class="mb-4">
+      <input type="text" id="clubPostTitle" placeholder="Title (optional)" style="width:100%;padding:0.4rem 0.6rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);margin-bottom:0.5rem;">
       <textarea id="clubPostContent" rows="3" placeholder="Share something with the club..." class="mb-2" required></textarea>
       <div class="flex items-center gap-2 mb-2">
         <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
@@ -336,7 +337,11 @@ function loadClubPosts() {
           '</div>' +
           (p.title ? '<div class="font-bold text-sm mt-2">' + escapeHtml(p.title) + '</div>' : '') +
           (p.content ? '<div class="text-xs text-muted mt-1" style="line-height:1.6;">' + escapeHtml(p.content) + '</div>' : '') +
-          (p.image_url ? '<div class="mt-2">' + (p.image_url.split('|||').map(function(u) { return '<img src="' + escapeHtml(u) + '" style="max-width:100%;border-radius:0.5rem;margin-bottom:0.25rem;">'; }).join('')) + '</div>' : '') +
+          (p.image_url ? '<div class="mt-2">' + (p.image_url.split('|||').map(function(u) {
+            if (!u) return '';
+            if (u.match(/\.(mp4|mov|avi|webm)$/i)) return '<div style="border-radius:0.5rem;overflow:hidden;"><video src="' + escapeHtml(u) + '" controls style="width:100%;max-height:400px;object-fit:contain;background:#000;"></video></div>';
+            return '<img src="' + escapeHtml(u) + '" style="max-width:100%;border-radius:0.5rem;margin-bottom:0.25rem;display:block;" loading="lazy">';
+          }).join('')) + '</div>' : '') +
           '<div class="text-xs text-muted mt-2">' + (p.timestamp || '') + '</div>';
         container.appendChild(div);
       });
@@ -344,24 +349,50 @@ function loadClubPosts() {
     .catch(function() {});
 }
 
-// Club post media upload
+// Club post media upload with compression
 var clubPendingFiles = [];
+function compressImage(file, maxW, quality) {
+  return new Promise(function(resolve) {
+    if (file.type === 'image/gif' || file.size < 100 * 1024) { resolve(file); return; }
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w <= maxW && file.size < 500 * 1024) { resolve(file); return; }
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      var ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      c.toBlob(function(blob) {
+        if (!blob) { resolve(file); return; }
+        var nf = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {type: 'image/jpeg'});
+        resolve(nf);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = function() { resolve(file); };
+    var url = URL.createObjectURL(file);
+    img.src = url;
+  });
+}
 document.getElementById('clubPostMedia').addEventListener('change', function() {
   var preview = document.getElementById('clubMediaPreview');
   preview.innerHTML = '';
   preview.classList.remove('hidden');
   clubPendingFiles = [];
-  Array.from(this.files).forEach(function(file) {
-    clubPendingFiles.push(file);
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var wrap = document.createElement('div');
-      wrap.style.cssText = 'position:relative;width:80px;height:80px;border-radius:0.5rem;overflow:hidden;border:1px solid var(--border);';
-      wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-      preview.appendChild(wrap);
-    };
-    reader.readAsDataURL(file);
-  });
+  var files = Array.from(this.files);
+  Promise.all(files.map(function(file) {
+    return compressImage(file, 1200, 0.82).then(function(compressed) {
+      clubPendingFiles.push(compressed);
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative;width:80px;height:80px;border-radius:0.5rem;overflow:hidden;border:1px solid var(--border);flex-shrink:0;';
+        wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
+        preview.appendChild(wrap);
+      };
+      reader.readAsDataURL(compressed);
+    });
+  }));
 });
 
 // Create club post
@@ -381,6 +412,8 @@ if (clubPostForm) {
       fd.append('club_id', CLUB_ID);
       var titleEl = document.getElementById('clubPostTitle');
       if (titleEl && titleEl.value) fd.append('title', titleEl.value);
+      var videoEl = document.getElementById('clubPostVideo');
+      if (videoEl && videoEl.value) fd.append('video_url', videoEl.value);
       clubPendingFiles.forEach(function(f) { fd.append('files', f); });
       fetch('/api/post/create', { method: 'POST', body: fd })
         .then(function(r) { return r.json(); })
@@ -401,10 +434,15 @@ if (clubPostForm) {
         })
         .catch(function() { submitBtn.disabled = false; submitBtn.textContent = 'Post'; showToast('Network error', 'info'); });
     } else {
+      var jsonBody = {content: content, type: 'club_post', club_id: CLUB_ID};
+      var titleEl2 = document.getElementById('clubPostTitle');
+      if (titleEl2 && titleEl2.value) jsonBody.title = titleEl2.value;
+      var videoEl2 = document.getElementById('clubPostVideo');
+      if (videoEl2 && videoEl2.value) jsonBody.video_url = videoEl2.value;
       fetch('/api/post/create', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({content: content, type: 'club_post', club_id: CLUB_ID})
+        body: JSON.stringify(jsonBody)
       })
       .then(function(r) { return r.json(); })
       .then(function(d) {

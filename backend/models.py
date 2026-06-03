@@ -80,7 +80,7 @@ class Post(db.Model):
     tags = db.Column(db.String(500), default="")
     timestamp = db.Column(db.String(30), default="")
     video_url = db.Column(db.String(500), default="")
-    image_url = db.Column(db.String(500), default="")
+    image_url = db.Column(db.Text, default="")
     club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=True, index=True)
 
 class Comment(db.Model):
