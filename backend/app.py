@@ -195,6 +195,23 @@ def register_routes(app, bcrypt, login_manager, limiter):
     except Exception as e:
         print(f"AUTO-MIGRATE: RLS setup failed: {e}")
 
+    # Auto-promote owner email to super_admin; delete old seed super_admin
+    try:
+        owner_email = 'abhiraj29in@gmail.com'
+        owner = User.query.filter_by(email=owner_email).first()
+        if owner and owner.role != 'super_admin':
+            owner.role = 'super_admin'
+            db.session.commit()
+            print(f"AUTO-MIGRATE: Promoted {owner_email} to super_admin")
+        # Remove the hardcoded seed super_admin (security: credentials were public in GitHub)
+        old_sa = User.query.filter_by(email='admin@scholrnet.com').first()
+        if old_sa:
+            db.session.delete(old_sa)
+            db.session.commit()
+            print("AUTO-MIGRATE: Removed hardcoded seed super_admin account")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: super_admin promotion failed: {e}")
+
     # Extended migrations (gated) — schools, ads, clubs, chat, etc.
     if os.environ.get('RUN_MIGRATIONS', '').lower() == 'true':
         try:

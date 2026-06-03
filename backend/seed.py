@@ -37,16 +37,20 @@ def _run_seed(bcrypt):
     )
     db.session.add(admin)
 
-    super_admin = User(
-        name="Platform Admin",
-        email="admin@scholrnet.com",
-        password_hash=bcrypt.generate_password_hash("admin123").decode('utf-8'),
-        school="ScholrNet",
-        role="super_admin",
-        avatar="SA",
-        bio="Platform Administrator"
-    )
-    db.session.add(super_admin)
+    # Super admin created via SUPER_ADMIN_EMAIL env var or skipped
+    sa_email = os.environ.get("SUPER_ADMIN_EMAIL", "").strip().lower()
+    if sa_email and not User.query.filter_by(email=sa_email).first():
+        sa_pass = os.environ.get("SUPER_ADMIN_PASSWORD", os.urandom(24).hex())
+        super_admin = User(
+            name="Platform Admin",
+            email=sa_email,
+            password_hash=bcrypt.generate_password_hash(sa_pass).decode('utf-8'),
+            school="ScholrNet",
+            role="super_admin",
+            avatar="SA",
+            bio="Platform Administrator"
+        )
+        db.session.add(super_admin)
 
     student = User(
         name="Aarav Sharma",
