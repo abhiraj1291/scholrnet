@@ -238,6 +238,18 @@ def register_routes(app, bcrypt, login_manager, limiter):
     except Exception as e:
         print(f"AUTO-MIGRATE: posts.image_url type change failed: {e}")
 
+    # Always ensure schools verification columns exist
+    try:
+        schools_cols = [c['name'] for c in inspector.get_columns('schools')]
+        with db.engine.connect() as conn:
+            if 'verification_code' not in schools_cols:
+                conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''"))
+            if 'verified_by_email' not in schools_cols:
+                conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''"))
+            conn.commit()
+    except Exception as e:
+        print(f"AUTO-MIGRATE: schools verification columns failed: {e}")
+
     # Ensure chat_typing table exists (for typing indicator)
     try:
         with db.engine.connect() as conn:
@@ -280,10 +292,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
             inspector = inspect(db.engine)
             schools_cols = [c['name'] for c in inspector.get_columns('schools')]
             with db.engine.connect() as conn:
-                if 'verification_code' not in schools_cols:
-                    conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''"))
-                if 'verified_by_email' not in schools_cols:
-                    conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''"))
                 try:
                     ads_cols = [c['name'] for c in inspector.get_columns('ads')]
                     if 'active' not in ads_cols:
@@ -2983,22 +2991,29 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     @limiter.limit("10 per minute")
     def api_school_verify():
-        data = request.json or {}
-        code = data.get('code', '').strip().upper()
-        school_id = data.get('school_id', type=int)
-        if not code or not school_id:
-            return jsonify({'success': False, 'error': 'School and verification code required'}), 400
-        if current_user.school_verified:
-            return jsonify({'success': False, 'error': 'Already verified at a school'}), 400
-        school = School.query.get(school_id)
-        if not school:
-            return jsonify({'success': False, 'error': 'School not found'}), 404
-        if school.verification_code != code:
-            return jsonify({'success': False, 'error': 'Invalid verification code'}), 400
-        current_user.school_verified = True
-        current_user.verified_school_id = school_id
-        db.session.commit()
-        return jsonify({'success': True, 'school_name': school.name})
+        try:
+            data = request.json or {}
+            code = data.get('code', '').strip().upper() if data.get('code') else ''
+            try:
+                school_id = int(data.get('school_id', 0))
+            except (TypeError, ValueError):
+                school_id = 0
+            if not code or not school_id:
+                return jsonify({'success': False, 'error': 'School and verification code required'}), 400
+            if current_user.school_verified:
+                return jsonify({'success': False, 'error': 'Already verified at a school'}), 400
+            school = School.query.get(school_id)
+            if not school:
+                return jsonify({'success': False, 'error': 'School not found'}), 404
+            if school.verification_code != code:
+                return jsonify({'success': False, 'error': 'Invalid verification code'}), 400
+            current_user.school_verified = True
+            current_user.verified_school_id = school_id
+            db.session.commit()
+            return jsonify({'success': True, 'school_name': school.name})
+        except Exception as e:
+            print(f"SCHOOL VERIFY ERROR: {e}")
+            return jsonify({'success': False, 'error': 'Server error, please try again'}), 500
 
     @app.route('/api/school/<int:school_id>')
     @login_required
