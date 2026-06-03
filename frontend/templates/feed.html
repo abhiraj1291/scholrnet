@@ -226,23 +226,56 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Build media HTML for a post
+  var carouselIdCounter = 0;
   function mediaHtml(post) {
     var html = '';
     if (post.image_url) {
-      var images = post.image_url.split('|||');
-      images.forEach(function(url) {
-        if (!url) return;
-        if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
-          html += '<div class="mt-3" style="border-radius:0.75rem;overflow:hidden;max-height:500px;"><video src="' + url + '" controls style="width:100%;max-height:500px;object-fit:contain;background:#000;"></video></div>';
-        } else {
-          html += '<div class="mt-3" style="border-radius:0.75rem;overflow:hidden;max-height:500px;background:var(--bg-hover);display:flex;align-items:center;justify-content:center;"><img src="' + url + '" alt="Post media" style="width:100%;max-height:500px;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div>';
+      var images = post.image_url.split('|||').filter(Boolean);
+      if (images.length > 1) {
+        var cid = 'cr_' + (++carouselIdCounter) + '_' + (post.id || '0');
+        html += '<div class="media-carousel" id="' + cid + '"><div class="media-carousel-track" onscroll="updateCarouselDots(\'' + cid + '\')">';
+        images.forEach(function(url) {
+          if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
+            html += '<div class="media-carousel-slide"><video src="' + url + '" controls style="object-fit:contain;background:#000;"></video></div>';
+          } else {
+            html += '<div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div>';
+          }
+        });
+        html += '</div><div class="media-carousel-dots">';
+        for (var di = 0; di < images.length; di++) {
+          html += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" onclick="goCarouselSlide(\'' + cid + '\',' + di + ')"></button>';
         }
-      });
+        html += '</div></div>';
+      } else {
+        images.forEach(function(url) {
+          if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
+            html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><video src="' + url + '" controls style="object-fit:contain;background:#000;"></video></div></div></div>';
+          } else {
+            html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div></div></div>';
+          }
+        });
+      }
     }
     if (post.video_url && post.video_url.indexOf('http') === 0) {
-      html += '<div class="mt-3" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:0.75rem;"><iframe src="' + escapeHtml(post.video_url) + '" style="position:absolute;top:0;left:0;width:100%;height:100%;" frameborder="0" allowfullscreen></iframe></div>';
+      html += '<div class="media-carousel-embed"><iframe src="' + escapeHtml(post.video_url) + '" frameborder="0" allowfullscreen></iframe></div>';
     }
     return html;
+  }
+  function updateCarouselDots(cid) {
+    var track = document.querySelector('#' + cid + ' .media-carousel-track');
+    if (!track) return;
+    var slideW = track.querySelector('.media-carousel-slide');
+    if (!slideW) return;
+    var idx = Math.round(track.scrollLeft / slideW.offsetWidth);
+    var dots = document.querySelectorAll('#' + cid + ' .media-carousel-dot');
+    dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+  }
+  function goCarouselSlide(cid, idx) {
+    var track = document.querySelector('#' + cid + ' .media-carousel-track');
+    if (!track) return;
+    var slideW = track.querySelector('.media-carousel-slide');
+    if (!slideW) return;
+    track.scrollLeft = idx * slideW.offsetWidth;
   }
 
   // Create post element

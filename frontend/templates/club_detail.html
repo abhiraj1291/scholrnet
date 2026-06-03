@@ -153,6 +153,22 @@ function escapeHtml(s) {
   if (!s) return '';
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+function goCarouselSlide(cid, idx) {
+  var track = document.querySelector('#' + cid + ' .media-carousel-track');
+  if (!track) return;
+  var slideW = track.querySelector('.media-carousel-slide');
+  if (!slideW) return;
+  track.scrollLeft = idx * slideW.offsetWidth;
+}
+function carouselDotSync(cid) {
+  var track = document.querySelector('#' + cid + ' .media-carousel-track');
+  if (!track) return;
+  var slideW = track.querySelector('.media-carousel-slide');
+  if (!slideW) return;
+  var idx = Math.round(track.scrollLeft / slideW.offsetWidth);
+  var dots = document.querySelectorAll('#' + cid + ' .media-carousel-dot');
+  dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+}
 
 function showToast(msg, type) {
   var t = document.createElement('div');
@@ -337,11 +353,18 @@ function loadClubPosts() {
           '</div>' +
           (p.title ? '<div class="font-bold text-sm mt-2">' + escapeHtml(p.title) + '</div>' : '') +
           (p.content ? '<div class="text-xs text-muted mt-1" style="line-height:1.6;">' + escapeHtml(p.content) + '</div>' : '') +
-          (p.image_url ? '<div class="mt-2">' + (p.image_url.split('|||').map(function(u) {
-            if (!u) return '';
-            if (u.match(/\.(mp4|mov|avi|webm)$/i)) return '<div style="border-radius:0.5rem;overflow:hidden;"><video src="' + escapeHtml(u) + '" controls style="width:100%;max-height:400px;object-fit:contain;background:#000;"></video></div>';
-            return '<img src="' + escapeHtml(u) + '" style="max-width:100%;border-radius:0.5rem;margin-bottom:0.25rem;display:block;" loading="lazy">';
-          }).join('')) + '</div>' : '') +
+          (p.image_url ? (function() {
+            var imgs = p.image_url.split('|||').filter(Boolean);
+            var cid2 = 'cr_' + (p.id || '0') + '_' + Math.random().toString(36).slice(2,6);
+            var h = '<div class="media-carousel" id="' + cid2 + '"><div class="media-carousel-track" onscroll="carouselDotSync(\'' + cid2 + '\')">';
+            imgs.forEach(function(u) {
+              if (u.match(/\.(mp4|mov|avi|webm)$/i)) { h += '<div class="media-carousel-slide"><video src="' + escapeHtml(u) + '" controls style="object-fit:contain;background:#000;"></video></div>'; }
+              else { h += '<div class="media-carousel-slide"><img src="' + escapeHtml(u) + '" loading="lazy"></div>'; }
+            });
+            h += '</div><div class="media-carousel-dots">';
+            for (var di = 0; di < imgs.length; di++) { h += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" onclick="goCarouselSlide(\'' + cid2 + '\',' + di + ')"></button>'; }
+            return h + '</div></div>';
+          })() : '') +
           '<div class="text-xs text-muted mt-2">' + (p.timestamp || '') + '</div>';
         container.appendChild(div);
       });
