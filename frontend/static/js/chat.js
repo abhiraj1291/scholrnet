@@ -27,24 +27,55 @@ function sendMessage() {
   });
 }
 
+var typingTimer = null;
+function sendTypingHeartbeat(contactId) {
+  if (!contactId) return;
+  fetch('/api/messages/typing', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contact_id:contactId})}).catch(function(){});
+}
 function startChatPolling(contactId) {
   stopChatPolling();
   chatPollInterval = setInterval(function() {
     if (activeChatId === contactId) {
-      // Fetch just to check for new messages (lightweight head request alternative: full refresh)
       apiGet('/api/messages?contact_id=' + contactId, function(data) {
         var container = document.getElementById('chat-messages-container');
         var pageContainer = document.getElementById('chatMessagesArea');
         var currentCount = container ? container.children.length : 0;
+        var pageMsgCount = pageContainer ? pageContainer.querySelectorAll('.chat-msg').length : 0;
+        var totalCurrent = currentCount || pageMsgCount;
         var newCount = (data.messages || []).length;
-        if (newCount > currentCount) {
+        if (newCount > totalCurrent) {
           refreshMessages(contactId);
+        }
+        // Typing indicator
+        if (data.is_typing) {
+          showTypingIndicator(contactId);
+        } else {
+          hideTypingIndicator();
         }
       });
     } else {
       stopChatPolling();
     }
   }, 3000);
+}
+
+function showTypingIndicator(contactId) {
+  var containers = ['chatMessagesArea', 'chat-messages-container'];
+  containers.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var existing = el.querySelector('.typing-indicator');
+    if (existing) return;
+    var div = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.dataset.contact = contactId;
+    div.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  });
+}
+function hideTypingIndicator() {
+  document.querySelectorAll('.typing-indicator').forEach(function(el) { el.remove(); });
 }
 
 function stopChatPolling() {
@@ -313,6 +344,12 @@ function initChat() {
       if (e.key === 'Enter') {
         e.preventDefault();
         sendMessage();
+      }
+    });
+    pageInput.addEventListener('input', function() {
+      if (activeChatId) {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(function() { sendTypingHeartbeat(activeChatId); }, 500);
       }
     });
   }

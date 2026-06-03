@@ -134,6 +134,18 @@
     <div id="clubFeedPosts"></div>
     <div id="clubFeedEmpty" class="hidden text-center text-muted text-xs py-4">No posts yet.</div>
   </div>
+
+  <!-- Group Chat -->
+  {% if is_member %}
+  <div class="card mb-4">
+    <h2 class="font-bold text-sm mb-3"><i data-lucide="message-circle" style="width:16px;height:16px;display:inline;"></i> Group Chat</h2>
+    <div id="clubChatMessages" style="max-height:300px;overflow-y:auto;margin-bottom:0.75rem;padding:0.5rem;background:var(--bg);border-radius:0.5rem;"></div>
+    <div class="flex gap-2">
+      <input type="text" id="clubChatInput" placeholder="Type a message..." class="flex-1" style="padding:0.5rem 0.75rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      <button class="btn btn-primary btn-sm" onclick="sendClubMessage()"><i data-lucide="send" style="width:16px;height:16px;"></i></button>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 
@@ -484,10 +496,62 @@ if (clubPostForm) {
   });
 }
 
+// Group Chat
+function loadClubMessages() {
+  fetch('/api/club/' + CLUB_ID + '/messages')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var container = document.getElementById('clubChatMessages');
+      if (!container) return;
+      var prevCount = container.children.length;
+      container.innerHTML = '';
+      if (!data.messages || data.messages.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted text-xs py-4">No messages yet. Start the conversation!</div>';
+        return;
+      }
+      data.messages.forEach(function(m) {
+        var div = document.createElement('div');
+        var isMine = m.sender_id === CURRENT_USER_ID;
+        div.className = 'chat-msg ' + (isMine ? 'sent' : 'received');
+        var nameHtml = isMine ? '' : '<div class="text-xs font-bold" style="margin-bottom:2px;">' + escapeHtml(m.sender_name || '') + '</div>';
+        div.innerHTML = nameHtml + escapeHtml(m.text);
+        container.appendChild(div);
+      });
+      if (container.children.length !== prevCount) {
+        container.scrollTop = container.scrollHeight;
+      }
+    })
+    .catch(function() {});
+}
+function sendClubMessage() {
+  var input = document.getElementById('clubChatInput');
+  if (!input) return;
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  fetch('/api/club/' + CLUB_ID + '/messages/send', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text: text})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) loadClubMessages();
+  })
+  .catch(function() {});
+}
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
   loadClubPosts();
   loadJoinRequests();
+  loadClubMessages();
+  setInterval(loadClubMessages, 4000);
+  var chatInput = document.getElementById('clubChatInput');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); sendClubMessage(); }
+    });
+  }
 });
 </script>
 {% endblock %}

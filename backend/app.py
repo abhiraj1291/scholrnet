@@ -15,7 +15,7 @@ from markupsafe import escape as escape_html
 from config import Config
 from models import db, User, Achievement, Project, Post, Comment, Ad, Opportunity, TeamRequest
 from models import TeamApplicant, VerificationRequest, Mentor, MentorshipRequest, MentorInteraction
-from models import Notification, ChatMessage, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience, Club, ClubMember, ClubJoinRequest
+from models import Notification, ChatMessage, ChatTyping, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience, Club, ClubMember, ClubJoinRequest
 
 MAX_STRING_LEN = 5000
 MAX_CONTENT_LEN = 50000
@@ -237,6 +237,41 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     print("AUTO-MIGRATE: Changed posts.image_url to TEXT")
     except Exception as e:
         print(f"AUTO-MIGRATE: posts.image_url type change failed: {e}")
+
+    # Ensure chat_typing table exists (for typing indicator)
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("CREATE TABLE IF NOT EXISTS chat_typing (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, contact_id INTEGER NOT NULL, updated_at TIMESTAMP DEFAULT NOW())"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_chat_typing_user_contact ON chat_typing(user_id, contact_id)"))
+            conn.commit()
+    except Exception as e:
+        print(f"AUTO-MIGRATE: chat_typing table creation failed: {e}")
+
+    # Ensure chat_messages group chat columns exist
+    try:
+        chat_msg_cols = [c['name'] for c in inspector.get_columns('chat_messages')]
+        with db.engine.connect() as conn:
+            if 'group_id' not in chat_msg_cols:
+                conn.execute(text("ALTER TABLE chat_messages ADD COLUMN group_id INTEGER DEFAULT NULL"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_chat_group ON chat_messages(group_id)"))
+            if 'sender_name' not in chat_msg_cols:
+                conn.execute(text("ALTER TABLE chat_messages ADD COLUMN sender_name VARCHAR(100) DEFAULT ''"))
+            if 'sender_avatar' not in chat_msg_cols:
+                conn.execute(text("ALTER TABLE chat_messages ADD COLUMN sender_avatar VARCHAR(50) DEFAULT ''"))
+            conn.commit()
+    except Exception as e:
+        print(f"AUTO-MIGRATE: chat_messages group columns failed: {e}")
+
+    # Performance indexes for common queries
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_posts_club_id ON posts(club_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, unread)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_user_likes_post ON user_likes(user_id, post_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id)"))
+            conn.commit()
+    except Exception as e:
+        print(f"AUTO-MIGRATE: performance indexes failed: {e}")
 
     # Extended migrations (gated) — schools, ads, clubs, chat, etc.
     if os.environ.get('RUN_MIGRATIONS', '').lower() == 'true':
@@ -1558,6 +1593,33 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'posts': [{'id': p.id, 'author_id': p.author_id, 'author_name': p.author_name, 'author_avatar': p.author_avatar, 'author_school': p.author_school, 'type': p.type, 'title': p.title, 'content': p.content[:500] if p.content else '', 'badge_text': p.badge_text, 'likes': p.likes or 0, 'tags': p.tags, 'timestamp': p.timestamp, 'image_url': p.image_url or '', 'video_url': p.video_url or '', 'author': user_map.get(p.author_id, {})} for p in posts.items],
             'total': posts.total, 'pages': posts.pages, 'page': page})
 
+    @app.route('/api/club/<int:club_id>/messages')
+    @login_required
+    def api_club_messages(club_id):
+        Club.query.get_or_404(club_id)  # ensure exists
+        msgs = ChatMessage.query.filter_by(group_id=club_id).order_by(ChatMessage.id.desc()).limit(100).all()
+        msgs.reverse()
+        return jsonify({'messages': [{'id': m.id, 'sender_id': m.sender_id, 'text': m.text, 'timestamp': m.timestamp, 'sender_name': m.sender_name, 'sender_avatar': m.sender_avatar} for m in msgs]})
+
+    @app.route('/api/club/<int:club_id>/messages/send', methods=['POST'])
+    @login_required
+    @limiter.limit("20 per minute")
+    def api_club_send_message(club_id):
+        club = Club.query.get_or_404(club_id)
+        mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+        if not mem:
+            return jsonify({'error': 'Not a member'}), 403
+        data = request.json or {}
+        text = sanitize_text(data.get('text', ''), 5000)
+        if not text:
+            return jsonify({'error': 'Message cannot be empty'}), 400
+        msg = ChatMessage(sender_id=current_user.id, receiver_id=0, text=text, group_id=club_id,
+                         timestamp=short_ts(), sender_name=current_user.name,
+                         sender_avatar=current_user.avatar or "".join(p[0] for p in current_user.name.split() if p)[:2].upper())
+        db.session.add(msg)
+        db.session.commit()
+        return jsonify({'success': True, 'message': {'id': msg.id, 'sender_id': msg.sender_id, 'text': msg.text, 'timestamp': msg.timestamp, 'sender_name': msg.sender_name, 'sender_avatar': msg.sender_avatar}})
+
     @app.route('/api/club/<int:club_id>/update', methods=['POST'])
     @login_required
     @limiter.limit("20 per minute")
@@ -2029,7 +2091,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if page > 1000:
             return jsonify({'posts': [], 'has_more': False})
         per_page = 10
-        posts_q = Post.query.order_by(Post.id.desc()).offset((page-1)*per_page).limit(per_page+1).all()
+        posts_q = Post.query.filter(Post.club_id.is_(None)).order_by(Post.id.desc()).offset((page-1)*per_page).limit(per_page+1).all()
         has_more = len(posts_q) > per_page
         posts = posts_q[:per_page]
         post_ids = [p.id for p in posts]
@@ -2162,8 +2224,15 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_messages():
         contact_id = request.args.get('contact_id', type=int)
         if contact_id:
-            msgs = ChatMessage.query.filter(((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == contact_id)) | ((ChatMessage.sender_id == contact_id) & (ChatMessage.receiver_id == current_user.id))).order_by(ChatMessage.id.asc()).all()
-            return jsonify({'messages': [{'id': m.id, 'sender_id': m.sender_id, 'text': m.text, 'timestamp': m.timestamp, 'is_read': m.is_read} for m in msgs]})
+            msgs = ChatMessage.query.filter(((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == contact_id)) | ((ChatMessage.sender_id == contact_id) & (ChatMessage.receiver_id == current_user.id))).order_by(ChatMessage.id.desc()).limit(100).all()
+            msgs.reverse()
+            # Check if contact is typing
+            typing_ts = db.session.query(ChatTyping.updated_at).filter(ChatTyping.user_id == contact_id, ChatTyping.contact_id == current_user.id).scalar()
+            is_typing = False
+            if typing_ts:
+                diff = (datetime.utcnow() - typing_ts).total_seconds()
+                is_typing = diff < 4
+            return jsonify({'messages': [{'id': m.id, 'sender_id': m.sender_id, 'text': m.text, 'timestamp': m.timestamp, 'is_read': m.is_read} for m in msgs], 'is_typing': is_typing})
         msgs = ChatMessage.query.filter((ChatMessage.sender_id == current_user.id) | (ChatMessage.receiver_id == current_user.id)).order_by(ChatMessage.timestamp.desc()).limit(200).all()
         cids = set()
         for m in msgs:
@@ -2175,6 +2244,21 @@ def register_routes(app, bcrypt, login_manager, limiter):
         else:
             contacts = []
         return jsonify({'contacts': contacts})
+
+    @app.route('/api/messages/typing', methods=['POST'])
+    @login_required
+    @limiter.limit("30 per minute")
+    def api_typing():
+        data = request.json or {}
+        contact_id = data.get('contact_id')
+        if contact_id:
+            existing = ChatTyping.query.filter_by(user_id=current_user.id, contact_id=contact_id).first()
+            if existing:
+                existing.updated_at = datetime.utcnow()
+            else:
+                db.session.add(ChatTyping(user_id=current_user.id, contact_id=contact_id, updated_at=datetime.utcnow()))
+            db.session.commit()
+        return jsonify({'success': True})
 
     @app.route('/api/messages/send', methods=['POST'])
     @login_required

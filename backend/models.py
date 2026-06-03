@@ -210,8 +210,18 @@ class ChatMessage(db.Model):
     text = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.String(30), default="")
     is_read = db.Column(db.Boolean, default=False, index=True)
+    group_id = db.Column(db.Integer, nullable=True, index=True, default=None)
+    sender_name = db.Column(db.String(100), default="")
+    sender_avatar = db.Column(db.String(50), default="")
 
-    __table_args__ = (db.Index('idx_chat_sender_receiver', 'sender_id', 'receiver_id'),)
+    __table_args__ = (db.Index('idx_chat_sender_receiver', 'sender_id', 'receiver_id'), db.Index('idx_chat_group', 'group_id'))
+
+class ChatTyping(db.Model):
+    __tablename__ = 'chat_typing'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False, index=True)
+    contact_id = db.Column(db.Integer, nullable=False, index=True)
+    updated_at = db.Column(db.DateTime, default=db.func.now())
 
 class Club(db.Model):
     __tablename__ = 'clubs'
