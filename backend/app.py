@@ -175,6 +175,26 @@ def register_routes(app, bcrypt, login_manager, limiter):
     except Exception as e:
         print(f"AUTO-MIGRATE: users column migration failed: {e}")
 
+    # Enable RLS on all tables to close public Supabase REST API
+    try:
+        from sqlalchemy import text
+        rls_tables = ['users','achievements','projects','posts','comments','ads','opportunities','team_requests','team_applicants','verification_requests','mentors','mentorship_requests','mentor_interactions','notifications','chat_messages','clubs','club_members','club_join_requests','schools','school_announcements','connections','user_likes','event_registrations','experiences','audit_logs']
+        with db.engine.connect() as conn:
+            conn.execute(text("SET client_min_messages TO warning"))
+            for tbl in rls_tables:
+                try:
+                    conn.execute(text(f"ALTER TABLE {tbl} ENABLE ROW LEVEL SECURITY"))
+                except Exception:
+                    pass  # table may not exist
+                try:
+                    conn.execute(text(f"DROP POLICY IF EXISTS deny_all ON {tbl}"))
+                    conn.execute(text(f"CREATE POLICY deny_all ON {tbl} FOR ALL USING (false)"))
+                except Exception:
+                    pass  # skip if table doesn't support policies yet
+            conn.commit()
+    except Exception as e:
+        print(f"AUTO-MIGRATE: RLS setup failed: {e}")
+
     # Extended migrations (gated) — schools, ads, clubs, chat, etc.
     if os.environ.get('RUN_MIGRATIONS', '').lower() == 'true':
         try:
