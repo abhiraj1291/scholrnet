@@ -95,6 +95,49 @@
     {% endif %}
   </div>
 
+  <!-- Edit Experience Modal -->
+  <div id="editExpModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="font-bold">Edit Experience</span>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('editExpModal').classList.add('hidden')"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Company / Organization</label>
+          <input type="text" id="editExpCompany" required>
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Role</label>
+          <input type="text" id="editExpRole" required>
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Description</label>
+          <textarea id="editExpDesc" rows="2"></textarea>
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Skills (comma-separated)</label>
+          <input type="text" id="editExpSkills">
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <div style="flex:1;">
+            <label class="text-xs font-bold text-muted block mb-1">Start</label>
+            <input type="text" id="editExpStart">
+          </div>
+          <div style="flex:1;">
+            <label class="text-xs font-bold text-muted block mb-1">End</label>
+            <input type="text" id="editExpEnd">
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <input type="checkbox" id="editExpCurrent" style="width:auto;">
+          <label for="editExpCurrent" class="text-xs">I currently work here</label>
+        </div>
+        <button class="btn btn-primary w-full" id="saveEditExpBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Posts Section -->
   <div class="card mb-3">
     <div class="flex items-center justify-between gap-2 mb-3">
@@ -503,6 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.start_date || e.end_date) {
               dateRange = '<div class="text-xs text-muted">' + (e.start_date || '') + (e.is_current ? ' - Present' : e.end_date ? ' - ' + e.end_date : '') + '</div>';
             }
+            var editBtn = isOwn ? '<button class="btn btn-ghost btn-xs exp-edit-btn" data-id="' + e.id + '" data-company="' + escapeHtml(e.company).replace(/'/g,'&#39;') + '" data-role="' + escapeHtml(e.role).replace(/'/g,'&#39;') + '" data-desc="' + escapeHtml(e.description || '').replace(/'/g,'&#39;') + '" data-skills="' + escapeHtml(e.skills || '').replace(/'/g,'&#39;') + '" data-start="' + escapeHtml(e.start_date || '').replace(/'/g,'&#39;') + '" data-end="' + escapeHtml(e.end_date || '').replace(/'/g,'&#39;') + '" data-current="' + (e.is_current ? '1' : '0') + '" style="flex-shrink:0;"><i data-lucide="pencil" style="width:14px;height:14px;"></i></button>' : '';
             el.innerHTML =
               '<div class="flex items-start gap-3">' +
                 '<i data-lucide="briefcase" style="width:1.25rem;height:1.25rem;color:var(--primary);flex-shrink:0;margin-top:0.25rem;"></i>' +
@@ -513,6 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   (e.description ? '<div class="text-xs text-muted mt-1">' + escapeHtml(e.description) + '</div>' : '') +
                   skillsHtml +
                 '</div>' +
+                editBtn +
               '</div>';
             list.appendChild(el);
           });
@@ -646,6 +691,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Edit Experience
+  var editingExpId = null;
+  function openEditExpFromData(btn) {
+    editingExpId = parseInt(btn.getAttribute('data-id'));
+    document.getElementById('editExpCompany').value = company;
+    document.getElementById('editExpRole').value = role;
+    document.getElementById('editExpDesc').value = desc;
+    document.getElementById('editExpSkills').value = skills;
+    document.getElementById('editExpStart').value = start;
+    document.getElementById('editExpEnd').value = end;
+    document.getElementById('editExpCurrent').checked = current;
+    document.getElementById('editExpModal').classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+    document.getElementById('editExpCompany').value = btn.getAttribute('data-company');
+    document.getElementById('editExpRole').value = btn.getAttribute('data-role');
+    document.getElementById('editExpDesc').value = btn.getAttribute('data-desc');
+    document.getElementById('editExpSkills').value = btn.getAttribute('data-skills');
+    document.getElementById('editExpStart').value = btn.getAttribute('data-start');
+    document.getElementById('editExpEnd').value = btn.getAttribute('data-end');
+    document.getElementById('editExpCurrent').checked = btn.getAttribute('data-current') === '1';
+    document.getElementById('editExpModal').classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+  // Delegate click on experience list for edit buttons
+  var expListEl = document.getElementById('experienceList');
+  if (expListEl) {
+    expListEl.addEventListener('click', function(ev) {
+      var btn = ev.target.closest('.exp-edit-btn');
+      if (btn) openEditExpFromData(btn);
+    });
+  }
+
+  var saveEditBtn = document.getElementById('saveEditExpBtn');
+  if (saveEditBtn) {
+    saveEditBtn.addEventListener('click', function() {
+      if (!editingExpId) return;
+      var body = {
+        company: document.getElementById('editExpCompany').value,
+        role: document.getElementById('editExpRole').value,
+        description: document.getElementById('editExpDesc').value,
+        skills: document.getElementById('editExpSkills').value,
+        start_date: document.getElementById('editExpStart').value,
+        end_date: document.getElementById('editExpEnd').value,
+        is_current: document.getElementById('editExpCurrent').checked
+      };
+      if (!body.company || !body.role) { showToast('Company and role are required', 'info'); return; }
+      fetch('/api/experience/' + editingExpId + '/edit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) {
+          document.getElementById('editExpModal').classList.add('hidden');
+          showToast('Experience updated!', 'success');
+          loadExperiences();
+        } else {
+          showToast(d.error || 'Error updating experience', 'info');
+        }
+      })
+      .catch(function() { showToast('Network error', 'info'); });
+    });
+  }
+
   // ---- 2FA Functions ----
   async function load2FAStatus() {
     var status = document.getElementById('2faStatus');
@@ -749,7 +860,7 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/user/' + puserId + '/clubs')
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        var list = document.getElementById('profileClubsList');
+        var list = document.getElementById('clubsList');
         if (!list) return;
         list.innerHTML = '';
         if (d.clubs && d.clubs.length > 0) {
@@ -833,6 +944,23 @@ document.addEventListener('DOMContentLoaded', function() {
           } else { showToast(d.error || 'Error', 'info'); }
         })
         .catch(function() { showToast('Error sending request', 'info'); });
+      } else if (status === 'friends') {
+        if (!confirm('Unfriend ' + puserName + '?')) return;
+        fetch('/api/connection/toggle', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({user_id: puserId})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) {
+            showToast('Removed from friends', 'info');
+            friendBtn.innerHTML = 'Add Friend <i data-lucide="user-plus" style="width:14px;height:14px;"></i>';
+            friendBtn.setAttribute('data-friend-status', 'none');
+            lucide.createIcons();
+            loadFriends();
+          }
+        });
       } else if (status === 'pending_sent') {
         showToast('Request already sent', 'info');
       } else if (status === 'pending_received') {
