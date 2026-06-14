@@ -67,6 +67,6 @@ def add_security_headers(response):
 from app import register_routes, enable_rls
 
 with app.app_context():
-    register_routes(app, bcrypt, login_manager, limiter)
     db.create_all()
     enable_rls()
+    register_routes(app, bcrypt, login_manager, limiter)
