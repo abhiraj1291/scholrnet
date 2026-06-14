@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ meta_title }}</title>
+  <meta name="description" content="{{ meta_desc }}">
+  <meta property="og:title" content="{{ meta_title }}">
+  <meta property="og:description" content="{{ meta_desc }}">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <style>
+    body{background:var(--bg-alt);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+    .school-page{max-width:720px;margin:3rem auto;padding:0 1.5rem;flex:1;width:100%}
+    .school-header{display:flex;gap:1.5rem;align-items:center;margin-bottom:2.5rem}
+    .school-avatar{width:72px;height:72px;border-radius:var(--radius-lg);background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;flex-shrink:0}
+    .school-header h1{font-size:1.5rem;font-weight:800;color:var(--text);margin-bottom:0.25rem}
+    .school-header .school-tagline{font-size:0.9rem;color:var(--text-secondary)}
+    .section-heading{font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:1rem;margin-top:2rem}
+    .student-list,.club-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.75rem}
+    .student-card,.school-club-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:0.875rem 1rem;display:flex;align-items:center;gap:0.75rem;transition:all 0.2s}
+    .student-card:hover,.school-club-card:hover{box-shadow:var(--shadow-sm);border-color:var(--border)}
+    .student-avatar,.club-icon{width:36px;height:36px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0}
+    .student-name{font-size:0.85rem;font-weight:600;color:var(--text)}
+    .student-role{font-size:0.7rem;color:var(--text-muted)}
+    .empty-state{text-align:center;padding:2rem;color:var(--text-muted);font-size:0.85rem}
+    .cta-box{background:var(--primary);border-radius:var(--radius-lg);padding:2rem;text-align:center;margin-top:2rem}
+    .cta-box h2{color:#fff;font-size:1.15rem;font-weight:700;margin-bottom:0.5rem}
+    .cta-box p{color:rgba(255,255,255,0.75);font-size:0.85rem;margin-bottom:1rem}
+    .cta-box .btn-primary{background:#fff;color:var(--primary);border-color:#fff}
+    .cta-box .btn-primary:hover{background:rgba(255,255,255,0.9)}
+  </style>
+</head>
+<body>
+  <div class="school-page">
+    <a href="/" class="back-link" style="display:inline-flex;align-items:center;gap:0.375rem;font-size:0.85rem;color:var(--primary);margin-bottom:1.5rem">&larr; Back to ScholrNet</a>
+
+    <div class="school-header">
+      <div class="school-avatar">{{ school.name[:2]|upper }}</div>
+      <div>
+        <h1>{{ school.name }}</h1>
+        {% if school.tagline %}<div class="school-tagline">{{ school.tagline }}</div>{% endif %}
+        {% if school.location %}<div class="school-tagline" style="font-size:0.8rem">{{ school.location }}</div>{% endif %}
+      </div>
+    </div>
+
+    <h2 class="section-heading">Verified Students</h2>
+    {% if students %}
+    <div class="student-list">
+      {% for s in students %}
+      <div class="student-card">
+        <div class="student-avatar">{{ s.name[:2]|upper }}</div>
+        <div>
+          <div class="student-name">{{ s.name }}</div>
+          <div class="student-role">{{ s.role|capitalize if s.role else 'Student' }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">No verified students from this school yet. Be the first!</div>
+    {% endif %}
+
+    {% if clubs %}
+    <h2 class="section-heading">Clubs</h2>
+    <div class="club-list">
+      {% for club in clubs %}
+      <div class="school-club-card">
+        <div class="club-icon">{{ club.name[:2]|upper }}</div>
+        <div>
+          <div class="student-name">{{ club.name }}</div>
+          {% if club.member_count %}<div class="student-role">{{ club.member_count }} members</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="cta-box">
+      <h2>Join {{ school.name }} on ScholrNet</h2>
+      <p>Create your verified profile and unlock opportunities.</p>
+      <a href="{{ url_for('register') }}" class="btn-primary">Get Started &rarr;</a>
+    </div>
+  </div>
+
+  <footer class="footer" style="margin-top:auto">
+    <div class="footer-inner">
+      <div class="footer-bottom" style="border:none;padding-top:0">
+        <span>&copy; 2026 ScholrNet</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

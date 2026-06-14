@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ meta_title }}</title>
+  <meta name="description" content="{{ meta_desc }}">
+  <meta property="og:title" content="{{ meta_title }}">
+  <meta property="og:description" content="{{ meta_desc }}">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="{{ request.url }}">
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <style>
+    body{background:var(--bg-alt);font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+    .opp-detail{max-width:720px;margin:3rem auto;padding:0 1.5rem;flex:1}
+    .opp-detail-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-md)}
+    .opp-detail-tag{display:inline-block;padding:0.25rem 0.75rem;border-radius:999px;font-size:0.75rem;font-weight:600;background:var(--primary-light);color:var(--primary);margin-bottom:0.75rem}
+    .opp-detail h1{font-size:1.75rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;letter-spacing:-0.02em}
+    .opp-detail-meta{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border-light)}
+    .opp-detail-meta-item{font-size:0.85rem;color:var(--text-secondary)}
+    .opp-detail-meta-item strong{color:var(--text)}
+    .opp-detail-desc{font-size:0.95rem;color:var(--text-secondary);line-height:1.7;margin-bottom:1.5rem}
+    .opp-detail-cta{display:flex;gap:0.75rem}
+    .back-link{display:inline-flex;align-items:center;gap:0.375rem;font-size:0.85rem;color:var(--primary);margin-bottom:1.5rem}
+    .back-link:hover{text-decoration:underline}
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "{{ opp.name }}",
+    "description": "{{ (opp.description or '')[:200] }}",
+    "datePublished": "{{ opp.deadline or '' }}"
+  }
+  </script>
+</head>
+<body>
+  <div class="opp-detail">
+    <a href="/" class="back-link">&larr; Back to ScholrNet</a>
+    <div class="opp-detail-card">
+      <div class="opp-detail-tag">{{ opp.type or 'Opportunity' }}</div>
+      <h1>{{ opp.name }}</h1>
+      <div class="opp-detail-meta">
+        {% if opp.provider %}<span class="opp-detail-meta-item"><strong>Provider:</strong> {{ opp.provider }}</span>{% endif %}
+        {% if opp.deadline %}<span class="opp-detail-meta-item"><strong>Deadline:</strong> {{ opp.deadline }}</span>{% endif %}
+        {% if opp.prize_pool %}<span class="opp-detail-meta-item"><strong>Prize/Pool:</strong> {{ opp.prize_pool }}</span>{% endif %}
+        {% if opp.eligibility %}<span class="opp-detail-meta-item"><strong>Eligibility:</strong> {{ opp.eligibility }}</span>{% endif %}
+      </div>
+      {% if opp.description %}
+      <div class="opp-detail-desc">{{ opp.description }}</div>
+      {% endif %}
+      <div class="opp-detail-cta">
+        <a href="{{ url_for('register') }}" class="btn-primary">Apply Now &rarr;</a>
+        <a href="{{ url_for('index') }}" class="btn-outline">Explore More</a>
+      </div>
+    </div>
+  </div>
+  <footer class="footer" style="margin-top:auto">
+    <div class="footer-inner">
+      <div class="footer-bottom" style="border:none;padding-top:0">
+        <span>&copy; 2026 ScholrNet</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
