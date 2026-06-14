@@ -33,8 +33,6 @@ class User(UserMixin, db.Model):
     email_otp_expires = db.Column(db.DateTime, nullable=True)
     reset_otp = db.Column(db.String(6), default="")
     reset_otp_expires = db.Column(db.DateTime, nullable=True)
-    referral_code = db.Column(db.String(20), unique=True, nullable=True)
-    referral_badge = db.Column(db.Boolean, default=False)
 
     achievements = db.relationship('Achievement', backref='user', lazy=True)
     projects = db.relationship('Project', backref='user', lazy=True)
@@ -332,34 +330,3 @@ class AuditLog(db.Model):
     timestamp = db.Column(db.String(30), default="")
 
     __table_args__ = (db.Index('idx_audit_action_time', 'action', 'timestamp'),)
-
-class Lead(db.Model):
-    __tablename__ = 'leads'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), default="")
-    email = db.Column(db.String(200), nullable=False, index=True)
-    source = db.Column(db.String(50), default="landing")
-    created_at = db.Column(db.String(30), default="")
-
-class Referral(db.Model):
-    __tablename__ = 'referrals'
-    id = db.Column(db.Integer, primary_key=True)
-    referrer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
-    referred_email = db.Column(db.String(200), default="")
-    referred_name = db.Column(db.String(100), default="")
-    status = db.Column(db.String(20), default='pending')
-    badge_awarded = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.String(30), default="")
-
-class BlogPost(db.Model):
-    __tablename__ = 'blog_posts'
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(300), nullable=False)
-    slug = db.Column(db.String(300), unique=True, nullable=False, index=True)
-    excerpt = db.Column(db.Text, default="")
-    content = db.Column(db.Text, default="")
-    author = db.Column(db.String(100), default="ScholrNet Team")
-    category = db.Column(db.String(50), default="Guide")
-    published = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.String(30), default="")
-    updated_at = db.Column(db.String(30), default="")

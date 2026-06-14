@@ -64,9 +64,8 @@ def add_security_headers(response):
         response.headers['Cache-Control'] = 'public, max-age=86400'
     return response
 
-from app import register_routes, enable_rls
+from app import register_routes
 
 with app.app_context():
-    db.create_all()
-    enable_rls()
     register_routes(app, bcrypt, login_manager, limiter)
+    db.create_all()

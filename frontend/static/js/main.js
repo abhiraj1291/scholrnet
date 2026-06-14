@@ -62,22 +62,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const settingsBtn = document.getElementById('settings-btn');
   const settingsModal = document.getElementById('settings-modal');
   const closeSettingsBtn = document.getElementById('close-settings-btn');
-  var schoolsLoaded = false;
-  function loadSchoolsSelect() {
-    var sel = document.getElementById('verifySchoolSelect');
-    if (!sel || schoolsLoaded) return;
-    fetch('/api/schools/list')
-      .then(function(r){return r.json()})
-      .then(function(d){
-        if (d.schools && d.schools.length > 0) {
-          sel.innerHTML = '<option value="">Select your school...</option>';
-          d.schools.forEach(function(s){ var o=document.createElement('option'); o.value=s.id; o.textContent=s.name; sel.appendChild(o); });
-          schoolsLoaded = true;
-        }
-      }).catch(function(){});
-  }
   if (settingsBtn && settingsModal) {
-    settingsBtn.addEventListener('click', () => { settingsModal.classList.remove('hidden'); loadSchoolsSelect(); });
+    settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
     settingsModal.addEventListener('click', (e) => {
       if (e.target === settingsModal) settingsModal.classList.add('hidden');
     });

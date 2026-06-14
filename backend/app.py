@@ -15,7 +15,7 @@ from markupsafe import escape as escape_html
 from config import Config
 from models import db, User, Achievement, Project, Post, Comment, Ad, Opportunity, TeamRequest
 from models import TeamApplicant, VerificationRequest, Mentor, MentorshipRequest, MentorInteraction
-from models import Notification, ChatMessage, ChatTyping, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience, Club, ClubMember, ClubJoinRequest, BlogPost, Lead, Referral
+from models import Notification, ChatMessage, ChatTyping, School, SchoolAnnouncement, Connection, UserLike, EventRegistration, Experience, Club, ClubMember, ClubJoinRequest
 
 MAX_STRING_LEN = 5000
 MAX_CONTENT_LEN = 50000
@@ -102,32 +102,6 @@ def validate_file_type(f, allowed_extensions, allowed_mime_prefixes):
             return False, "Invalid image file"
     return True, ''
 
-def enable_rls():
-    """Enable RLS + revoke anon/authenticated perms on all tables. Run after db.create_all()."""
-    try:
-        from sqlalchemy import text
-        rls_tables = ['users','achievements','projects','posts','comments','ads','opportunities','team_requests','team_applicants','verification_requests','mentors','mentorship_requests','mentor_interactions','notifications','chat_messages','chat_typing','clubs','club_members','club_join_requests','schools','school_announcements','connections','user_likes','event_registrations','experiences','audit_logs','leads','referrals','blog_posts']
-        with db.engine.connect() as conn:
-            conn.execute(text("SET client_min_messages TO warning"))
-            for tbl in rls_tables:
-                try:
-                    conn.execute(text(f"ALTER TABLE IF EXISTS {tbl} ENABLE ROW LEVEL SECURITY"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text(f"DROP POLICY IF EXISTS deny_all ON {tbl}"))
-                    conn.execute(text(f"CREATE POLICY deny_all ON {tbl} FOR ALL USING (false)"))
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text(f"REVOKE ALL ON {tbl} FROM anon, authenticated"))
-                except Exception:
-                    pass
-            conn.commit()
-        print("AUTO-MIGRATE: RLS enabled on all tables")
-    except Exception as e:
-        print(f"AUTO-MIGRATE: RLS setup failed: {e}")
-
 def register_routes(app, bcrypt, login_manager, limiter):
     supabase_url = current_app.config.get("SUPABASE_URL", "").rstrip("/")
     supabase_key = current_app.config.get("SUPABASE_STORAGE_KEY", "")
@@ -206,7 +180,25 @@ def register_routes(app, bcrypt, login_manager, limiter):
     except Exception as e:
         print(f"AUTO-MIGRATE: users column migration failed: {e}")
 
-
+    # Enable RLS on all tables to close public Supabase REST API
+    try:
+        from sqlalchemy import text
+        rls_tables = ['users','achievements','projects','posts','comments','ads','opportunities','team_requests','team_applicants','verification_requests','mentors','mentorship_requests','mentor_interactions','notifications','chat_messages','clubs','club_members','club_join_requests','schools','school_announcements','connections','user_likes','event_registrations','experiences','audit_logs','leads','referrals','blog_posts']
+        with db.engine.connect() as conn:
+            conn.execute(text("SET client_min_messages TO warning"))
+            for tbl in rls_tables:
+                try:
+                    conn.execute(text(f"ALTER TABLE {tbl} ENABLE ROW LEVEL SECURITY"))
+                except Exception:
+                    pass  # table may not exist
+                try:
+                    conn.execute(text(f"DROP POLICY IF EXISTS deny_all ON {tbl}"))
+                    conn.execute(text(f"CREATE POLICY deny_all ON {tbl} FOR ALL USING (false)"))
+                except Exception:
+                    pass  # skip if table doesn't support policies yet
+            conn.commit()
+    except Exception as e:
+        print(f"AUTO-MIGRATE: RLS setup failed: {e}")
 
     # Auto-promote owner email to super_admin; delete old seed super_admin
     try:
@@ -224,44 +216,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
             print("AUTO-MIGRATE: Removed hardcoded seed super_admin account")
     except Exception as e:
         print(f"AUTO-MIGRATE: super_admin promotion failed: {e}")
-
-    # Seed blog posts if empty
-    try:
-        from datetime import datetime, timezone
-        if BlogPost.query.count() == 0:
-            seed_articles = [
-                {
-                    'title': 'How to Find Internships as a High School Student',
-                    'slug': 'how-to-find-internships-high-school',
-                    'category': 'Guide',
-                    'excerpt': 'A practical guide to finding internships as a high school student — where to look, how to apply, and how to stand out.',
-                    'content': '<h2>Why Internships Matter in High School</h2><p>Internships give you real-world experience, strengthen your college applications, and help you discover what you enjoy. Here\'s how to find them.</p><h2>1. Start with Your Network</h2><p>Talk to teachers, family friends, and school counselors. Many opportunities come through personal connections. Let people know you\'re looking.</p><h2>2. Use Online Platforms</h2><p>ScholrNet aggregates internships, research programs, and fellowships for students. Create your profile and get matched with opportunities that fit your interests.</p><h2>3. Cold Email Strategically</h2><p>Identify companies or labs you\'re interested in. Write a short, professional email explaining why you want to work with them and what you can contribute.</p><h2>4. Build Your Portfolio</h2><p>Before applying, make sure your ScholrNet profile is complete with your achievements, projects, and school-verified credentials. A strong profile doubles your chances.</p><h2>5. Apply Early and Often</h2><p>Deadlines fill up fast. Track them on ScholrNet and apply as early as possible. Don\'t get discouraged by rejections — every application is practice.</p>'
-                },
-                {
-                    'title': '10 Scholarships Every Indian Student Should Know About',
-                    'slug': '10-scholarships-indian-students',
-                    'category': 'Scholarships',
-                    'excerpt': 'Discover 10 scholarships available to Indian students — from merit-based to need-based — and learn how to apply successfully.',
-                    'content': '<h2>Scholarships Can Change Your Life</h2><p>Millions of rupees in scholarships go unclaimed every year. Here are 10 scholarships every Indian student should apply for.</p><h2>1. National Talent Search Examination (NTSE)</h2><p>One of the most prestigious scholarships in India. Open to class 10 students. Covers tuition and provides a monthly stipend.</p><h2>2. Kishore Vaigyanik Protsahan Yojana (KVPY)</h2><p>For students interested in research careers in basic sciences. Open to class 11, 12, and first-year undergraduate students.</p><h2>3. Inspire Scholarship</h2><p>For students who rank in the top 1% of their class 12 board exams in science. Provides financial support for undergraduate studies.</p><h2>4. AICTE Pragati Scholarship</h2><p>For girl students pursuing technical education. Covers tuition fees and provides a stipend for project work.</p><h2>5. Sitaram Jindal Foundation Scholarship</h2><p>Need-based scholarship for students from class 1 to professional courses. One of the most accessible scholarships.</p><h2>Build Your Profile on ScholrNet</h2><p>Keep your ScholrNet profile updated with your achievements. Many scholarship committees look for verified credentials — and that\'s exactly what we provide.</p>'
-                },
-                {
-                    'title': 'How to Build a Strong Student Profile for College Applications',
-                    'slug': 'build-strong-student-profile-college',
-                    'category': 'Guide',
-                    'excerpt': 'Learn how to create a compelling academic profile that colleges notice — with verified achievements, projects, and recommendations.',
-                    'content': '<h2>Your Profile is Your Story</h2><p>College admissions officers spend an average of 8 minutes reviewing each application. Your profile needs to tell a compelling story in that time.</p><h2>1. Focus on Quality Over Quantity</h2><p>Having 20 minor achievements is less impressive than 3 significant ones with verified impact. Prioritize depth over breadth.</p><h2>2. Get Your Achievements Verified</h2><p>Unverified achievements are just claims. ScholrNet\'s school verification system turns claims into credentials that colleges can trust.</p><h2>3. Showcase Projects and Research</h2><p>Colleges want to see what you\'ve built, not just what you\'ve studied. Document your projects, research papers, and creative work on your portfolio.</p><h2>4. Demonstrate Leadership</h2><p>Leadership isn\'t just about titles. Show how you\'ve initiated change — starting a club, organizing an event, or mentoring younger students.</p><h2>5. Keep Everything in One Place</h2><p>Use ScholrNet to maintain your academic portfolio. Generate a shareable link for college applications. One URL. Everything they need to know.</p>'
-                }
-            ]
-            now_str = str(datetime.now(timezone.utc))
-            for art in seed_articles:
-                existing = BlogPost.query.filter_by(slug=art['slug']).first()
-                if not existing:
-                    bp = BlogPost(title=art['title'], slug=art['slug'], excerpt=art['excerpt'], content=art['content'], category=art['category'], published=True, created_at=now_str, updated_at=now_str)
-                    db.session.add(bp)
-            db.session.commit()
-            print("AUTO-MIGRATE: Seeded 3 blog articles")
-    except Exception as e:
-        print(f"AUTO-MIGRATE: Blog seeding failed: {e}")
 
     # Always ensure posts.club_id column exists (critical for club posts)
     try:
@@ -392,6 +346,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.context_processor
     def inject_globals():
+        try:
+            if current_user.is_authenticated and (current_user.role in ('admin', 'super_admin') or not current_user.school_verified):
+                return {'schools': get_all_schools()}
+        except Exception:
+            pass
         return {'schools': []}
 
     @app.errorhandler(404)
@@ -523,77 +482,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def index():
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
-        schools_count = School.query.count()
-        users_count = User.query.count()
-        clubs_count = Club.query.count()
-        opportunities_count = Opportunity.query.count()
-        recent_opportunities = Opportunity.query.order_by(Opportunity.id.desc()).limit(3).all()
-        recent_clubs = Club.query.order_by(Club.id.desc()).limit(3).all()
-        return render_template('landing.html',
-            schools_count=schools_count,
-            users_count=users_count,
-            clubs_count=clubs_count,
-            opportunities_count=opportunities_count,
-            recent_opportunities=recent_opportunities,
-            recent_clubs=recent_clubs
-        )
-
-    @app.route('/api/leads', methods=['POST'])
-    def api_lead_capture():
-        try:
-            data = request.json or {}
-            email = (data.get('email') or '').strip().lower()
-            name = (data.get('name') or '').strip()
-            if not email or '@' not in email:
-                return jsonify({'success': False, 'error': 'Valid email required'}), 400
-            exists = Lead.query.filter_by(email=email).first()
-            if not exists:
-                from datetime import datetime, timezone
-                lead = Lead(name=name, email=email, source='landing', created_at=str(datetime.now(timezone.utc)))
-                db.session.add(lead)
-                db.session.commit()
-            return jsonify({'success': True})
-        except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    @app.route('/robots.txt')
-    def robots_txt():
-        lines = [
-            'User-agent: *',
-            'Allow: /',
-            'Disallow: /login',
-            'Disallow: /register',
-            'Disallow: /dashboard',
-            'Disallow: /api/',
-            f'Sitemap: {request.url_root}sitemap.xml',
-            '',
-            '# Crawl delay for serverless cold start',
-            'Crawl-Delay: 10'
-        ]
-        return Response('\n'.join(lines), mimetype='text/plain')
-
-    @app.route('/sitemap.xml')
-    def sitemap_xml():
-        from datetime import datetime, timezone
-        today = str(datetime.now(timezone.utc).date())
-        schools = School.query.order_by(School.id.desc()).limit(100).all()
-        blog_posts = BlogPost.query.filter_by(published=True).all()
-        opportunities = Opportunity.query.order_by(Opportunity.id.desc()).limit(100).all()
-        urls = [
-            f'<url><loc>{request.url_root}</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>',
-            f'<url><loc>{request.url_root}login</loc><priority>0.3</priority></url>',
-            f'<url><loc>{request.url_root}register</loc><priority>0.8</priority></url>',
-        ]
-        for opp in opportunities:
-            slug = opp.name.lower().replace(' ', '-').replace('/', '-')[:80]
-            urls.append(f'<url><loc>{request.url_root}opportunity/{opp.id}/{slug}</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>')
-        for school in schools:
-            slug = school.name.lower().replace(' ', '-').replace('/', '-')[:80]
-            urls.append(f'<url><loc>{request.url_root}school/{school.id}/{slug}</loc><priority>0.6</priority><changefreq>weekly</changefreq></url>')
-        for post in blog_posts:
-            urls.append(f'<url><loc>{request.url_root}blog/{post.slug}</loc><priority>0.6</priority><lastmod>{post.updated_at or today}</lastmod></url>')
-        xml = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(urls) + '</urlset>'
-        return Response(xml, mimetype='application/xml')
+        return render_template('landing.html')
 
     @app.route('/login', methods=['GET', 'POST'])
     @limiter.limit("30 per 15 minutes", methods=['POST'])
@@ -942,7 +831,19 @@ def register_routes(app, bcrypt, login_manager, limiter):
         import traceback
         try:
             return render_template('feed.html',
-                user=current_user
+                user=current_user,
+                posts=get_all_posts(),
+                ads=active_ads(),
+                schools=get_all_schools(),
+                opportunities=get_all_opportunities(),
+                team_requests=get_all_team_requests(),
+                mentors=get_all_mentors(),
+                achievements=Achievement.query.filter_by(user_id=current_user.id).order_by(Achievement.id.desc()).all(),
+                projects=Project.query.filter_by(user_id=current_user.id).order_by(Project.id.desc()).all(),
+                verification_requests=VerificationRequest.query.order_by(VerificationRequest.id.desc()).limit(200).all() if current_user.role in ('admin', 'super_admin') else [],
+                notifications=get_user_notifications(current_user.id),
+                registered_event_ids=[r.announce_id for r in EventRegistration.query.filter_by(user_id=current_user.id).all()],
+                connections=[c.connected_user_id for c in Connection.query.filter_by(user_id=current_user.id).all()]
             )
         except Exception as e:
             print(f"DASHBOARD ERROR: {e}")
@@ -979,7 +880,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
             is_own=is_own,
             friend_status=friend_status,
             is_verified=_is_verified(puser),
-            posts=Post.query.filter_by(author_id=user_id).order_by(Post.id.desc()).all()
+            achievements=Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all(),
+            projects=Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all(),
+            posts=Post.query.filter_by(author_id=user_id).order_by(Post.id.desc()).all(),
+            ads=active_ads(),
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/u/<username>')
@@ -1034,94 +939,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'author_avatar_url': author.avatar_url if author else '',
                 'author_verified': _is_verified(author) if author else False
             })
-        return render_template('public.html', posts=enriched        )
-
-    # SEO-friendly routes
-    @app.route('/opportunity/<int:opp_id>/<path:slug>')
-    def opportunity_page(opp_id, slug):
-        opp = Opportunity.query.get(opp_id)
-        if not opp:
-            abort(404)
-        meta_title = f"{opp.name} — ScholrNet Opportunities"
-        meta_desc = (opp.description or '')[:200]
-        return render_template('opportunity_detail.html', opp=opp, meta_title=meta_title, meta_desc=meta_desc)
-
-    @app.route('/school/<int:school_id>/<path:slug>')
-    def school_page(school_id, slug):
-        school = School.query.get(school_id)
-        if not school:
-            abort(404)
-        students = User.query.filter_by(verified_school_id=school_id).limit(20).all()
-        clubs = Club.query.filter(Club.name.ilike(f'%{school.name[:20]}%')).limit(5).all()
-        meta_title = f"{school.name} — ScholrNet School Profile"
-        meta_desc = (school.tagline or school.name or '')[:200]
-        return render_template('school_landing.html', school=school, students=students, clubs=clubs, meta_title=meta_title, meta_desc=meta_desc)
-
-    @app.route('/blog')
-    def blog_index():
-        posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.id.desc()).all()
-        return render_template('blog_index.html', posts=posts)
-
-    @app.route('/blog/<path:slug>')
-    def blog_post(slug):
-        post = BlogPost.query.filter_by(slug=slug, published=True).first()
-        if not post:
-            abort(404)
-        return render_template('blog_post.html', post=post)
-
-    # Referral API
-    @app.route('/api/referral/generate', methods=['POST'])
-    @login_required
-    def api_generate_referral():
-        if not current_user.referral_code:
-            import uuid
-            current_user.referral_code = uuid.uuid4().hex[:10]
-            db.session.commit()
-        return jsonify({'code': current_user.referral_code})
-
-    @app.route('/api/referral/invite', methods=['POST'])
-    @login_required
-    def api_referral_invite():
-        data = request.json or {}
-        email = (data.get('email') or '').strip().lower()
-        name = (data.get('name') or '').strip()
-        if not email or '@' not in email:
-            return jsonify({'success': False, 'error': 'Valid email required'}), 400
-        from datetime import datetime, timezone
-        ref = Referral(referrer_id=current_user.id, referred_email=email, referred_name=name, status='pending', created_at=str(datetime.now(timezone.utc)))
-        db.session.add(ref)
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Invitation sent'})
-
-    @app.route('/api/referral/claim', methods=['POST'])
-    @login_required
-    def api_referral_claim():
-        code = (request.json or {}).get('code', '')
-        referrer = User.query.filter_by(referral_code=code).first()
-        if not referrer:
-            return jsonify({'success': False, 'error': 'Invalid code'}), 400
-        ref = Referral.query.filter_by(referrer_id=referrer.id, referred_email=current_user.email).first()
-        if not ref:
-            ref = Referral(referrer_id=referrer.id, referred_email=current_user.email, referred_name=current_user.name, status='joined', badge_awarded=False, created_at=str(datetime.now(timezone.utc)))
-            db.session.add(ref)
-        if not ref.badge_awarded:
-            count = Referral.query.filter_by(referrer_id=referrer.id, status='joined').count()
-            if count >= 1:
-                referrer.referral_badge = True
-                ref.badge_awarded = True
-            ref.status = 'joined'
-            db.session.commit()
-        return jsonify({'success': True})
-
-    @app.route('/api/share/achievement/<int:achievement_id>')
-    @login_required
-    def api_share_achievement(achievement_id):
-        achievement = Achievement.query.get(achievement_id)
-        if not achievement or achievement.user_id != current_user.id:
-            return jsonify({'error': 'Not found'}), 404
-        share_url = f"{request.url_root}profile/{current_user.id}"
-        text = f"I earned '{achievement.title}' — verified on ScholrNet! Check out my profile: {share_url}"
-        return jsonify({'text': text, 'url': share_url})
+        return render_template('public.html', posts=enriched)
 
     @app.route('/choose-username')
     @login_required
@@ -1130,7 +948,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return redirect(url_for('dashboard'))
         return render_template('choose_username.html',
             user=current_user,
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/api/username/check', methods=['GET'])
@@ -1165,7 +983,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return render_template('opportunities.html',
             user=current_user,
             opportunities=get_all_opportunities(),
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/teams')
@@ -1174,7 +992,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return render_template('teams.html',
             user=current_user,
             team_requests=get_all_team_requests(),
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/mentors')
@@ -1184,7 +1002,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             user=current_user,
             mentors=get_all_mentors(),
             mentorship_requests=MentorshipRequest.query.filter_by(student_id=current_user.id).order_by(MentorshipRequest.id.desc()).all(),
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/analytics')
@@ -1193,7 +1011,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return render_template('analytics.html',
             user=current_user,
             achievements=Achievement.query.filter_by(user_id=current_user.id).all(),
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/advisor')
@@ -1201,7 +1019,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def advisor_page():
         return render_template('advisor.html',
             user=current_user,
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/clubs')
@@ -1209,7 +1027,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def clubs_page():
         return render_template('clubs.html',
             user=current_user,
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/club/<int:club_id>')
@@ -1237,7 +1055,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             join_request_pending=join_request_pending,
             members=members, user_map=user_map,
             user=current_user,
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/search')
@@ -1245,7 +1063,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def search_page():
         return render_template('search.html',
             user=current_user,
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/chat')
@@ -1254,7 +1072,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return render_template('chat.html',
             user=current_user,
             firebase_config=app.config.get("FIREBASE_CONFIG", {}),
-            
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/school-desk')
@@ -1264,7 +1082,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return redirect(url_for('dashboard'))
         return render_template('school.html',
             user=current_user,
-            verification_requests=VerificationRequest.query.order_by(VerificationRequest.id.desc()).limit(200).all()
+            schools=get_all_schools(),
+            verification_requests=VerificationRequest.query.order_by(VerificationRequest.id.desc()).limit(200).all(),
+            notifications=get_user_notifications(current_user.id)
         )
 
     @app.route('/admin-panel')
@@ -1273,7 +1093,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if current_user.role != 'super_admin':
             return redirect(url_for('dashboard'))
         return render_template('admin_panel.html',
-            user=current_user
+            user=current_user,
+            posts=get_all_posts(),
+            ads=active_ads(),
+            schools=get_all_schools(),
+            notifications=get_user_notifications(current_user.id)
         )
 
     # ---- API ENDPOINTS ----
@@ -2739,7 +2563,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not session.get('2fa_required'):
             return redirect(url_for('dashboard'))
         return render_template('2fa_login.html', user=current_user,
-            )
+            notifications=get_user_notifications(current_user.id))
 
     @app.route('/api/2fa/setup', methods=['GET'])
     @login_required

@@ -3,163 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Join ScholrNet — Create Your Verified Student Profile</title>
+  <title>ScholrNet - Register</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='logo-icon.png') }}">
-  <meta property="og:title" content="Join ScholrNet — Create Your Verified Student Profile">
-  <meta property="og:description" content="Create your ScholrNet profile in 30 seconds. Find internships, scholarships, hackathons, and clubs with a school-verified profile.">
+  <meta property="og:title" content="ScholrNet - Register">
+  <meta property="og:description" content="Join ScholrNet — the academic trust network for verified achievements.">
   <meta property="og:url" content="https://scholrnet.in">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://www.scholrnet.in/static/logo.svg">
-  <meta name="description" content="Join ScholrNet — the platform where students discover internships, scholarships, hackathons, and clubs with a school-verified profile.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
-  <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
-  <style>
-    body{background:var(--bg-alt);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
-    .auth-wrapper{display:flex;gap:2.5rem;max-width:64rem;width:100%;align-items:center}
-    .auth-visual{flex:1;display:none;flex-direction:column;align-items:center}
-    .auth-visual .auth-tagline{font-size:1.75rem;font-weight:700;color:var(--text);line-height:1.3;margin-top:1.5rem;text-align:center;max-width:24rem;letter-spacing:-0.02em}
-    .auth-visual .auth-tagline span{color:var(--primary)}
-    .auth-container{width:100%;max-width:26rem}
-    .auth-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-md)}
-    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.25rem;color:var(--text);letter-spacing:-0.02em}
-    .auth-card .sub{font-size:0.85rem;color:var(--text-muted);margin:0 0 1.5rem}
-    .auth-card label{font-size:0.8rem;font-weight:600;color:var(--text);display:block;margin-bottom:0.25rem}
-    .auth-card input,.auth-card select{width:100%;padding:0.7rem 0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.875rem;outline:none;box-sizing:border-box;transition:border-color 0.15s,box-shadow 0.15s;background:#fff;color:var(--text);font-family:inherit}
-    .auth-card input:focus,.auth-card select:focus{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light)}
-    .auth-card .field{margin-bottom:0.875rem}
-    .auth-card .btn-submit{width:100%;padding:0.75rem;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:0.9rem;font-weight:600;cursor:pointer;transition:background 0.15s,transform 0.15s;font-family:inherit}
-    .auth-card .btn-submit:hover{background:var(--primary-hover);transform:translateY(-1px)}
-    .auth-card .switch-page{text-align:center;font-size:0.8rem;color:var(--text-muted);margin-top:1rem}
-    .auth-card .switch-page a{font-weight:600;color:var(--primary);text-decoration:none}
-    .auth-card .switch-page a:hover{text-decoration:underline}
-    .auth-card .error-msg{background:#fff5f5;border:1px solid #f0c0c0;border-radius:var(--radius-sm);padding:0.75rem;font-size:0.8rem;color:#c0392b;margin-bottom:1rem}
-    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:var(--text-muted)}
-    .auth-footer a{color:var(--primary);text-decoration:none}
-    .auth-footer a:hover{text-decoration:underline}
-    .auth-card .status-hint{font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem}
-    .auth-card .status-hint.error{color:var(--accent)}
-    .auth-card .status-hint.success{color:var(--secondary)}
-    .auth-card .trust-badges{display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:1.25rem;flex-wrap:wrap}
-    .auth-card .trust-badge{font-size:0.7rem;color:var(--text-muted);display:flex;align-items:center;gap:0.25rem}
-    .auth-card .trust-badge svg{width:12px;height:12px;color:var(--secondary)}
-    @media(min-width:48rem){.auth-visual{display:flex}}
-    @media(max-width:30rem){.auth-card{padding:1.25rem}.auth-card h1{font-size:1.15rem}}
-  </style>
-</head>
-<body>
-  <div class="auth-wrapper">
-    <div class="auth-visual">
-      <svg viewBox="0 0 400 340" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M50 280 Q100 180 180 200 Q260 220 280 120 Q300 20 350 40" stroke="#6C3BF5" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.3"/>
-        <path d="M30 300 Q120 260 200 280 Q280 300 340 200 Q380 140 400 160" stroke="#00C4B8" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.25"/>
-        <circle cx="120" cy="100" r="32" fill="#6C3BF5" opacity="0.06"/>
-        <circle cx="310" cy="80" r="24" fill="#00C4B8" opacity="0.08"/>
-        <g transform="translate(160, 60)" opacity="0.12">
-          <path d="M40 10 L0 28 L40 46 L80 28 Z" fill="#6C3BF5"/>
-          <path d="M40 46 L40 62 L20 54 L20 38" stroke="#6C3BF5" stroke-width="2" fill="none"/>
-          <path d="M80 28 L80 44" stroke="#6C3BF5" stroke-width="2"/>
-        </g>
-        <g transform="translate(290, 150)" opacity="0.1">
-          <rect x="0" y="0" width="30" height="36" rx="2" fill="#6C3BF5"/>
-          <rect x="3" y="3" width="24" height="30" rx="1" fill="#fff"/>
-          <line x1="7" y1="10" x2="23" y2="10" stroke="#6C3BF5" stroke-width="1.5"/>
-          <line x1="7" y1="17" x2="23" y2="17" stroke="#6C3BF5" stroke-width="1.5"/>
-          <line x1="7" y1="24" x2="18" y2="24" stroke="#6C3BF5" stroke-width="1.5"/>
-        </g>
-      </svg>
-      <div class="auth-tagline">
-        Your achievements,<br><span>verified and connected.</span>
-      </div>
-    </div>
-
-    <div class="auth-container">
-      <div class="auth-card">
-        <h1>Create your profile</h1>
-        <p class="sub">Join the platform where your achievements open doors</p>
-
-        {% if error %}
-          <div class="error-msg">{{ error }}</div>
-        {% endif %}
-
-        <form method="POST">
-          <div class="field">
-            <label for="regName">Full Name</label>
-            <input type="text" id="regName" name="name" placeholder="e.g. Aarav Sharma" required autocomplete="name">
-          </div>
-          <div class="field">
-            <label for="regEmail">Email</label>
-            <input type="email" id="regEmail" name="email" placeholder="your@email.com" required autocomplete="email">
-          </div>
-          <div class="field">
-            <label for="regPassword">Password</label>
-            <input type="password" id="regPassword" name="password" placeholder="Min. 6 characters" required minlength="6" autocomplete="new-password">
-          </div>
-          <div class="field">
-            <label for="regUsername">Username <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
-            <input type="text" id="regUsername" name="username" placeholder="e.g. aarav_sharma" maxlength="30" autocomplete="username">
-            <div id="usernameStatus" class="status-hint">3-30 chars: letters, numbers, underscores</div>
-          </div>
-          <div class="field">
-            <label for="regSchool">School / Institution</label>
-            <input type="text" id="regSchool" name="school" placeholder="e.g. Delhi Public School" autocomplete="organization">
-          </div>
-          <div class="field">
-            <label for="regRole">I am a</label>
-            <select id="regRole" name="role">
-              <option value="student">Student</option>
-              <option value="teacher">Teacher</option>
-              <option value="mentor">Mentor</option>
-              <option value="admin">School Counselor</option>
-            </select>
-          </div>
-          {% if turnstile_site_key %}
-          <div class="cf-turnstile" style="margin-bottom:0.875rem;" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
-          <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-          {% endif %}
-          <button type="submit" class="btn-submit">Create Account</button>
-        </form>
-
-        <div class="trust-badges">
-          <span class="trust-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Free forever</span>
-          <span class="trust-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> School-verified</span>
-          <span class="trust-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> No spam</span>
-        </div>
-
-        <div class="switch-page">
-          Already registered? <a href="{{ url_for('login') }}">Sign in</a>
-        </div>
-      </div>
-      <div class="auth-footer">
-        <a href="/">Back to homepage</a>
-      </div>
-    </div>
-  </div>
-
+  <meta property="og:image" content="{{ url_for('static', filename='logo.svg', _external=True) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script>
-    (function(){
-      var regUsername = document.getElementById('regUsername');
-      var usernameStatus = document.getElementById('usernameStatus');
-      var checkTimer = null;
-      if (regUsername && usernameStatus) {
-        regUsername.addEventListener('input', function() {
-          var val = this.value.trim().toLowerCase();
-          if (!val) { usernameStatus.textContent = '3-30 chars: letters, numbers, underscores'; usernameStatus.className = 'status-hint'; return; }
-          if (!/^[a-z0-9_]{3,30}$/.test(val)) { usernameStatus.textContent = 'Invalid characters'; usernameStatus.className = 'status-hint error'; return; }
-          usernameStatus.textContent = 'Checking...'; usernameStatus.className = 'status-hint';
-          clearTimeout(checkTimer);
-          checkTimer = setTimeout(function() {
-            fetch('/api/username/check?u=' + encodeURIComponent(val))
-              .then(function(r){return r.json()})
-              .then(function(d){ usernameStatus.textContent = d.available ? 'Available' : (d.error || 'Taken'); usernameStatus.className = 'status-hint ' + (d.available ? 'success' : 'error'); })
-              .catch(function(){ usernameStatus.textContent = 'Error checking'; usernameStatus.className = 'status-hint error'; });
-          }, 300);
-        });
-      }
-    })();
+  // Username availability check on registration form
+  const regUsername = document.getElementById('regUsername');
+  const usernameStatus = document.getElementById('usernameStatus');
+  let checkTimer = null;
+  if (regUsername) {
+    regUsername.addEventListener('input', function() {
+      const val = this.value.trim().toLowerCase();
+      if (!val) { usernameStatus.textContent = '3-30 chars: letters, numbers, underscores'; usernameStatus.style.color = ''; return; }
+      if (!/^[a-z0-9_]{3,30}$/.test(val)) { usernameStatus.textContent = 'Invalid characters'; usernameStatus.style.color = 'var(--danger)'; return; }
+      usernameStatus.textContent = 'Checking...'; usernameStatus.style.color = 'var(--text-muted)';
+      clearTimeout(checkTimer);
+      checkTimer = setTimeout(() => {
+        fetch('/api/username/check?u=' + encodeURIComponent(val))
+          .then(r => r.json())
+          .then(d => { usernameStatus.textContent = d.available ? 'Available' : (d.error || 'Taken'); usernameStatus.style.color = d.available ? 'var(--success)' : 'var(--danger)'; })
+          .catch(() => { usernameStatus.textContent = 'Error checking'; usernameStatus.style.color = 'var(--danger)'; });
+      }, 300);
+    });
+  }
   </script>
+  <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+</head>
+<body class="flex items-center justify-center min-h-screen p-4" style="background: var(--bg);">
+  <div class="card" style="max-width: 24rem; width: 100%; padding: 2rem;">
+    <style>@media (max-width: 30rem) { .card { padding: 1.25rem !important; } }</style>
+      <div class="flex items-center gap-2 mb-4">
+        <div class="logo">
+          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
+        </div>
+      </div>
+    <h1 class="text-lg font-black mb-1">Create your profile</h1>
+    <p class="text-sm text-muted mb-4">Join the academic trust network</p>
+
+    {% if error %}
+      <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <div style="margin-bottom: 0.75rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Full Name</label>
+        <input type="text" id="regName" name="name" placeholder="e.g. Aarav Sharma" required>
+      </div>
+      <div style="margin-bottom: 0.75rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Email</label>
+        <input type="email" id="regEmail" name="email" placeholder="your@email.com" required>
+      </div>
+      <div style="margin-bottom: 0.75rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Password</label>
+        <input type="password" id="regPassword" name="password" placeholder="Min. 6 characters" required minlength="6">
+      </div>
+      <div style="margin-bottom: 0.75rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Username <span class="text-xs text-muted">(optional, set later)</span></label>
+        <input type="text" id="regUsername" name="username" placeholder="e.g. aarav_sharma" maxlength="30">
+        <div id="usernameStatus" class="text-xs text-muted mt-1">3-30 chars: letters, numbers, underscores</div>
+      </div>
+      <div style="margin-bottom: 0.75rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">School / Institution</label>
+        <input type="text" id="regSchool" name="school" placeholder="e.g. Delhi Public School">
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="text-xs font-bold text-muted" style="display: block; margin-bottom: 0.25rem;">Role</label>
+        <select id="regRole" name="role">
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="mentor">Mentor</option>
+          <option value="admin">School Counselor</option>
+        </select>
+      </div>
+      {% if turnstile_site_key %}
+      <div class="cf-turnstile mb-4" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+      {% endif %}
+      <button type="submit" class="btn btn-primary w-full" style="padding: 0.75rem;">Create Account</button>
+    </form>
+
+    <p class="text-xs text-muted text-center mt-4">
+      Already registered? <a href="{{ url_for('login') }}" class="font-bold">Sign in</a>
+    </p>
+  </div>
 </body>
 </html>

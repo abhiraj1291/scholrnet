@@ -3,23 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScholrNet — Find internships, scholarships &amp; hackathons with a verified student profile</title>
+  <title>ScholrNet — Academic Trust Network</title>
   <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
-  <meta name="description" content="ScholrNet helps students discover internships, scholarships, hackathons, competitions, and research opportunities — with a school-verified profile that opens doors.">
-  <meta property="og:title" content="ScholrNet — Your Verified Academic Profile">
-  <meta property="og:description" content="Find internships, scholarships, hackathons, and clubs. Your achievements, verified by your school.">
+  <meta name="description" content="Verified academic network for students, teachers, and schools.">
+  <meta property="og:title" content="ScholrNet">
+  <meta property="og:description" content="Verified academic network for students, teachers, and schools.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://scholrnet.in">
-  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ScholrNet — Your Verified Academic Profile">
-  <meta name="twitter:description" content="Find internships, scholarships, hackathons, and clubs. Your achievements, verified by your school.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
   <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
   <script type="application/ld+json">
   {
@@ -27,7 +22,7 @@
     "@type": "WebSite",
     "name": "ScholrNet",
     "url": "https://scholrnet.in",
-    "description": "Find internships, scholarships, hackathons, and clubs. Your achievements, verified by your school.",
+    "description": "Verified academic network for students, teachers, and schools.",
     "potentialAction": {
       "@type": "SearchAction",
       "target": "https://scholrnet.in/search?q={search_term_string}",
@@ -42,444 +37,69 @@
     "name": "ScholrNet",
     "url": "https://scholrnet.in",
     "logo": "https://scholrnet.in/static/logo.svg",
-    "description": "ScholrNet helps students discover internships, scholarships, hackathons, competitions, and research opportunities.",
-    "founder": {"@type": "Person", "name": "Abhiraj"},
-    "email": "scolrnetsupport@gmail.com"
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {"@type":"Question","name":"Is ScholrNet free?","acceptedAnswer":{"@type":"Answer","text":"Yes. ScholrNet is completely free for students. Always."}},
-      {"@type":"Question","name":"How does achievement verification work?","acceptedAnswer":{"@type":"Answer","text":"Your school counselor or teacher confirms your achievements through their dashboard. It takes 2 seconds."}},
-      {"@type":"Question","name":"Can colleges see my profile?","acceptedAnswer":{"@type":"Answer","text":"Yes. Your profile generates a shareable verification link. Send it with college applications, scholarship forms, or internship resumes."}},
-      {"@type":"Question","name":"What if my school isn't on ScholrNet yet?","acceptedAnswer":{"@type":"Answer","text":"You can request your school to join, or ask any teacher on the platform to verify your achievements."}},
-      {"@type":"Question","name":"Is my data private?","acceptedAnswer":{"@type":"Answer","text":"Your profile is only visible to connections you approve. Nothing is public by default except your public timeline posts."}}
-    ]
+    "description": "Academic trust network connecting students, teachers, and schools with verified achievements."
   }
   </script>
 </head>
 <body>
 
-  <!-- Nav -->
-  <nav class="nav" role="navigation" aria-label="Main navigation">
-    <div class="nav-inner">
-      <a href="/" class="nav-logo" aria-label="ScholrNet Home">
-        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
+<div class="layout">
+  <div class="hero-left">
+    <div class="hero-art">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-right-inner">
+      <a href="https://scholrnet.in" class="brand">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet">
       </a>
-      <div class="nav-links">
-        <a href="#features" class="nav-link">Features</a>
-        <a href="#how-it-works" class="nav-link">How It Works</a>
-        <a href="{{ url_for('blog_index') }}" class="nav-link">Resources</a>
-        <a href="#faq" class="nav-link">FAQ</a>
-      </div>
-      <div class="nav-actions">
-        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
-        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
-      </div>
-      <button class="nav-mobile-toggle" aria-label="Toggle menu" onclick="toggleMobileNav()">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="nav-mobile hidden" id="mobileNav">
-      <a href="#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
-      <a href="#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
-      <a href="{{ url_for('blog_index') }}" class="nav-link" onclick="toggleMobileNav()">Resources</a>
-      <a href="#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
-      <div class="nav-mobile-actions">
-        <a href="{{ url_for('login') }}" class="btn-ghost" onclick="toggleMobileNav()">Sign In</a>
-        <a href="{{ url_for('register') }}" class="btn-primary" onclick="toggleMobileNav()">Join Free</a>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Hero -->
-  <section class="hero" aria-label="Hero">
-    <div class="hero-inner">
-      <div class="hero-content">
-        <h1 class="hero-title">Your achievements should open doors.<br><span class="hero-highlight">We make sure they do.</span></h1>
-        <p class="hero-sub">ScholrNet is the platform where your awards, projects, and experience are verified by your school — so internships, scholarships, and competitions come to you.</p>
-        <div class="hero-cta">
-          <a href="{{ url_for('register') }}" class="btn-primary btn-lg">Find Your First Opportunity &rarr;</a>
-          <a href="#features" class="btn-outline btn-lg">See How It Works</a>
-        </div>
-        <div class="hero-trust">
-          <span class="hero-trust-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            {% if schools_count > 0 %}{{ schools_count }} school{% if schools_count != 1 %}s{% endif %} participating{% else %}Schools joining daily{% endif %}
-          </span>
-          <span class="hero-trust-dot">&middot;</span>
-          <span class="hero-trust-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            {% if opportunities_count > 0 %}{{ opportunities_count }} opportunit{% if opportunities_count != 1 %}ies{% else %}y{% endif %}{% else %}Opportunities updated weekly{% endif %}
-          </span>
-        </div>
-      </div>
-      <div class="hero-visual" aria-hidden="true">
-        <div class="hero-card hero-card-1">
-          <div class="hero-card-header">
-            <div class="hero-card-avatar" style="background:#6C3BF5;">AR</div>
-            <div>
-              <div class="hero-card-name">Aarav R.</div>
-              <div class="hero-card-badge">&#10003; School Verified</div>
-            </div>
-          </div>
-          <div class="hero-card-body">
-            <div class="hero-card-stat"><span class="hero-card-stat-value">5</span> achievements</div>
-            <div class="hero-card-stat"><span class="hero-card-stat-value">3</span> projects</div>
-            <div class="hero-card-stat"><span class="hero-card-stat-value">2</span> internships</div>
-          </div>
-        </div>
-        <div class="hero-card hero-card-2">
-          <div class="hero-card-tag">New</div>
-          <div class="hero-card-title">Research Internship</div>
-          <div class="hero-card-meta">IISc · Deadline in 12 days</div>
-        </div>
-        <div class="hero-card hero-card-3">
-          <div class="hero-card-tag" style="background:rgba(0,196,184,0.15);color:#00a89e;">Popular</div>
-          <div class="hero-card-title">National Hackathon</div>
-          <div class="hero-card-meta">2,000+ participants · Prize &pound;50,000</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Trust Bar -->
-  <div class="trust-bar" aria-label="Trust indicators">
-    <div class="trust-bar-inner">
-      <span class="trust-bar-label">Trusted by students &amp; schools across India</span>
-      <div class="trust-bar-items">
-        {% if schools_count > 0 %}
-        <span class="trust-bar-item"><strong>{{ schools_count }}</strong> Schools</span>
-        {% endif %}
-        {% if users_count > 0 %}
-        <span class="trust-bar-item"><strong>{{ users_count }}</strong> Students</span>
-        {% endif %}
-        {% if clubs_count > 0 %}
-        <span class="trust-bar-item"><strong>{{ clubs_count }}</strong> Clubs</span>
-        {% endif %}
-        {% if opportunities_count > 0 %}
-        <span class="trust-bar-item"><strong>{{ opportunities_count }}</strong> Opportunities</span>
-        {% endif %}
+      <h1 class="hero-title">Your achievements,<br><span>verified and connected.</span></h1>
+      <p class="hero-sub">The academic network for students, teachers, and schools.</p>
+      <div class="hero-cta">
+        <a href="{{ url_for('register') }}" class="btn-primary ripple">Join Now</a>
+        <a href="{{ url_for('login') }}" class="btn-outline ripple">Sign In</a>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Features -->
-  <section class="section" id="features" aria-label="Features">
-    <div class="section-inner">
-      <h2 class="section-title">Everything a student needs to build their future</h2>
-      <p class="section-sub">One platform for your achievements, opportunities, and network — with school-level verification that makes your profile stand out.</p>
-      <div class="features-grid">
-        <article class="feature-card fade-up">
-          <div class="feature-icon" style="background:rgba(108,59,245,0.1);color:#6C3BF5;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          </div>
-          <h3 class="feature-title">School-Verified Achievements</h3>
-          <p class="feature-desc">Add your awards, certifications, and projects. Your school confirms them with one click. No more fake resume padding.</p>
-        </article>
-        <article class="feature-card fade-up">
-          <div class="feature-icon" style="background:rgba(0,196,184,0.1);color:#00C4B8;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
-          </div>
-          <h3 class="feature-title">Internships &amp; Scholarships</h3>
-          <p class="feature-desc">Discover opportunities matched to your profile. Research internships, hackathons, competitions, and funding — all in one feed.</p>
-        </article>
-        <article class="feature-card fade-up">
-          <div class="feature-icon" style="background:rgba(255,107,107,0.1);color:#FF6B6B;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <h3 class="feature-title">Academic Network</h3>
-          <p class="feature-desc">Connect with classmates, teachers, and mentors. Join clubs, share opportunities, and build your academic community.</p>
-        </article>
-        <article class="feature-card fade-up">
-          <div class="feature-icon" style="background:rgba(108,59,245,0.1);color:#6C3BF5;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-          </div>
-          <h3 class="feature-title">Trust Portfolio</h3>
-          <p class="feature-desc">A verified record of everything you've achieved. Generate a shareable link for college applications, internship resumes, and scholarship forms.</p>
-        </article>
-        <article class="feature-card fade-up">
-          <div class="feature-icon" style="background:rgba(0,196,184,0.1);color:#00C4B8;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 13 14 20 7"/><polyline points="14 7 20 7 20 13"/></svg>
-          </div>
-          <h3 class="feature-title">Growth Analytics</h3>
-          <p class="feature-desc">Track your profile views, opportunity applications, and network growth. Know exactly how your academic profile is performing.</p>
-        </article>
-        <article class="feature-card fade-up">
-          <div class="feature-icon" style="background:rgba(255,107,107,0.1);color:#FF6B6B;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          </div>
-          <h3 class="feature-title">Clubs &amp; Communities</h3>
-          <p class="feature-desc">Join school clubs, find team members for hackathons, and connect with students who share your interests.</p>
-        </article>
-      </div>
+<section class="features">
+  <div class="features-inner">
+    <div class="feature-card reveal">
+      <div class="feature-icon"><i data-lucide="badge-check"></i></div>
+      <h3>Verified achievements</h3>
+      <p>Your awards and certifications, confirmed by your school.</p>
     </div>
-  </section>
-
-  <!-- Why ScholrNet -->
-  <section class="section section-alt" id="why-scholrnet" aria-label="Why ScholrNet">
-    <div class="section-inner">
-      <h2 class="section-title">Not another LinkedIn. Built for students.</h2>
-      <p class="section-sub">LinkedIn is for professionals. Internshala only has internships. Unstop focuses on competitions. ScholrNet is the only platform that combines everything students need — with school-level verification that makes your profile trustworthy.</p>
-      <div class="comparison-grid fade-up">
-        <div class="comparison-card">
-          <div class="comparison-label">LinkedIn</div>
-          <ul class="comparison-list">
-            <li class="comparison-item comparison-no">Not built for students</li>
-            <li class="comparison-item comparison-no">No school verification</li>
-            <li class="comparison-item comparison-no">No scholarship discovery</li>
-            <li class="comparison-item comparison-no">No club management</li>
-            <li class="comparison-item comparison-no">No opportunity matching</li>
-          </ul>
-        </div>
-        <div class="comparison-card">
-          <div class="comparison-label">Internshala</div>
-          <ul class="comparison-list">
-            <li class="comparison-item comparison-no">Internships only</li>
-            <li class="comparison-item comparison-no">No school verification</li>
-            <li class="comparison-item comparison-no">No hackathons</li>
-            <li class="comparison-item comparison-no">No achievement portfolio</li>
-            <li class="comparison-item comparison-no">No academic network</li>
-          </ul>
-        </div>
-        <div class="comparison-card comparison-card-featured">
-          <div class="comparison-label comparison-label-featured">ScholrNet</div>
-          <ul class="comparison-list">
-            <li class="comparison-item comparison-yes">Internships, scholarships, hackathons, clubs</li>
-            <li class="comparison-item comparison-yes">School-verified achievements</li>
-            <li class="comparison-item comparison-yes">Shareable trust portfolio</li>
-            <li class="comparison-item comparison-yes">Academic network + mentors</li>
-            <li class="comparison-item comparison-yes">Growth analytics</li>
-          </ul>
-          <a href="{{ url_for('register') }}" class="btn-primary" style="margin-top:1.25rem;justify-content:center;">Get Started Free</a>
-        </div>
-      </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon"><i data-lucide="users"></i></div>
+      <h3>Academic network</h3>
+      <p>Connect with classmates, teachers, and mentors.</p>
     </div>
-  </section>
-
-  <!-- How It Works -->
-  <section class="section" id="how-it-works" aria-label="How It Works">
-    <div class="section-inner">
-      <h2 class="section-title">Your future in 3 steps</h2>
-      <p class="section-sub">From zero to a verified academic profile in under 5 minutes.</p>
-      <div class="steps">
-        <div class="step fade-up">
-          <div class="step-number">1</div>
-          <h3 class="step-title">Create your profile</h3>
-          <p class="step-desc">Sign up with email or Google. Add your school, grade, and interests. Takes 30 seconds.</p>
-        </div>
-        <div class="step-connector" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-        <div class="step fade-up">
-          <div class="step-number">2</div>
-          <h3 class="step-title">Add your achievements</h3>
-          <p class="step-desc">List your awards, projects, and experience. Your school verifies them with one click. Now they're official.</p>
-        </div>
-        <div class="step-connector" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </div>
-        <div class="step fade-up">
-          <div class="step-number">3</div>
-          <h3 class="step-title">Get matched</h3>
-          <p class="step-desc">Scholarships, internships, hackathons, and clubs that match your profile. No more hunting across 10 websites.</p>
-        </div>
-      </div>
+    <div class="feature-card reveal">
+      <div class="feature-icon"><i data-lucide="book-open"></i></div>
+      <h3>Trust portfolio</h3>
+      <p>A verified record of achievements, projects, and experience.</p>
     </div>
-  </section>
-
-  <!-- Live Opportunities -->
-  {% if recent_opportunities %}
-  <section class="section section-alt" id="opportunities" aria-label="Live opportunities">
-    <div class="section-inner">
-      <h2 class="section-title">Live opportunities</h2>
-      <p class="section-sub">Real internships, scholarships, and events on ScholrNet right now.</p>
-      <div class="opps-grid">
-        {% for opp in recent_opportunities %}
-        <article class="opp-card fade-up">
-          <div class="opp-tag">{{ opp.type or 'Opportunity' }}</div>
-          <h3 class="opp-title">{{ opp.name }}</h3>
-          {% if opp.provider %}<p class="opp-provider">{{ opp.provider }}</p>{% endif %}
-          {% if opp.deadline %}<p class="opp-deadline">Deadline: {{ opp.deadline }}</p>{% endif %}
-          {% if opp.prize_pool %}<p class="opp-prize">{{ opp.prize_pool }}</p>{% endif %}
-        </article>
-        {% endfor %}
-      </div>
-      <div class="section-cta">
-        <a href="{{ url_for('register') }}" class="btn-outline">View All Opportunities &rarr;</a>
-      </div>
-    </div>
-  </section>
-  {% endif %}
-
-  <!-- Featured Clubs -->
-  {% if recent_clubs %}
-  <section class="section" id="clubs" aria-label="Student clubs">
-    <div class="section-inner">
-      <h2 class="section-title">Active clubs</h2>
-      <p class="section-sub">Join student clubs, find teammates, and build together.</p>
-      <div class="clubs-grid">
-        {% for club in recent_clubs %}
-        <article class="club-card fade-up">
-          <div class="club-avatar">{{ club.name[:2]|upper }}</div>
-          <div>
-            <h3 class="club-name">{{ club.name }}</h3>
-            {% if club.member_count %}<p class="club-members">{{ club.member_count }} member{% if club.member_count != 1 %}s{% endif %}</p>{% endif %}
-          </div>
-        </article>
-        {% endfor %}
-      </div>
-      <div class="section-cta">
-        <a href="{{ url_for('register') }}" class="btn-outline">Explore Clubs &rarr;</a>
-      </div>
-    </div>
-  </section>
-  {% endif %}
-
-  <!-- Founder Story -->
-  <section class="section section-alt" id="founder" aria-label="Founder story">
-    <div class="section-inner">
-      <div class="founder fade-up">
-        <div class="founder-avatar" aria-hidden="true">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="20" fill="#6C3BF5"/><text x="20" y="24" text-anchor="middle" fill="#fff" font-size="16" font-weight="700" font-family="Inter,sans-serif">A</text></svg>
-        </div>
-        <div class="founder-content">
-          <h2 class="founder-heading">Built by a student, for students</h2>
-          <blockquote class="founder-quote">
-            "I was tired of repeating my achievements on every college application, scholarship form, and internship portal. And nobody could verify them anyway. So I built ScholrNet — a platform where your school verifies your profile once, and every opportunity sees the real you."
-          </blockquote>
-          <div class="founder-name">&mdash; Abhiraj, Founder</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section class="section" id="faq" aria-label="Frequently asked questions">
-    <div class="section-inner">
-      <h2 class="section-title">Frequently asked questions</h2>
-      <div class="faq-list" itemscope itemtype="https://schema.org/FAQPage">
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">Is ScholrNet free?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Yes. ScholrNet is completely free for students. Always. No hidden charges, no premium tiers.</div>
-          </div>
-        </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">How does achievement verification work?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Your school counselor or teacher confirms your achievements through their dashboard. It takes 2 seconds. Once verified, your profile shows a trust badge that colleges and employers recognize.</div>
-          </div>
-        </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">What if my school isn't on ScholrNet?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">You can request your school to join, or ask any teacher on the platform to verify your achievements. We're adding new schools every week.</div>
-          </div>
-        </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">Can colleges see my profile?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Yes. Your profile generates a shareable verification link. Send it with college applications, scholarship forms, or internship resumes. It's like a resume that can't lie.</div>
-          </div>
-        </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">Is my data private?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Your profile is only visible to connections you approve. Nothing is public by default except posts you choose to share on the public timeline. You control what's visible.</div>
-          </div>
-        </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">I'm a teacher. Can I verify students?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Yes. Sign up as a teacher or school counselor and you'll get a verification dashboard. You can confirm student achievements and post opportunities for your school.</div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </section>
-
-  <!-- Final CTA -->
-  <section class="section cta-section" aria-label="Call to action">
-    <div class="section-inner">
-      <h2 class="cta-title">Your next opportunity is one profile away</h2>
-      <p class="cta-sub">{% if users_count > 0 %}Join {{ users_count }} student{% if users_count != 1 %}s{% endif %} who've built their verified academic profile.{% else %}Build your verified academic profile and unlock opportunities.{% endif %}</p>
-      <div class="cta-actions">
-        <a href="{{ url_for('register') }}" class="btn-primary btn-lg">Join Free &mdash; Takes 30 Seconds &rarr;</a>
-      </div>
-      <div class="cta-email-form">
-        <p class="cta-email-label">Or get notified when new opportunities arrive:</p>
-        <form class="cta-email-inner" id="leadForm" onsubmit="return captureLead(event)">
-          <input type="text" id="leadName" placeholder="Your name" class="cta-input" autocomplete="name">
-          <input type="email" id="leadEmail" placeholder="your@email.com" class="cta-input" required autocomplete="email">
-          <button type="submit" class="btn-primary cta-submit">Get Updates</button>
-        </form>
-        <div id="leadStatus" class="cta-email-status"></div>
-      </div>
-      <div class="cta-badges">
-        <span class="cta-badge">&#10003; Free forever</span>
-        <span class="cta-badge-dot">&middot;</span>
-        <span class="cta-badge">&#10003; School-verified</span>
-        <span class="cta-badge-dot">&middot;</span>
-        <span class="cta-badge">&#10003; Privacy protected</span>
-        <span class="cta-badge-dot">&middot;</span>
-        <span class="cta-badge">&#10003; Student focused</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer" role="contentinfo">
-    <div class="footer-inner">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="24">
-          <p class="footer-desc">The academic trust network for students, teachers, and schools.</p>
-        </div>
-        <div class="footer-col">
-          <h4 class="footer-heading">Product</h4>
-          <a href="#features" class="footer-link">Features</a>
-          <a href="#how-it-works" class="footer-link">How It Works</a>
-          <a href="{{ url_for('blog_index') }}" class="footer-link">Resources</a>
-          <a href="#faq" class="footer-link">FAQ</a>
-        </div>
-        <div class="footer-col">
-          <h4 class="footer-heading">Community</h4>
-          <a href="{{ url_for('public_timeline') }}" class="footer-link">Public Timeline</a>
-          <a href="{{ url_for('register') }}" class="footer-link">Join Now</a>
-        </div>
-        <div class="footer-col">
-          <h4 class="footer-heading">Support</h4>
-          <a href="mailto:scolrnetsupport@gmail.com" class="footer-link">Contact Us</a>
-          <a href="#" class="footer-link">Privacy Policy</a>
-          <a href="#" class="footer-link">Terms of Service</a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>&copy; 2026 ScholrNet. Built for the academic community.</span>
-      </div>
-    </div>
-  </footer>
-
-  <!-- Exit Intent Modal -->
-  <div class="exit-modal" id="exitModal" role="dialog" aria-label="Don't miss opportunities">
-    <div class="exit-modal-card">
-      <button class="exit-modal-close" aria-label="Close">&times;</button>
-      <h2>Don't miss out on opportunities</h2>
-      <p>Get notified when new internships, scholarships, and programs are added — straight to your inbox.</p>
-      <form class="cta-email-inner" novalidate>
-        <input type="text" id="leadNameModal" placeholder="Your name" class="cta-input" autocomplete="name">
-        <input type="email" id="leadEmailModal" placeholder="your@email.com" class="cta-input" required autocomplete="email">
-        <button type="submit" class="cta-submit">Get Updates</button>
-      </form>
-      <div class="cta-email-status" style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;min-height:1.25rem"></div>
-      <button class="exit-no-thanks">No thanks, I'll sign up directly</button>
+    <div class="feature-card reveal">
+      <div class="feature-icon"><i data-lucide="sparkles"></i></div>
+      <h3>Opportunities</h3>
+      <p>Scholarships, internships, and events tailored to you.</p>
     </div>
   </div>
+</section>
 
-  <script src="{{ url_for('static', filename='js/landing.js') }}?v=5"></script>
+<section class="cta-section">
+  <h2 class="reveal">Ready to begin?</h2>
+  <p class="reveal">Join ScholrNet and build your academic future.</p>
+  <a href="{{ url_for('register') }}" class="btn-primary ripple reveal">Get Started</a>
+  <div class="footer-bar">
+    &copy; 2026 ScholrNet &middot; <a href="{{ url_for('public_timeline') }}">Public Timeline</a> &middot; <a href="mailto:scolrnetsupport@gmail.com">Contact</a>
+  </div>
+</section>
+
+<script src="{{ url_for('static', filename='js/landing.js') }}"></script>
 </body>
 </html>

@@ -496,14 +496,3 @@ body { padding-top: 6.5rem; }
 .typing-dot:nth-child(2) { animation-delay:0.2s; }
 .typing-dot:nth-child(3) { animation-delay:0.4s; }
 @keyframes typingBounce { 0%,60%,100% { transform:translateY(0); opacity:0.4; } 30% { transform:translateY(-4px); opacity:1; } }
-
-/* App Footer */
-.app-footer{border-top:1px solid var(--border);background:var(--bg-card);padding:0.75rem 1rem}
-.app-footer-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
-.app-footer-brand{display:flex;align-items:center;gap:0.5rem}
-.app-footer-brand img{opacity:0.5}
-.app-footer-text{font-size:0.7rem;color:var(--text-muted)}
-.app-footer-links{display:flex;align-items:center;gap:1rem}
-.app-footer-links a{font-size:0.7rem;color:var(--text-muted);text-decoration:none;transition:color 0.15s}
-.app-footer-links a:hover{color:var(--text)}
-.app-footer-copy{font-size:0.7rem;color:var(--text-light)}
