@@ -18,7 +18,7 @@
       <div class="stats-grid">
         <div class="stat-box"><div class="stat-num" id="statAchievements">0</div><div class="stat-label">Verify</div></div>
         <div class="stat-box"><div class="stat-num" id="statProjects">0</div><div class="stat-label">Projects</div></div>
-        <div class="stat-box"><div class="stat-num" id="statCollabs">0</div><div class="stat-label">Collabs</div></div>
+        <div class="stat-box"><div class="stat-num" id="statFriendsFeed">0</div><div class="stat-label">Friends</div></div>
       </div>
     </div>
 
@@ -463,7 +463,10 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(function(data) {
         document.getElementById('statAchievements').textContent = data.verified_achievements || 0;
         document.getElementById('statProjects').textContent = data.projects || 0;
-        document.getElementById('statCollabs').textContent = data.collaborations || 0;
+        if (data.friends !== undefined) {
+          var fc = document.getElementById('statFriendsFeed');
+          if (fc) fc.textContent = data.friends;
+        }
         document.getElementById('trustCount').textContent = data.verified_achievements || 0;
         document.getElementById('trustScore').textContent = data.trust_score || '--';
       })

@@ -390,6 +390,59 @@ def register_routes(app, bcrypt, login_manager, limiter):
         except Exception as e:
             print(f"AUTO-MIGRATE: {e}, continuing")
 
+    # Fix duplicate connections and ensure constraints
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text("SET client_min_messages TO warning"))
+            # Remove self-connections
+            conn.execute(text("DELETE FROM connections WHERE user_id = connected_user_id"))
+            # Remove exact duplicates keeping lowest id per (user_id, connected_user_id)
+            conn.execute(text("""
+                DELETE FROM connections WHERE id NOT IN (
+                    SELECT MIN(id) FROM connections GROUP BY user_id, connected_user_id
+                )
+            """))
+            # Remove swapped duplicates keeping lowest id per unordered pair
+            conn.execute(text("""
+                DELETE FROM connections WHERE id IN (
+                    SELECT c1.id FROM connections c1
+                    INNER JOIN connections c2 ON (
+                        c1.user_id = c2.connected_user_id AND c1.connected_user_id = c2.user_id
+                    )
+                    WHERE c1.id > c2.id
+                )
+            """))
+            conn.commit()
+        print("AUTO-MIGRATE: Cleaned duplicate connections")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: connection cleanup failed: {e}")
+
+    # Recalculate all club member_counts from actual ClubMember rows
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("""
+                UPDATE clubs SET member_count = (
+                    SELECT COUNT(*) FROM club_members WHERE club_members.club_id = clubs.id
+                )
+            """))
+            conn.commit()
+        print("AUTO-MIGRATE: Recalculated club member_counts")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: club member_count recalculation failed: {e}")
+
+    # Add unique index on connections to prevent duplicate friendships at DB level
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_connections_unique
+                ON connections(user_id, connected_user_id)
+            """))
+            conn.commit()
+        print("AUTO-MIGRATE: Added unique index on connections")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: connections unique index failed: {e}")
+
     @app.context_processor
     def inject_globals():
         return {'schools': []}
@@ -1749,7 +1802,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({'success': True, 'pending': True, 'message': 'Join request sent. Waiting for approval.'})
         mem = ClubMember(club_id=club_id, user_id=current_user.id, role='member', joined_at=jnow())
         db.session.add(mem)
-        club.member_count = (club.member_count or 0) + 1
+        club.member_count = ClubMember.query.filter_by(club_id=club_id).count()
         db.session.commit()
         return jsonify({'success': True, 'member_count': club.member_count})
 
@@ -1764,7 +1817,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if mem.role == 'owner':
             return jsonify({'error': 'Owner cannot leave. Transfer ownership or delete the club.'}), 400
         db.session.delete(mem)
-        club.member_count = max(0, (club.member_count or 1) - 1)
+        club.member_count = ClubMember.query.filter_by(club_id=club_id).count()
         db.session.commit()
         return jsonify({'success': True, 'member_count': club.member_count})
 
@@ -1893,7 +1946,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not existing:
             new_mem = ClubMember(club_id=club_id, user_id=req.user_id, role='member', joined_at=jnow())
             db.session.add(new_mem)
-            club.member_count = (club.member_count or 0) + 1
+        club.member_count = ClubMember.query.filter_by(club_id=club_id).count()
         db.session.commit()
         return jsonify({'success': True, 'member_count': club.member_count})
 
@@ -2309,13 +2362,23 @@ def register_routes(app, bcrypt, login_manager, limiter):
             'has_more': has_more
         })
 
+    def _friend_count(user_id):
+        sent = Connection.query.filter_by(user_id=user_id, status='accepted').all()
+        received = Connection.query.filter_by(connected_user_id=user_id, status='accepted').all()
+        ids = set()
+        for c in sent: ids.add(c.connected_user_id)
+        for c in received: ids.add(c.user_id)
+        return len(ids)
+
     @app.route('/api/user/stats')
     @login_required
     def api_user_stats():
         v_count = Achievement.query.filter_by(user_id=current_user.id, verification_status='Verified').count()
         p_count = Project.query.filter_by(user_id=current_user.id).count()
-        f_count = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').count() + Connection.query.filter_by(user_id=current_user.id, status='accepted').count()
-        return jsonify({'verified_achievements': v_count, 'projects': p_count, 'collaborations': 0, 'friends': f_count})
+        f_count = _friend_count(current_user.id)
+        c_count = ClubMember.query.filter_by(user_id=current_user.id).count()
+        a_count = Achievement.query.filter_by(user_id=current_user.id).count()
+        return jsonify({'verified_achievements': v_count, 'projects': p_count, 'clubs': c_count, 'friends': f_count, 'achievements': a_count, 'collaborations': 0})
 
     @app.route('/api/user/<int:user_id>/profile')
     @login_required
@@ -2325,7 +2388,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({'error': 'User not found'}), 404
         v_count = Achievement.query.filter_by(user_id=user_id, verification_status='Verified').count()
         p_count = Project.query.filter_by(user_id=user_id).count()
-        f_count = Connection.query.filter_by(connected_user_id=user_id, status='accepted').count() + Connection.query.filter_by(user_id=user_id, status='accepted').count()
+        f_count = _friend_count(user_id)
+        c_count = ClubMember.query.filter_by(user_id=user_id).count()
+        a_count = Achievement.query.filter_by(user_id=user_id).count()
         friend_status = 'none'
         conn = Connection.query.filter(
             ((Connection.user_id == current_user.id) & (Connection.connected_user_id == user_id)) |
@@ -2351,7 +2416,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
             'avatar_url': puser.avatar_url or '',
             'role': puser.role or 'student', 'grade': puser.grade or '',
             'verified_achievements': v_count, 'projects': p_count,
-            'collaborations': 0, 'friends': f_count,
+            'clubs': c_count, 'friends': f_count,
+            'achievements': a_count, 'collaborations': 0,
             'skills': skills, 'friend_status': friend_status
         })
 
@@ -2549,8 +2615,19 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({'error': 'Invalid user'}), 400
         if not User.query.get(target_id):
             return jsonify({'error': 'User not found'}), 404
-        existing = Connection.query.filter_by(user_id=current_user.id, connected_user_id=target_id).first()
+        existing = Connection.query.filter(
+            ((Connection.user_id == current_user.id) & (Connection.connected_user_id == target_id)) |
+            ((Connection.user_id == target_id) & (Connection.connected_user_id == current_user.id))
+        ).first()
         if existing:
+            if existing.status == 'accepted':
+                return jsonify({'error': 'Already friends'}), 400
+            if existing.user_id == target_id and existing.connected_user_id == current_user.id:
+                existing.status = 'accepted'
+                n = Notification(user_id=target_id, title=f"{sanitize_text(current_user.name, 100)} accepted your friend request", type="friend_accept", from_user=current_user.name)
+                db.session.add(n)
+                db.session.commit()
+                return jsonify({'success': True, 'accepted': True})
             return jsonify({'error': 'Request already exists'}), 400
         conn = Connection(user_id=current_user.id, connected_user_id=target_id, status='pending')
         db.session.add(conn)
@@ -2629,18 +2706,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_toggle_connection():
         data = request.json or {}
         other_id = data.get('user_id')
-        if not other_id:
-            return jsonify({'error': 'user_id required'}), 400
-        existing = Connection.query.filter_by(user_id=current_user.id, connected_user_id=other_id).first()
-        if existing:
-            db.session.delete(existing)
-            connected = False
-        else:
-            conn = Connection(user_id=current_user.id, connected_user_id=other_id, status='accepted')
-            db.session.add(conn)
-            connected = True
+        if not other_id or other_id == current_user.id:
+            return jsonify({'error': 'Invalid user'}), 400
+        existing = Connection.query.filter(
+            ((Connection.user_id == current_user.id) & (Connection.connected_user_id == other_id)) |
+            ((Connection.user_id == other_id) & (Connection.connected_user_id == current_user.id))
+        ).all()
+        for c in existing:
+            db.session.delete(c)
         db.session.commit()
-        return jsonify({'success': True, 'connected': connected})
+        return jsonify({'success': True, 'connected': False})
 
     @app.route('/api/profile/update', methods=['POST'])
     @login_required

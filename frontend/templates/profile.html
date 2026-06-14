@@ -25,10 +25,10 @@
     </div>
     <div class="skills" id="profileSkills"></div>
     <div class="stats-grid">
-      <div class="stat-box"><div class="stat-num" id="pStatVerified">0</div><div class="stat-label">Verified</div></div>
-      <div class="stat-box"><div class="stat-num" id="pStatProjects">0</div><div class="stat-label">Projects</div></div>
-      <div class="stat-box"><div class="stat-num" id="pStatCollabs">0</div><div class="stat-label">Collabs</div></div>
-      <div class="stat-box"><div class="stat-num" id="pStatFriends">0</div><div class="stat-label">Friends</div></div>
+      <div class="stat-box"><div class="stat-num" id="pStatVerified"><span class="skeleton-loader" style="width:2rem;height:1.5rem;display:inline-block;"></span></div><div class="stat-label">Verified</div></div>
+      <div class="stat-box"><div class="stat-num" id="pStatProjects"><span class="skeleton-loader" style="width:2rem;height:1.5rem;display:inline-block;"></span></div><div class="stat-label">Projects</div></div>
+      <div class="stat-box"><div class="stat-num" id="pStatClubs"><span class="skeleton-loader" style="width:2rem;height:1.5rem;display:inline-block;"></span></div><div class="stat-label">Clubs</div></div>
+      <div class="stat-box"><div class="stat-num" id="pStatFriends"><span class="skeleton-loader" style="width:2rem;height:1.5rem;display:inline-block;"></span></div><div class="stat-label">Friends</div></div>
     </div>
     <!-- Friend Action Button + Message (for other users) -->
   {% if not is_own %}
@@ -352,7 +352,7 @@
       <span class="font-bold text-sm">Connections</span>
       <span id="friendsCount" class="text-xs text-muted">0</span>
     </div>
-    <div id="friendsList"></div>
+    <div id="friendsList"><div class="text-center text-muted text-sm py-4"><span class="skeleton-loader" style="width:12rem;height:1rem;display:inline-block;margin-bottom:0.5rem;"></span></div></div>
   </div>
 
   <!-- Clubs -->
@@ -364,7 +364,7 @@
       </div>
       <a href="{{ url_for('clubs_page') }}" class="btn btn-ghost btn-xs"><i data-lucide="plus" style="width:12px;height:12px;"></i> Browse</a>
     </div>
-    <div id="profileClubsList"></div>
+    <div id="profileClubsList"><div class="text-center text-muted text-sm py-4"><span class="skeleton-loader" style="width:10rem;height:1rem;display:inline-block;"></span></div></div>
   </div>
 </div>
 
@@ -577,7 +577,10 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(function(data) {
         document.getElementById('pStatVerified').textContent = data.verified_achievements || 0;
         document.getElementById('pStatProjects').textContent = data.projects || 0;
-        document.getElementById('pStatCollabs').textContent = data.collaborations || 0;
+        if (data.clubs !== undefined) {
+          var cc = document.getElementById('pStatClubs');
+          if (cc) cc.textContent = data.clubs;
+        }
         if (data.friends !== undefined) {
           var fc = document.getElementById('pStatFriends');
           if (fc) fc.textContent = data.friends;
@@ -860,7 +863,7 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/user/' + puserId + '/clubs')
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        var list = document.getElementById('clubsList');
+        var list = document.getElementById('profileClubsList');
         if (!list) return;
         list.innerHTML = '';
         if (d.clubs && d.clubs.length > 0) {
@@ -936,7 +939,14 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(function(r) { return r.json(); })
         .then(function(d) {
-          if (d.success) {
+          if (d.accepted) {
+            showToast('Friend request accepted!', 'success');
+            friendBtn.innerHTML = 'Friends <i data-lucide="check" style="width:14px;height:14px;"></i>';
+            friendBtn.setAttribute('data-friend-status', 'friends');
+            lucide.createIcons();
+            loadFriends();
+            loadProfile();
+          } else if (d.success) {
             showToast('Friend request sent!', 'success');
             friendBtn.innerHTML = 'Request Sent <i data-lucide="clock" style="width:14px;height:14px;"></i>';
             friendBtn.setAttribute('data-friend-status', 'pending_sent');
@@ -959,10 +969,25 @@ document.addEventListener('DOMContentLoaded', function() {
             friendBtn.setAttribute('data-friend-status', 'none');
             lucide.createIcons();
             loadFriends();
+            loadProfile();
           }
         });
       } else if (status === 'pending_sent') {
-        showToast('Request already sent', 'info');
+        if (!confirm('Cancel friend request to ' + puserName + '?')) return;
+        fetch('/api/connection/toggle', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({user_id: puserId})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) {
+            showToast('Request cancelled', 'info');
+            friendBtn.innerHTML = 'Add Friend <i data-lucide="user-plus" style="width:14px;height:14px;"></i>';
+            friendBtn.setAttribute('data-friend-status', 'none');
+            lucide.createIcons();
+          }
+        });
       } else if (status === 'pending_received') {
         fetch('/api/friend/requests')
           .then(function(r) { return r.json(); })
@@ -981,6 +1006,8 @@ document.addEventListener('DOMContentLoaded', function() {
                   friendBtn.innerHTML = 'Friends <i data-lucide="check" style="width:14px;height:14px;"></i>';
                   friendBtn.setAttribute('data-friend-status', 'friends');
                   lucide.createIcons();
+                  loadFriends();
+                  loadProfile();
                 }
               });
             }
