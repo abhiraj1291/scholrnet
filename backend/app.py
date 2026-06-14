@@ -576,12 +576,20 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def index():
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
-        schools_count = School.query.count()
-        users_count = User.query.count()
-        clubs_count = Club.query.count()
-        opportunities_count = Opportunity.query.count()
-        recent_opportunities = Opportunity.query.order_by(Opportunity.id.desc()).limit(3).all()
-        recent_clubs = Club.query.order_by(Club.id.desc()).limit(3).all()
+        try:
+            schools_count = School.query.count()
+            users_count = User.query.count()
+            clubs_count = Club.query.count()
+            opportunities_count = Opportunity.query.count()
+            recent_opportunities = Opportunity.query.order_by(Opportunity.id.desc()).limit(3).all()
+            recent_clubs = Club.query.order_by(Club.id.desc()).limit(3).all()
+        except Exception:
+            schools_count = 0
+            users_count = 0
+            clubs_count = 0
+            opportunities_count = 0
+            recent_opportunities = []
+            recent_clubs = []
         return render_template('landing.html',
             schools_count=schools_count,
             users_count=users_count,
