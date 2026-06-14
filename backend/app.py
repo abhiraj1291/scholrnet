@@ -431,17 +431,21 @@ def register_routes(app, bcrypt, login_manager, limiter):
     except Exception as e:
         print(f"AUTO-MIGRATE: club member_count recalculation failed: {e}")
 
-    # Add unique index on connections to prevent duplicate friendships at DB level
+    # Add unique indexes on connections to prevent duplicate friendships at DB level
     try:
         with db.engine.connect() as conn:
             conn.execute(text("""
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_connections_unique
                 ON connections(user_id, connected_user_id)
             """))
+            conn.execute(text("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_connections_pair
+                ON connections(LEAST(user_id, connected_user_id), GREATEST(user_id, connected_user_id))
+            """))
             conn.commit()
-        print("AUTO-MIGRATE: Added unique index on connections")
+        print("AUTO-MIGRATE: Added unique indexes on connections")
     except Exception as e:
-        print(f"AUTO-MIGRATE: connections unique index failed: {e}")
+        print(f"AUTO-MIGRATE: connections unique indexes failed: {e}")
 
     @app.context_processor
     def inject_globals():
