@@ -66,7 +66,28 @@ def add_security_headers(response):
 
 from app import register_routes, enable_rls
 
-with app.app_context():
-    db.create_all()
-    enable_rls()
-    register_routes(app, bcrypt, login_manager, limiter)
+_startup_ok = False
+_startup_error = None
+try:
+    with app.app_context():
+        db.create_all()
+        enable_rls()
+        register_routes(app, bcrypt, login_manager, limiter)
+    _startup_ok = True
+except Exception as e:
+    import traceback
+    _startup_error = traceback.format_exc()
+    print(f"CRITICAL STARTUP ERROR: {_startup_error}", file=sys.stderr)
+
+if not _startup_ok:
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def fallback(path):
+        return f"""<!DOCTYPE html><html><head><title>ScholrNet</title><meta charset="utf-8">
+<style>body{{font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6f9}}
+.card{{max-width:480px;padding:2rem;text-align:center;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}}
+h1{{font-size:1.5rem;color:#1a2744}}p{{color:#5a6a7a;font-size:0.9rem;line-height:1.6}}</style></head>
+<body><div class="card"><h1>ScholrNet</h1>
+<p>We're doing some maintenance. Check back in a few minutes.</p>
+<pre style="font-size:0.7rem;color:#9aa6b5;margin-top:1rem;text-align:left;max-height:200px;overflow:auto">{_startup_error[:500] if _startup_error else 'Unknown error'}</pre>
+</div></body></html>""", 503
