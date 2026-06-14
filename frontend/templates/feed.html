@@ -170,6 +170,28 @@
 
 <script>
 var CURRENT_USER_ID = {{ user.id }};
+
+function fetchWithRetry(url, retries, delay) {
+  if (retries === undefined) retries = 2;
+  if (delay === undefined) delay = 2000;
+  return new Promise(function(resolve, reject) {
+    function attempt(n) {
+      fetch(url)
+        .then(function(r) {
+          var ct = r.headers.get('content-type') || '';
+          if (ct.indexOf('application/json') === -1) throw new Error('Not JSON');
+          return r.json();
+        })
+        .then(function(d) { resolve(d); })
+        .catch(function(e) {
+          if (n > 0) { setTimeout(function() { attempt(n - 1); }, delay); }
+          else { reject(e); }
+        });
+    }
+    attempt(retries);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   var page = 1;
   var loading = false;
@@ -459,8 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Load sidebar data
   function loadSidebar() {
-    fetch('/api/user/stats')
-      .then(function(r) { return r.json(); })
+    fetchWithRetry('/api/user/stats')
       .then(function(data) {
         document.getElementById('statAchievements').textContent = data.verified_achievements || 0;
         document.getElementById('statProjects').textContent = data.projects || 0;
@@ -475,7 +496,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('trustCount').textContent = data.verified_achievements || 0;
         document.getElementById('trustScore').textContent = data.trust_score || '--';
       })
-      .catch(function() {});
+      .catch(function() {
+        ['statAchievements','statProjects','statClubsFeed','statFriendsFeed'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = '--';
+        });
+      });
   }
 
   // Load ads

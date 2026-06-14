@@ -374,6 +374,30 @@ var puserName = '{{ puser.name|replace("'", "\\'") }}';
 var puserAvatar = '{{ puser.avatar or "" }}';
 var puserAvatarUrl = '{{ puser.avatar_url or "" }}';
 var isOwn = {{ 'true' if is_own else 'false' }};
+
+function fetchWithRetry(url, retries, delay) {
+  if (retries === undefined) retries = 2;
+  if (delay === undefined) delay = 2000;
+  return new Promise(function(resolve, reject) {
+    function attempt(n) {
+      fetch(url)
+        .then(function(r) {
+          var ct = r.headers.get('content-type') || '';
+          if (ct.indexOf('application/json') === -1) {
+            throw new Error('Not JSON');
+          }
+          return r.json();
+        })
+        .then(function(d) { resolve(d); })
+        .catch(function(e) {
+          if (n > 0) { setTimeout(function() { attempt(n - 1); }, delay); }
+          else { reject(e); }
+        });
+    }
+    attempt(retries);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   {% if is_own %}
   // Toggle achievement form
@@ -572,8 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Load profile skills & stats
   function loadProfile() {
     var url = isOwn ? '/api/user/stats' : '/api/user/' + puserId + '/profile';
-    fetch(url)
-      .then(function(r) { return r.json(); })
+    fetchWithRetry(url)
       .then(function(data) {
         document.getElementById('pStatVerified').textContent = data.verified_achievements || 0;
         document.getElementById('pStatProjects').textContent = data.projects || 0;
@@ -590,7 +613,14 @@ document.addEventListener('DOMContentLoaded', function() {
           skillsEl.innerHTML = data.skills.map(function(s) { return '<span class="skill">' + s + '</span>'; }).join('');
         }
       })
-      .catch(function() {});
+      .catch(function() {
+        ['pStatVerified','pStatProjects','pStatClubs','pStatFriends'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el && el.querySelector('.skeleton-loader')) {
+            el.textContent = '--';
+          }
+        });
+      });
   }
 
   {% if is_own %}

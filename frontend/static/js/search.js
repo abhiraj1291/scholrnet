@@ -73,7 +73,8 @@ function doSearch(q, callback) {
       if (data.schools && data.schools.length) {
         html += '<div class="p-3"><div class="text-xs font-bold text-muted mb-2">Schools</div>';
         data.schools.forEach(function(s) {
-          html += '<div class="flex items-center gap-2 p-2" style="border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'"><span class="text-sm">\uD83C\uDFEB</span><div><div class="text-xs font-bold">' + s.name + '</div><div class="text-xs text-muted">' + (s.location || '') + '</div></div></div>';
+          var slug = s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'school';
+          html += '<a href="/school/' + s.id + '/' + slug + '" class="flex items-center gap-2 p-2" style="text-decoration:none;color:inherit;border-radius:8px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'"><span class="text-sm">\uD83C\uDFEB</span><div><div class="text-xs font-bold">' + s.name + '</div><div class="text-xs text-muted">' + (s.location || '') + '</div></div></a>';
         });
         html += '</div>';
       }
