@@ -11,13 +11,23 @@ class Config:
 
     _db_url = os.environ.get("DATABASE_URL")
     if _db_url and _db_url.startswith("postgresql"):
-        # Ensure SSL for cloud PostgreSQL (Supabase)
         if "sslmode" not in _db_url:
-            _db_url += "?sslmode=require"
+            sep = "&" if "?" in _db_url else "?"
+            _db_url += f"{sep}sslmode=require"
         SQLALCHEMY_DATABASE_URI = _db_url
     else:
         SQLALCHEMY_DATABASE_URI = _db_url or f"sqlite:///{os.path.join(BASE_DIR, 'backend', 'scholrnet.db')}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'connect_args': {
+            'keepalives': 1,
+            'keepalives_idle': 30,
+            'keepalives_interval': 10,
+            'keepalives_count': 5,
+        }
+    }
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 

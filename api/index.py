@@ -69,7 +69,18 @@ from app import register_routes, enable_rls
 _startup_error = None
 try:
     with app.app_context():
-        db.create_all()
+        import time
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                db.create_all()
+                break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"DB CONNECT ATTEMPT {attempt + 1} FAILED, retrying in 2s: {e}")
+                    time.sleep(2)
+                else:
+                    raise
         enable_rls()
         register_routes(app, bcrypt, login_manager, limiter)
 except Exception as e:
