@@ -2518,16 +2518,31 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 diff = (datetime.utcnow() - typing_ts).total_seconds()
                 is_typing = diff < 4
             return jsonify({'messages': [{'id': m.id, 'sender_id': m.sender_id, 'text': m.text, 'timestamp': m.timestamp, 'is_read': m.is_read} for m in msgs], 'is_typing': is_typing})
+        # Gather user contacts ordered by latest message
         msgs = ChatMessage.query.filter((ChatMessage.sender_id == current_user.id) | (ChatMessage.receiver_id == current_user.id)).order_by(ChatMessage.timestamp.desc()).limit(200).all()
-        cids = set()
+        ordered_ids = []
+        seen = set()
         for m in msgs:
             other = m.receiver_id if m.sender_id == current_user.id else m.sender_id
-            cids.add(other)
-        if cids:
-            users = {u.id: u for u in User.query.filter(User.id.in_(cids)).all()}
-            contacts = [{'id': u.id, 'name': u.name, 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'school': u.school, 'role': u.role, 'username': u.username, 'verified': _is_verified(u)} for u in users.values()]
-        else:
-            contacts = []
+            if other not in seen:
+                seen.add(other)
+                ordered_ids.append(other)
+        contacts = []
+        if ordered_ids:
+            users = {u.id: u for u in User.query.filter(User.id.in_(ordered_ids)).all()}
+            for uid in ordered_ids:
+                u = users.get(uid)
+                if u:
+                    contacts.append({'id': u.id, 'name': u.name, 'type': 'user', 'avatar': u.avatar or "".join(p[0] for p in u.name.split() if p)[:2].upper(), 'avatar_url': u.avatar_url or '', 'school': u.school, 'role': u.role, 'username': u.username, 'verified': _is_verified(u)})
+        # Gather club conversations the user is a member of
+        my_clubs = ClubMember.query.filter_by(user_id=current_user.id).all()
+        if my_clubs:
+            club_ids = [cm.club_id for cm in my_clubs]
+            clubs = {c.id: c for c in Club.query.filter(Club.id.in_(club_ids)).all()}
+            for cm in my_clubs:
+                c = clubs.get(cm.club_id)
+                if c:
+                    contacts.append({'id': c.id, 'name': c.name, 'type': 'club', 'avatar': (c.avatar or '')[:2].upper() if c.avatar else c.name[:2].upper(), 'avatar_url': '', 'school': '', 'role': 'club', 'username': '', 'verified': False, 'member_count': c.member_count or 0})
         return jsonify({'contacts': contacts})
 
     @app.route('/api/messages/typing', methods=['POST'])

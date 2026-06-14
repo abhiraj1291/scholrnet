@@ -63,6 +63,7 @@
   }
   </script>
   <script>
+  var CURRENT_USER_ID = {{ current_user.id }};
   function escapeHtml(s) {
     if (typeof s !== 'string') return s || '';
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
