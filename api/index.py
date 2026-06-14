@@ -64,21 +64,7 @@ def add_security_headers(response):
         response.headers['Cache-Control'] = 'public, max-age=86400'
     return response
 
-from app import register_routes, enable_rls
+from app import register_routes
 
-# Always register routes first so the app can serve requests even if DB is cold
 with app.app_context():
     register_routes(app, bcrypt, login_manager, limiter)
-
-# Then attempt DB connection + migrations (best-effort, won't crash the app)
-_db_init_error = None
-try:
-    with app.app_context():
-        db.create_all()
-        enable_rls()
-except Exception as e:
-    import traceback
-    _db_init_error = traceback.format_exc()
-    print(f"DB INIT WARNING (non-fatal): {_db_init_error}", file=sys.stderr)
-
-
