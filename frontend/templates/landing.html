@@ -73,6 +73,7 @@
         <a href="#features" class="nav-link">Features</a>
         <a href="#how-it-works" class="nav-link">How It Works</a>
         <a href="{{ url_for('blog_index') }}" class="nav-link">Resources</a>
+        <a href="{{ url_for('about_page') }}" class="nav-link">About</a>
         <a href="#faq" class="nav-link">FAQ</a>
       </div>
       <div class="nav-actions">
@@ -87,6 +88,7 @@
       <a href="#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
       <a href="#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
       <a href="{{ url_for('blog_index') }}" class="nav-link" onclick="toggleMobileNav()">Resources</a>
+      <a href="{{ url_for('about_page') }}" class="nav-link" onclick="toggleMobileNav()">About</a>
       <a href="#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
       <div class="nav-mobile-actions">
         <a href="{{ url_for('login') }}" class="btn-ghost" onclick="toggleMobileNav()">Sign In</a>
@@ -445,6 +447,10 @@
           <a href="#how-it-works" class="footer-link">How It Works</a>
           <a href="{{ url_for('blog_index') }}" class="footer-link">Resources</a>
           <a href="#faq" class="footer-link">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Company</h4>
+          <a href="{{ url_for('about_page') }}" class="footer-link">About Us</a>
         </div>
         <div class="footer-col">
           <h4 class="footer-heading">Community</h4>

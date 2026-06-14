@@ -603,6 +603,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
             recent_clubs=recent_clubs
         )
 
+    @app.route('/about')
+    def about_page():
+        return render_template('about.html')
+
     @app.route('/api/leads', methods=['POST'])
     def api_lead_capture():
         try:

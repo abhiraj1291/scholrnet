@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About ScholrNet — Our Story & Mission</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <meta name="description" content="ScholrNet helps students discover internships, scholarships, hackathons, and research opportunities — with a school-verified profile that opens doors.">
+  <meta property="og:title" content="About ScholrNet — Our Story & Mission">
+  <meta property="og:description" content="Learn why ScholrNet was built, meet the founder, and join thousands of students building their academic future.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://scholrnet.in/about">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="About ScholrNet — Our Story & Mission">
+  <meta name="twitter:description" content="Learn why ScholrNet was built, meet the founder, and join thousands of students building their academic future.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "About ScholrNet",
+    "description": "ScholrNet helps students discover internships, scholarships, hackathons, competitions, and research opportunities with a school-verified profile.",
+    "url": "https://scholrnet.in/about",
+    "mainEntity": {
+      "@type": "Organization",
+      "name": "ScholrNet",
+      "url": "https://scholrnet.in",
+      "foundingDate": "2025",
+      "founder": {"@type": "Person", "name": "Abhiraj"},
+      "description": "Student platform for discovering opportunities and building verified academic profiles."
+    }
+  }
+  </script>
+  <style>
+    .about-hero{min-height:50vh;display:flex;align-items:center;justify-content:center;padding:4rem 1.5rem;background:linear-gradient(180deg,#fff 0%,var(--bg-alt) 100%);text-align:center}
+    .about-hero h1{font-size:clamp(2rem,4vw,3rem);font-weight:800;letter-spacing:-0.03em;line-height:1.15;margin-bottom:1rem}
+    .about-hero p{font-size:clamp(1rem,1.2vw,1.1rem);color:var(--text-secondary);max-width:560px;margin:0 auto;line-height:1.7}
+    .about-section{padding:5rem 1.5rem}
+    .about-section:nth-child(even){background:var(--bg-alt)}
+    .about-inner{max-width:var(--max-width);margin:0 auto}
+    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center}
+    .about-label{display:inline-block;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary);margin-bottom:0.75rem}
+    .about-title{font-size:clamp(1.4rem,2.5vw,1.85rem);font-weight:800;letter-spacing:-0.02em;line-height:1.3;margin-bottom:1rem;color:var(--text)}
+    .about-text{font-size:0.95rem;color:var(--text-secondary);line-height:1.75;margin-bottom:1rem}
+    .about-text:last-child{margin-bottom:0}
+    .about-visual{display:flex;align-items:center;justify-content:center}
+    .about-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-md)}
+    .about-mission{text-align:center;padding:5rem 1.5rem;background:linear-gradient(135deg,var(--primary),#8B6CFF);color:#fff}
+    .about-mission h2{font-size:clamp(1.5rem,2.5vw,2rem);font-weight:800;letter-spacing:-0.02em;margin-bottom:1rem}
+    .about-mission p{font-size:1rem;line-height:1.7;max-width:640px;margin:0 auto 2rem;opacity:0.9}
+    .about-mission-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:720px;margin:0 auto;text-align:left}
+    .about-mission-item{background:rgba(255,255,255,0.1);border-radius:var(--radius-md);padding:1.5rem;backdrop-filter:blur(4px)}
+    .about-mission-item h3{font-size:0.85rem;font-weight:700;margin-bottom:0.5rem;letter-spacing:0.02em}
+    .about-mission-item p{font-size:0.85rem;opacity:0.85;margin:0;line-height:1.6}
+    .founder-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start}
+    .founder-avatar{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#8B6CFF);display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.5rem;font-weight:800;margin-bottom:1.5rem;flex-shrink:0}
+    .founder-name{font-size:1.35rem;font-weight:800;color:var(--text);margin-bottom:0.25rem}
+    .founder-title{font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem}
+    .founder-bio{font-size:0.95rem;color:var(--text-secondary);line-height:1.75;margin-bottom:1rem}
+    .founder-quote{border-left:3px solid var(--primary);padding:1rem 1.25rem;margin:1.5rem 0;background:var(--primary-light);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+    .founder-quote p{font-size:0.95rem;font-style:italic;color:var(--text);margin:0;line-height:1.6}
+    .founder-quote cite{display:block;font-size:0.8rem;font-style:normal;color:var(--text-muted);margin-top:0.5rem}
+    .section-centered{text-align:center}
+    .about-values{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:2rem}
+    .about-value{border:1px solid var(--border-light);border-radius:var(--radius-md);padding:1.5rem;background:var(--bg-card);box-shadow:var(--shadow-sm)}
+    .about-value h3{font-size:0.9rem;font-weight:700;margin-bottom:0.5rem;color:var(--text)}
+    .about-value p{font-size:0.85rem;color:var(--text-muted);line-height:1.6;margin:0}
+    .about-cta{text-align:center;padding:5rem 1.5rem;background:linear-gradient(180deg,var(--bg-alt) 0%,#fff 100%)}
+    .about-cta h2{font-size:clamp(1.5rem,2.5vw,2rem);font-weight:800;letter-spacing:-0.02em;margin-bottom:0.75rem}
+    .about-cta p{font-size:1rem;color:var(--text-secondary);max-width:480px;margin:0 auto 1.75rem;line-height:1.7}
+    .about-cta .btn-primary.btn-lg{box-shadow:0 4px 14px rgba(108,59,245,0.3)}
+    .about-team-text{font-size:0.95rem;color:var(--text-secondary);line-height:1.75;max-width:600px;margin:1rem auto 0}
+    @media(max-width:48rem){
+      .about-grid{grid-template-columns:1fr;gap:2rem}
+      .about-section{padding:3rem 1.5rem}
+      .about-mission-grid{grid-template-columns:1fr}
+      .about-values{grid-template-columns:1fr}
+      .founder-grid{grid-template-columns:1fr;gap:2rem}
+      .about-hero{padding:3rem 1.5rem}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo" aria-label="ScholrNet Home">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
+      </a>
+      <div class="nav-links">
+        <a href="/#features" class="nav-link">Features</a>
+        <a href="/#how-it-works" class="nav-link">How It Works</a>
+        <a href="/blog" class="nav-link">Resources</a>
+        <a href="/about" class="nav-link">About</a>
+        <a href="/#faq" class="nav-link">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+      </div>
+      <button class="nav-mobile-toggle" aria-label="Toggle menu" onclick="toggleMobileNav()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="nav-mobile hidden" id="mobileNav">
+      <a href="/#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
+      <a href="/#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
+      <a href="/blog" class="nav-link" onclick="toggleMobileNav()">Resources</a>
+      <a href="/about" class="nav-link" onclick="toggleMobileNav()">About</a>
+      <a href="/#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
+      <div class="nav-mobile-actions">
+        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="about-hero">
+    <div>
+      <span class="about-label">About Us</span>
+      <h1>Building the academic<br>trust network for students</h1>
+      <p>ScholrNet is a student-built platform that helps ambitious students discover opportunities and build verified academic profiles — all in one place.</p>
+    </div>
+  </section>
+
+  <!-- Our Story -->
+  <section class="about-section">
+    <div class="about-inner">
+      <div class="about-grid">
+        <div>
+          <span class="about-label">Our Story</span>
+          <h2 class="about-title">It started with a simple observation</h2>
+          <p class="about-text">Students were missing opportunities — not because they weren't qualified, but because the opportunities were scattered across dozens of websites, WhatsApp groups, and social media channels. A scholarship deadline passed while a student was studying for exams. An internship application closed before anyone even knew it existed.</p>
+          <p class="about-text">At the same time, students were building impressive portfolios — winning competitions, leading projects, earning certifications — but had no way to present them credibly. A college application or internship resume listed achievements with no proof behind them.</p>
+          <p class="about-text">ScholrNet was built to solve both problems: a single place to find opportunities, and a verified profile that makes every achievement count.</p>
+        </div>
+        <div class="about-visual">
+          <div class="about-card">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#6C3BF5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            </div>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin:0;line-height:1.6;">One platform. Opportunities you'd otherwise miss. A profile that opens doors.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why We Built ScholrNet -->
+  <section class="about-section">
+    <div class="about-inner">
+      <div class="about-grid" style="direction:rtl;grid-template-columns:1fr 1fr;">
+        <div style="direction:ltr;">
+          <span class="about-label">Why We Built It</span>
+          <h2 class="about-title">Opportunities should find the right students</h2>
+          <p class="about-text">The internet has more opportunities than ever — online courses, global competitions, research programs, startup internships, scholarships. But they're buried in newsletters, Twitter threads, LinkedIn posts, and college notice boards.</p>
+          <p class="about-text">Most students don't have time to hunt across platforms. Many don't even know what's available to them. And when they do find something, they often hesitate to apply because their profile doesn't stand out.</p>
+          <p class="about-text">ScholrNet aggregates opportunities in one feed, tailored to students. And it gives every student a credible, verifiable profile — so your application speaks for itself.</p>
+        </div>
+        <div class="about-visual" style="direction:ltr;">
+          <div class="about-card">
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+              <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg-alt);border-radius:var(--radius-sm);">
+                <div style="width:32px;height:32px;border-radius:50%;background:#FF6B6B;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.7rem;font-weight:700;">X</div>
+                <div style="font-size:0.8rem;color:var(--text-muted);">Scattered across 12+ platforms</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg-alt);border-radius:var(--radius-sm);">
+                <div style="width:32px;height:32px;border-radius:50%;background:#00C4B8;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.7rem;font-weight:700;">✓</div>
+                <div style="font-size:0.8rem;color:var(--text);">One feed. Every opportunity.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mission & Vision -->
+  <section class="about-mission">
+    <div class="about-inner">
+      <span class="about-label" style="color:rgba(255,255,255,0.7);">Our Mission & Vision</span>
+      <h2>Every ambitious student deserves<br>a fair shot at the future</h2>
+      <p>We're building the infrastructure for student opportunity — making it accessible, credible, and connected.</p>
+      <div class="about-mission-grid">
+        <div class="about-mission-item">
+          <h3>Mission</h3>
+          <p>To give every student — regardless of school, background, or location — equal access to opportunities and a credible way to showcase their achievements.</p>
+        </div>
+        <div class="about-mission-item">
+          <h3>Vision</h3>
+          <p>A world where a student's potential is measured by what they've accomplished, not where they come from — and where every achievement opens the next door.</p>
+        </div>
+        <div class="about-mission-item">
+          <h3>How We Do It</h3>
+          <p>We aggregate internships, scholarships, hackathons, competitions, research programs, and clubs into one platform — and give every student a school-verified profile they own.</p>
+        </div>
+        <div class="about-mission-item">
+          <h3>Who It's For</h3>
+          <p>Ambitious students in high school and early college who want to build real credentials, explore career paths, and stand out in competitive applications.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Meet the Founder -->
+  <section class="about-section">
+    <div class="about-inner">
+      <div class="section-centered" style="margin-bottom:3rem;">
+        <span class="about-label">Meet the Founder</span>
+        <h2 class="about-title" style="margin-bottom:0.5rem;">Built by a student, for students</h2>
+        <p style="font-size:0.95rem;color:var(--text-secondary);max-width:520px;margin:0 auto;">ScholrNet was started by Abhiraj, a high school student who saw the gap between talent and opportunity — and decided to build the bridge.</p>
+      </div>
+
+      <div class="founder-grid">
+        <div class="about-card" style="padding:2rem;">
+          <div class="founder-avatar">A</div>
+          <div class="founder-name">Abhiraj</div>
+          <div class="founder-title">Founder, ScholrNet</div>
+          <div class="founder-bio">
+            <p style="margin-bottom:1rem;">Abhiraj is a high school student studying in Class 10 with a deep interest in technology, startups, and education. He built ScholrNet after noticing that talented students around him were missing life-changing opportunities — not because they lacked ability, but because the ecosystem was fragmented.</p>
+            <p style="margin-bottom:1rem;">He started coding at a young age and quickly realized that software could solve real problems. ScholrNet is his attempt to use technology to level the playing field for students across India and beyond.</p>
+            <p>Abhiraj believes that a student's background should never determine their ceiling. He continues to build ScholrNet while balancing school, learning about product development, and talking to users to understand what they need.</p>
+          </div>
+          <div class="founder-quote">
+            <p>"I started ScholrNet because I saw students miss deadlines, lose opportunities, and struggle to prove what they'd accomplished. That shouldn't happen. The internet gives us the tools to fix it — so I built something."</p>
+            <cite>— Abhiraj, Founder</cite>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:var(--text);">What drives this project</h3>
+          <div style="display:flex;flex-direction:column;gap:1rem;">
+            <div style="border:1px solid var(--border-light);border-radius:var(--radius-md);padding:1.25rem;background:var(--bg-card);">
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text);margin-bottom:0.375rem;">The problem is real</div>
+              <div style="font-size:0.85rem;color:var(--text-muted);line-height:1.6;">Thousands of students miss opportunities every year because they simply don't know they exist. ScholrNet makes discovery effortless.</div>
+            </div>
+            <div style="border:1px solid var(--border-light);border-radius:var(--radius-md);padding:1.25rem;background:var(--bg-card);">
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text);margin-bottom:0.375rem;">Credentials need to be credible</div>
+              <div style="font-size:0.85rem;color:var(--text-muted);line-height:1.6;">Any student can list achievements. ScholrNet's school verification system turns claims into credentials that colleges and employers can trust.</div>
+            </div>
+            <div style="border:1px solid var(--border-light);border-radius:var(--radius-md);padding:1.25rem;background:var(--bg-card);">
+              <div style="font-size:0.85rem;font-weight:700;color:var(--text);margin-bottom:0.375rem;">Building in public</div>
+              <div style="font-size:0.85rem;color:var(--text-muted);line-height:1.6;">ScholrNet is being built openly, with real users and real feedback. Every feature comes from talking to students, teachers, and schools.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- What We're Building -->
+  <section class="about-section">
+    <div class="about-inner section-centered">
+      <span class="about-label">What We're Building</span>
+      <h2 class="about-title" style="max-width:520px;margin:0 auto 0.5rem;">A platform that grows with you</h2>
+      <p style="font-size:0.95rem;color:var(--text-secondary);max-width:560px;margin:0 auto 2rem;">ScholrNet is more than a feed of opportunities. It's a complete ecosystem for student growth.</p>
+      <div class="about-values">
+        <div class="about-value">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C3BF5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
+          </div>
+          <h3>Opportunity Feed</h3>
+          <p>Internships, scholarships, hackathons, competitions, and research programs — curated and updated regularly.</p>
+        </div>
+        <div class="about-value">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C3BF5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+          <h3>Verified Profile</h3>
+          <p>School-verified achievements that colleges and employers can trust. One shareable link for all your credentials.</p>
+        </div>
+        <div class="about-value">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C3BF5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3>Student Community</h3>
+          <p>Clubs, peer connections, and a public timeline where students share their journey and inspire each other.</p>
+        </div>
+        <div class="about-value">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C3BF5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </div>
+          <h3>School Dashboard</h3>
+          <p>Tools for teachers and counselors to verify achievements, post announcements, and track student progress.</p>
+        </div>
+        <div class="about-value">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C3BF5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h3>AI Career Guidance</h3>
+          <p>Personalized recommendations for opportunities based on your profile, interests, and past achievements.</p>
+        </div>
+        <div class="about-value">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6C3BF5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Trust & Safety</h3>
+          <p>Privacy controls, school verification, and moderation to keep the platform safe and trustworthy for students.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section class="about-section" style="background:var(--bg-alt);">
+    <div class="about-inner section-centered">
+      <span class="about-label">Team</span>
+      <h2 class="about-title" style="max-width:480px;margin:0 auto 0.5rem;">Built by students who care</h2>
+      <p class="about-team-text">ScholrNet started as a solo project and is growing. As we expand, we're looking for people who believe in this mission — developers, designers, student ambassadors, and educators who want to build the future of student opportunity.</p>
+      <p class="about-team-text" style="margin-top:1rem;">If that sounds like you, <a href="mailto:scolrnetsupport@gmail.com" style="color:var(--primary);font-weight:600;text-decoration:underline;">reach out</a>.</p>
+    </div>
+  </section>
+
+  <!-- Join the Journey -->
+  <section class="about-cta">
+    <div class="about-inner">
+      <h2>Ready to build your academic future?</h2>
+      <p>Join thousands of students discovering opportunities and building verified profiles on ScholrNet.</p>
+      <a href="{{ url_for('register') }}" class="btn-primary btn-lg">Create Your Profile — It's Free</a>
+      <div style="display:flex;align-items:center;justify-content:center;gap:1.5rem;flex-wrap:wrap;margin-top:1.25rem;">
+        <span style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;gap:0.375rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Free for students
+        </span>
+        <span style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;gap:0.375rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          School-verified credentials
+        </span>
+        <span style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;gap:0.375rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Curated opportunities
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="24">
+          <p class="footer-desc">The academic trust network for students, teachers, and schools.</p>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Product</h4>
+          <a href="/#features" class="footer-link">Features</a>
+          <a href="/#how-it-works" class="footer-link">How It Works</a>
+          <a href="/blog" class="footer-link">Resources</a>
+          <a href="/#faq" class="footer-link">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Company</h4>
+          <a href="/about" class="footer-link">About Us</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Community</h4>
+          <a href="{{ url_for('public_timeline') }}" class="footer-link">Public Timeline</a>
+          <a href="{{ url_for('register') }}" class="footer-link">Join Now</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Support</h4>
+          <a href="mailto:scolrnetsupport@gmail.com" class="footer-link">Contact Us</a>
+          <a href="#" class="footer-link">Privacy Policy</a>
+          <a href="#" class="footer-link">Terms of Service</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 ScholrNet. Built for the academic community.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v=5"></script>
+</body>
+</html>
