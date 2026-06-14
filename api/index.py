@@ -66,7 +66,22 @@ def add_security_headers(response):
 
 from app import register_routes, enable_rls
 
-with app.app_context():
-    db.create_all()
-    enable_rls()
-    register_routes(app, bcrypt, login_manager, limiter)
+_startup_error = None
+try:
+    with app.app_context():
+        db.create_all()
+        enable_rls()
+        register_routes(app, bcrypt, login_manager, limiter)
+except Exception as e:
+    import traceback
+    _startup_error = traceback.format_exc()
+    print(f"STARTUP ERROR: {_startup_error}", file=sys.stderr)
+
+if _startup_error:
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def fallback(path):
+        return f"""<!DOCTYPE html><html><head><title>ScholrNet - Error</title><meta charset="utf-8">
+<style>body{{font-family:monospace;padding:2rem;background:#1a1a2e;color:#e0e0e0}}
+pre{{white-space:pre-wrap;word-break:break-word;background:#16213e;padding:1rem;border-radius:8px;max-width:800px;margin:0 auto}}
+h1{{color:#e94560}}</style></head><body><h1>Startup Error</h1><pre>{_startup_error}</pre></body></html>""", 500
