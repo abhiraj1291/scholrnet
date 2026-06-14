@@ -644,23 +644,37 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/sitemap.xml')
     def sitemap_xml():
         from datetime import datetime, timezone
+        from xml.sax.saxutils import escape as xml_escape
         today = str(datetime.now(timezone.utc).date())
+        base = request.url_root.rstrip('/')
         schools = School.query.order_by(School.id.desc()).limit(100).all()
         blog_posts = BlogPost.query.filter_by(published=True).all()
         opportunities = Opportunity.query.order_by(Opportunity.id.desc()).limit(100).all()
+        clubs = Club.query.order_by(Club.id.desc()).limit(100).all()
+        users = User.query.filter(User.username.isnot(None), User.username != '').order_by(User.id.desc()).limit(500).all()
+        posts = Post.query.order_by(Post.id.desc()).limit(500).all()
         urls = [
-            f'<url><loc>{request.url_root}</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>',
-            f'<url><loc>{request.url_root}login</loc><priority>0.3</priority></url>',
-            f'<url><loc>{request.url_root}register</loc><priority>0.8</priority></url>',
+            f'<url><loc>{base}/</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>',
+            f'<url><loc>{base}/about</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>',
+            f'<url><loc>{base}/public</loc><priority>0.7</priority><changefreq>daily</changefreq></url>',
+            f'<url><loc>{base}/login</loc><priority>0.3</priority><changefreq>monthly</changefreq></url>',
+            f'<url><loc>{base}/register</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>',
+            f'<url><loc>{base}/blog</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>',
         ]
+        for post in blog_posts:
+            urls.append(f'<url><loc>{base}/blog/{xml_escape(post.slug)}</loc><priority>0.6</priority><lastmod>{post.updated_at or today}</lastmod></url>')
         for opp in opportunities:
             slug = opp.name.lower().replace(' ', '-').replace('/', '-')[:80]
-            urls.append(f'<url><loc>{request.url_root}opportunity/{opp.id}/{slug}</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>')
+            urls.append(f'<url><loc>{base}/opportunity/{opp.id}/{slug}</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>')
         for school in schools:
             slug = school.name.lower().replace(' ', '-').replace('/', '-')[:80]
-            urls.append(f'<url><loc>{request.url_root}school/{school.id}/{slug}</loc><priority>0.6</priority><changefreq>weekly</changefreq></url>')
-        for post in blog_posts:
-            urls.append(f'<url><loc>{request.url_root}blog/{post.slug}</loc><priority>0.6</priority><lastmod>{post.updated_at or today}</lastmod></url>')
+            urls.append(f'<url><loc>{base}/school/{school.id}/{slug}</loc><priority>0.6</priority><changefreq>weekly</changefreq></url>')
+        for club in clubs:
+            urls.append(f'<url><loc>{base}/club/{club.id}</loc><priority>0.5</priority><changefreq>weekly</changefreq></url>')
+        for u in users:
+            urls.append(f'<url><loc>{base}/share/{xml_escape(u.username)}</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>')
+        for p in posts:
+            urls.append(f'<url><loc>{base}/post/{p.id}</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>')
         xml = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(urls) + '</urlset>'
         return Response(xml, mimetype='application/xml')
 
@@ -3307,41 +3321,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/health')
     def api_health():
         return jsonify({"status": "healthy"})
-
-    @app.route('/robots.txt')
-    def robots_txt():
-        return Response("User-agent: *\nAllow: /\nSitemap: https://scholrnet.in/sitemap.xml\n", mimetype='text/plain')
-
-    @app.route('/sitemap.xml')
-    def sitemap():
-        from xml.sax.saxutils import escape as xml_escape
-        pages = []
-        base = 'https://scholrnet.in'
-        # Static pages
-        for url, priority, changefreq in [
-            ('/', '1.0', 'weekly'),
-            ('/login', '0.5', 'monthly'),
-            ('/register', '0.6', 'monthly'),
-            ('/public', '0.7', 'daily'),
-        ]:
-            pages.append({'loc': base + url, 'priority': priority, 'changefreq': changefreq})
-        # Public profiles
-        users = User.query.filter(User.username.isnot(None), User.username != '').order_by(User.id.desc()).limit(500).all()
-        for u in users:
-            pages.append({'loc': base + '/share/' + u.username, 'priority': '0.8', 'changefreq': 'weekly'})
-        # Public posts
-        posts = Post.query.order_by(Post.id.desc()).limit(500).all()
-        for p in posts:
-            pages.append({'loc': base + '/post/' + str(p.id), 'priority': '0.6', 'changefreq': 'monthly'})
-        xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        for p in pages:
-            xml += '  <url>\n'
-            xml += '    <loc>' + xml_escape(p['loc']) + '</loc>\n'
-            xml += '    <changefreq>' + p['changefreq'] + '</changefreq>\n'
-            xml += '    <priority>' + p['priority'] + '</priority>\n'
-            xml += '  </url>\n'
-        xml += '</urlset>'
-        return Response(xml, mimetype='application/xml')
 
     @app.route('/api/migrate')
     @login_required

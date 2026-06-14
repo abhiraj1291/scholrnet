@@ -21,6 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
   <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+  <link rel="canonical" href="https://scholrnet.in/about" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -28,6 +29,13 @@
     "name": "About ScholrNet",
     "description": "ScholrNet helps students discover internships, scholarships, hackathons, competitions, and research opportunities with a school-verified profile.",
     "url": "https://scholrnet.in/about",
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://scholrnet.in"},
+        {"@type": "ListItem", "position": 2, "name": "About", "item": "https://scholrnet.in/about"}
+      ]
+    },
     "mainEntity": {
       "@type": "Organization",
       "name": "ScholrNet",
