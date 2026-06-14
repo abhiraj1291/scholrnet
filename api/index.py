@@ -1,7 +1,7 @@
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backend'))
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_limiter import Limiter
@@ -42,7 +42,6 @@ limiter = Limiter(
 def add_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "0"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
@@ -66,5 +65,28 @@ def add_security_headers(response):
 
 from app import register_routes
 
-with app.app_context():
-    register_routes(app, bcrypt, login_manager, limiter)
+try:
+    with app.app_context():
+        register_routes(app, bcrypt, login_manager, limiter)
+except Exception:
+    import traceback
+    print(f"ROUTE REGISTRATION ERROR (non-fatal, serving fallback): {traceback.format_exc()}", file=sys.stderr)
+
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def fallback(path):
+        return """<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScholrNet</title>
+<style>body{margin:0;padding:2rem;font-family:-apple-system,sans-serif;background:#f4f6f9;color:#1a2744;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{max-width:28rem;text-align:center;background:#fff;padding:2.5rem;border-radius:1.5rem;box-shadow:0 4px 24px rgba(0,0,0,0.06)}
+h1{font-size:1.5rem;margin:0 0 0.5rem}
+p{font-size:0.875rem;color:#5a6a7a;margin:0 0 1.5rem;line-height:1.6}
+.btn{display:inline-block;padding:0.75rem 2rem;background:#1a2744;color:#fff;border-radius:0.75rem;text-decoration:none;font-weight:600;font-size:0.875rem}
+</style></head>
+<body><div class="card">
+<h1>ScholrNet</h1>
+<p>We're waking up the server. Please refresh in a moment.</p>
+<a class="btn" href="/">Refresh</a>
+</div></body></html>"""
