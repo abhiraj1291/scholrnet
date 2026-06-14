@@ -106,7 +106,7 @@ def enable_rls():
     """Enable RLS + revoke anon/authenticated perms on all tables. Run after db.create_all()."""
     try:
         from sqlalchemy import text
-        rls_tables = ['users','achievements','projects','posts','comments','ads','opportunities','team_requests','team_applicants','verification_requests','mentors','mentorship_requests','mentor_interactions','notifications','chat_messages','chat_typing','clubs','club_members','club_join_requests','schools','school_announcements','connections','user_likes','event_registrations','experiences','audit_logs']
+        rls_tables = ['users','achievements','projects','posts','comments','ads','opportunities','team_requests','team_applicants','verification_requests','mentors','mentorship_requests','mentor_interactions','notifications','chat_messages','chat_typing','clubs','club_members','club_join_requests','schools','school_announcements','connections','user_likes','event_registrations','experiences','audit_logs','leads','referrals','blog_posts']
         with db.engine.connect() as conn:
             conn.execute(text("SET client_min_messages TO warning"))
             for tbl in rls_tables:
@@ -197,6 +197,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 conn.execute(text("ALTER TABLE users ADD COLUMN reset_otp VARCHAR(6) DEFAULT ''"))
             if 'reset_otp_expires' not in users_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN reset_otp_expires TIMESTAMP"))
+            if 'referral_code' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN referral_code VARCHAR(20) DEFAULT NULL"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)"))
+            if 'referral_badge' not in users_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN referral_badge BOOLEAN DEFAULT FALSE"))
             conn.commit()
     except Exception as e:
         print(f"AUTO-MIGRATE: users column migration failed: {e}")
