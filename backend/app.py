@@ -1676,12 +1676,15 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/user/<int:user_id>/experiences', methods=['GET'])
     @login_required
     def api_get_experiences(user_id):
-        exps = Experience.query.filter_by(user_id=user_id).order_by(Experience.is_current.desc(), Experience.id.desc()).all()
-        return jsonify({'experiences': [{
-            'id': e.id, 'company': e.company, 'role': e.role, 'description': e.description,
-            'skills': e.skills, 'start_date': e.start_date, 'end_date': e.end_date,
-            'is_current': e.is_current, 'created_at': e.created_at.isoformat() if e.created_at else ''
-        } for e in exps]})
+        try:
+            exps = Experience.query.filter_by(user_id=user_id).order_by(Experience.is_current.desc(), Experience.id.desc()).all()
+            return jsonify({'experiences': [{
+                'id': e.id, 'company': e.company, 'role': e.role, 'description': e.description,
+                'skills': e.skills, 'start_date': e.start_date, 'end_date': e.end_date,
+                'is_current': e.is_current, 'created_at': e.created_at.isoformat() if e.created_at else ''
+            } for e in exps]})
+        except Exception:
+            return jsonify({'experiences': []})
 
     @app.route('/api/experience/create', methods=['POST'])
     @login_required
@@ -1777,20 +1780,27 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/achievements')
     @login_required
     def api_achievements():
-        user_id = request.args.get('user_id', type=int)
-        if not user_id:
+        try:
+            achs = Achievement.query.filter_by(user_id=current_user.id).order_by(Achievement.id.desc()).all()
+            return jsonify({'achievements': [{
+                'id': a.id, 'title': a.title, 'description': a.description,
+                'category': a.category, 'institution': a.institution,
+                'year': a.year, 'verified': a.verification_status == 'Verified',
+                'verification_status': a.verification_status,
+                'verification_hash': a.verification_hash if current_user.role == 'super_admin' else ''
+            } for a in achs]})
+        except Exception:
             return jsonify({'achievements': []})
-        achs = Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all()
-        return jsonify({'achievements': [{'id': a.id, 'title': a.title, 'description': a.description, 'category': a.category, 'institution': a.institution, 'year': a.year, 'verification_status': a.verification_status, 'verified_by': a.verified_by, 'verified_at': a.verified_at, 'verification_hash': a.verification_hash} for a in achs]})
 
     @app.route('/api/projects')
     @login_required
     def api_projects():
-        user_id = request.args.get('user_id', type=int)
-        if not user_id:
+        try:
+            user_id = request.args.get('user_id', type=int) or current_user.id
+            projs = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all()
+            return jsonify({'projects': [{'id': p.id, 'title': p.title, 'description': p.description, 'collaborators': p.collaborators, 'link': p.link, 'skills': p.skills, 'verification_status': p.verification_status} for p in projs]})
+        except Exception:
             return jsonify({'projects': []})
-        projs = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all()
-        return jsonify({'projects': [{'id': p.id, 'title': p.title, 'description': p.description, 'collaborators': p.collaborators, 'link': p.link, 'skills': p.skills, 'verification_status': p.verification_status} for p in projs]})
 
     @app.route('/api/verification/<int:req_id>/action', methods=['POST'])
     @login_required
@@ -2019,18 +2029,21 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/user/<int:user_id>/clubs')
     @login_required
     def api_user_clubs(user_id):
-        memberships = ClubMember.query.filter_by(user_id=user_id).all()
-        if not memberships:
+        try:
+            memberships = ClubMember.query.filter_by(user_id=user_id).all()
+            if not memberships:
+                return jsonify({'clubs': []})
+            club_ids = [m.club_id for m in memberships]
+            clubs = Club.query.filter(Club.id.in_(club_ids)).all()
+            club_map = {c.id: c for c in clubs}
+            return jsonify({'clubs': [{'id': m.club_id, 'name': club_map[m.club_id].name if m.club_id in club_map else 'Unknown',
+                'description': (club_map[m.club_id].description or '')[:200] if m.club_id in club_map else '',
+                'member_count': club_map[m.club_id].member_count if m.club_id in club_map else 0,
+                'is_private': club_map[m.club_id].is_private if m.club_id in club_map else False,
+                'avatar': club_map[m.club_id].avatar or '' if m.club_id in club_map else '',
+                'role': m.role, 'joined_at': m.joined_at} for m in memberships]})
+        except Exception:
             return jsonify({'clubs': []})
-        club_ids = [m.club_id for m in memberships]
-        clubs = Club.query.filter(Club.id.in_(club_ids)).all()
-        club_map = {c.id: c for c in clubs}
-        return jsonify({'clubs': [{'id': m.club_id, 'name': club_map[m.club_id].name if m.club_id in club_map else 'Unknown',
-            'description': (club_map[m.club_id].description or '')[:200] if m.club_id in club_map else '',
-            'member_count': club_map[m.club_id].member_count if m.club_id in club_map else 0,
-            'is_private': club_map[m.club_id].is_private if m.club_id in club_map else False,
-            'avatar': club_map[m.club_id].avatar or '' if m.club_id in club_map else '',
-            'role': m.role, 'joined_at': m.joined_at} for m in memberships]})
 
     @app.route('/api/club/<int:club_id>/join-requests')
     @login_required
@@ -2522,75 +2535,92 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/user/stats')
     @login_required
     def api_user_stats():
-        v_count = Achievement.query.filter_by(user_id=current_user.id, verification_status='Verified').count()
-        p_count = Project.query.filter_by(user_id=current_user.id).count()
-        f_count = _friend_count(current_user.id)
-        c_count = ClubMember.query.filter_by(user_id=current_user.id).count()
-        a_count = Achievement.query.filter_by(user_id=current_user.id).count()
-        return jsonify({'verified_achievements': v_count, 'projects': p_count, 'clubs': c_count, 'friends': f_count, 'achievements': a_count, 'collaborations': 0})
+        try:
+            v_count = Achievement.query.filter_by(user_id=current_user.id, verification_status='Verified').count()
+            p_count = Project.query.filter_by(user_id=current_user.id).count()
+            f_count = _friend_count(current_user.id)
+            c_count = ClubMember.query.filter_by(user_id=current_user.id).count()
+            a_count = Achievement.query.filter_by(user_id=current_user.id).count()
+            return jsonify({'verified_achievements': v_count, 'projects': p_count, 'clubs': c_count, 'friends': f_count, 'achievements': a_count, 'collaborations': 0})
+        except Exception:
+            return jsonify({'verified_achievements': 0, 'projects': 0, 'clubs': 0, 'friends': 0, 'achievements': 0, 'collaborations': 0})
 
     @app.route('/api/user/<int:user_id>/profile')
     @login_required
     def api_user_profile(user_id):
-        puser = User.query.get(user_id)
-        if not puser:
-            return jsonify({'error': 'User not found'}), 404
-        v_count = Achievement.query.filter_by(user_id=user_id, verification_status='Verified').count()
-        p_count = Project.query.filter_by(user_id=user_id).count()
-        f_count = _friend_count(user_id)
-        c_count = ClubMember.query.filter_by(user_id=user_id).count()
-        a_count = Achievement.query.filter_by(user_id=user_id).count()
-        friend_status = 'none'
-        conn = Connection.query.filter(
-            ((Connection.user_id == current_user.id) & (Connection.connected_user_id == user_id)) |
-            ((Connection.user_id == user_id) & (Connection.connected_user_id == current_user.id))
-        ).first()
-        if conn:
-            if conn.status == 'accepted':
-                friend_status = 'friends'
-            elif conn.user_id == current_user.id:
-                friend_status = 'pending_sent'
-            else:
-                friend_status = 'pending_received'
-        skills = []
-        for pj in Project.query.filter_by(user_id=user_id).all():
-            if pj.skills:
-                for s in pj.skills.split(','):
-                    s = s.strip()
-                    if s and s not in skills:
-                        skills.append(s)
-        return jsonify({
-            'id': puser.id, 'name': puser.name, 'school': puser.school,
-            'bio': puser.bio or '', 'avatar': puser.avatar or '',
-            'avatar_url': puser.avatar_url or '',
-            'role': puser.role or 'student', 'grade': puser.grade or '',
-            'verified_achievements': v_count, 'projects': p_count,
-            'clubs': c_count, 'friends': f_count,
-            'achievements': a_count, 'collaborations': 0,
-            'skills': skills, 'friend_status': friend_status
-        })
+        try:
+            puser = User.query.get(user_id)
+            if not puser:
+                return jsonify({'error': 'User not found'}), 404
+            v_count = Achievement.query.filter_by(user_id=user_id, verification_status='Verified').count()
+            p_count = Project.query.filter_by(user_id=user_id).count()
+            f_count = _friend_count(user_id)
+            c_count = ClubMember.query.filter_by(user_id=user_id).count()
+            a_count = Achievement.query.filter_by(user_id=user_id).count()
+            friend_status = 'none'
+            conn = Connection.query.filter(
+                ((Connection.user_id == current_user.id) & (Connection.connected_user_id == user_id)) |
+                ((Connection.user_id == user_id) & (Connection.connected_user_id == current_user.id))
+            ).first()
+            if conn:
+                if conn.status == 'accepted':
+                    friend_status = 'friends'
+                elif conn.user_id == current_user.id:
+                    friend_status = 'pending_sent'
+                else:
+                    friend_status = 'pending_received'
+            skills = []
+            for pj in Project.query.filter_by(user_id=user_id).all():
+                if pj.skills:
+                    for s in pj.skills.split(','):
+                        s = s.strip()
+                        if s and s not in skills:
+                            skills.append(s)
+            return jsonify({
+                'id': puser.id, 'name': puser.name, 'school': puser.school,
+                'bio': puser.bio or '', 'avatar': puser.avatar or '',
+                'avatar_url': puser.avatar_url or '',
+                'role': puser.role or 'student', 'grade': puser.grade or '',
+                'verified_achievements': v_count, 'projects': p_count,
+                'clubs': c_count, 'friends': f_count,
+                'achievements': a_count, 'collaborations': 0,
+                'skills': skills, 'friend_status': friend_status
+            })
+        except Exception:
+            return jsonify({
+                'id': user_id, 'name': '', 'school': '', 'bio': '', 'avatar': '', 'avatar_url': '',
+                'role': 'student', 'grade': '', 'verified_achievements': 0, 'projects': 0,
+                'clubs': 0, 'friends': 0, 'achievements': 0, 'collaborations': 0,
+                'skills': [], 'friend_status': 'none'
+            })
 
     @app.route('/api/user/<int:user_id>/achievements')
     @login_required
     def api_user_achievements(user_id):
-        achs = Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all()
-        return jsonify({'achievements': [{
-            'id': a.id, 'title': a.title, 'description': a.description,
-            'category': a.category, 'institution': a.institution,
-            'year': a.year, 'verified': a.verification_status == 'Verified',
-            'verification_status': a.verification_status,
-            'verification_hash': a.verification_hash if current_user.id == user_id or current_user.role == 'super_admin' else ''
-        } for a in achs]})
+        try:
+            achs = Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all()
+            return jsonify({'achievements': [{
+                'id': a.id, 'title': a.title, 'description': a.description,
+                'category': a.category, 'institution': a.institution,
+                'year': a.year, 'verified': a.verification_status == 'Verified',
+                'verification_status': a.verification_status,
+                'verification_hash': a.verification_hash if current_user.id == user_id or current_user.role == 'super_admin' else ''
+            } for a in achs]})
+        except Exception:
+            return jsonify({'achievements': []})
 
     @app.route('/api/user/<int:user_id>/projects')
     @login_required
     def api_user_projects(user_id):
-        projs = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all()
-        return jsonify({'projects': [{
-            'id': p.id, 'title': p.title, 'description': p.description,
-            'collaborators': p.collaborators, 'link': p.link,
-            'skills': [s.strip() for s in (p.skills or '').split(',') if s.strip()]
-        } for p in projs]})
+        try:
+            projs = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all()
+            return jsonify({'projects': [{
+                'id': p.id, 'title': p.title, 'description': p.description,
+                'collaborators': p.collaborators, 'link': p.link,
+                'skills': [s.strip() for s in (p.skills or '').split(',') if s.strip()]
+            } for p in projs]})
+        except Exception:
+            return jsonify({'projects': []})
 
     @app.route('/api/ads')
     def api_list_ads():
@@ -2834,45 +2864,53 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/friend/requests')
     @login_required
     def api_friend_requests():
-        reqs = Connection.query.filter_by(connected_user_id=current_user.id, status='pending').all()
-        user_ids = [r.user_id for r in reqs]
-        users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
-        return jsonify({'requests': [{
-            'id': r.id, 'user_id': r.user_id,
-            'user': {'name': users[r.user_id].name, 'avatar': users[r.user_id].avatar, 'avatar_url': users[r.user_id].avatar_url}
-        } for r in reqs if r.user_id in users]})
+        try:
+            reqs = Connection.query.filter_by(connected_user_id=current_user.id, status='pending').all()
+            user_ids = [r.user_id for r in reqs]
+            users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
+            return jsonify({'requests': [{
+                'id': r.id, 'user_id': r.user_id,
+                'user': {'name': users[r.user_id].name, 'avatar': users[r.user_id].avatar, 'avatar_url': users[r.user_id].avatar_url}
+            } for r in reqs if r.user_id in users]})
+        except Exception:
+            return jsonify({'requests': []})
 
     @app.route('/api/friend/list')
     @login_required
     def api_friend_list():
-        sent = Connection.query.filter_by(user_id=current_user.id, status='accepted').all()
-        received = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all()
-        ids = set()
-        for c in sent: ids.add(c.connected_user_id)
-        for c in received: ids.add(c.user_id)
-        users = User.query.filter(User.id.in_(ids)).all() if ids else []
-        return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school} for u in users]})
+        try:
+            sent = Connection.query.filter_by(user_id=current_user.id, status='accepted').all()
+            received = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all()
+            ids = set()
+            for c in sent: ids.add(c.connected_user_id)
+            for c in received: ids.add(c.user_id)
+            users = User.query.filter(User.id.in_(ids)).all() if ids else []
+            return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school} for u in users]})
+        except Exception:
+            return jsonify({'friends': []})
 
     @app.route('/api/user/<int:user_id>/connections')
     @login_required
     def api_user_connections(user_id):
-        sent = Connection.query.filter_by(user_id=user_id, status='accepted').all()
-        received = Connection.query.filter_by(connected_user_id=user_id, status='accepted').all()
-        ids = set()
-        for c in sent: ids.add(c.connected_user_id)
-        for c in received: ids.add(c.user_id)
-        # Calculate mutual connections with current user
-        my_sent = Connection.query.filter_by(user_id=current_user.id, status='accepted').all()
-        my_received = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all()
-        my_ids = set()
-        for c in my_sent: my_ids.add(c.connected_user_id)
-        for c in my_received: my_ids.add(c.user_id)
-        users = User.query.filter(User.id.in_(ids)).all() if ids else []
-        return jsonify({'connections': [{
-            'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url,
-            'school': u.school, 'username': u.username,
-            'mutual': len(my_ids & {u.id})
-        } for u in users]})
+        try:
+            sent = Connection.query.filter_by(user_id=user_id, status='accepted').all()
+            received = Connection.query.filter_by(connected_user_id=user_id, status='accepted').all()
+            ids = set()
+            for c in sent: ids.add(c.connected_user_id)
+            for c in received: ids.add(c.user_id)
+            my_sent = Connection.query.filter_by(user_id=current_user.id, status='accepted').all()
+            my_received = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all()
+            my_ids = set()
+            for c in my_sent: my_ids.add(c.connected_user_id)
+            for c in my_received: my_ids.add(c.user_id)
+            users = User.query.filter(User.id.in_(ids)).all() if ids else []
+            return jsonify({'connections': [{
+                'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url,
+                'school': u.school, 'username': u.username,
+                'mutual': len(my_ids & {u.id})
+            } for u in users]})
+        except Exception:
+            return jsonify({'connections': []})
 
     @app.route('/api/connection/toggle', methods=['POST'])
     @login_required
