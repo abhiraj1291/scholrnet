@@ -10,7 +10,7 @@ function addAchievement(form) {
     certificateFile: form.querySelector('[name=certificate]')?.value || ''
   };
   if (!data.title) { showToast('Title is required', 'info'); return; }
-  apiPost('/api/achievement/add', data, function() {
+  apiPost('/api/achievement/create', data, function() {
     showToast('Achievement added!');
     form.reset();
     setTimeout(function() { location.reload(); }, 500);
@@ -26,7 +26,7 @@ function addProject(form) {
     skills: form.querySelector('[name=skills]')?.value || ''
   };
   if (!data.title) { showToast('Title is required', 'info'); return; }
-  apiPost('/api/project/add', data, function() {
+  apiPost('/api/project/create', data, function() {
     showToast('Project added!');
     form.reset();
     setTimeout(function() { location.reload(); }, 500);

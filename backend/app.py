@@ -1883,8 +1883,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
             db.session.add(req)
             db.session.commit()
             return jsonify({'success': True, 'pending': True, 'message': 'Join request sent. Waiting for approval.'})
-        mem = ClubMember(club_id=club_id, user_id=current_user.id, role='member', joined_at=jnow())
-        db.session.add(mem)
+        try:
+            mem = ClubMember(club_id=club_id, user_id=current_user.id, role='member', joined_at=jnow())
+            db.session.add(mem)
+            db.session.flush()
+        except Exception:
+            db.session.rollback()
+            return jsonify({'error': 'Already a member'}), 400
         club.member_count = ClubMember.query.filter_by(club_id=club_id).count()
         db.session.commit()
         return jsonify({'success': True, 'member_count': club.member_count})
@@ -1921,7 +1926,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/club/<int:club_id>/messages')
     @login_required
     def api_club_messages(club_id):
-        Club.query.get_or_404(club_id)  # ensure exists
+        club = Club.query.get_or_404(club_id)
+        mem = ClubMember.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+        if not mem and current_user.role != 'super_admin':
+            return jsonify({'error': 'Not a member'}), 403
         msgs = ChatMessage.query.filter_by(group_id=club_id).order_by(ChatMessage.id.desc()).limit(100).all()
         msgs.reverse()
         return jsonify({'messages': [{'id': m.id, 'sender_id': m.sender_id, 'text': m.text, 'timestamp': m.timestamp, 'sender_name': m.sender_name, 'sender_avatar': m.sender_avatar} for m in msgs]})
@@ -2027,8 +2035,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
         req.responded_at = jnow()
         existing = ClubMember.query.filter_by(club_id=club_id, user_id=req.user_id).first()
         if not existing:
-            new_mem = ClubMember(club_id=club_id, user_id=req.user_id, role='member', joined_at=jnow())
-            db.session.add(new_mem)
+            try:
+                new_mem = ClubMember(club_id=club_id, user_id=req.user_id, role='member', joined_at=jnow())
+                db.session.add(new_mem)
+                db.session.flush()
+            except Exception:
+                db.session.rollback()
+                pass
         club.member_count = ClubMember.query.filter_by(club_id=club_id).count()
         db.session.commit()
         return jsonify({'success': True, 'member_count': club.member_count})
@@ -2227,6 +2240,26 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_team_applicants(team_id):
         apps = TeamApplicant.query.filter_by(team_request_id=team_id).all()
         return jsonify({'applicants': [{'id': a.id, 'name': a.name, 'school': a.school, 'status': a.status} for a in apps]})
+
+    @app.route('/api/team/<int:team_id>/applicant/<string:action>', methods=['POST'])
+    @login_required
+    @limiter.limit("20 per minute")
+    def api_team_applicant_action(team_id, action):
+        if action not in ('approve', 'reject'):
+            return jsonify({'error': 'Invalid action'}), 400
+        data = request.json or {}
+        applicant_id = data.get('applicant_id')
+        if not applicant_id:
+            return jsonify({'error': 'Missing applicant_id'}), 400
+        team = TeamRequest.query.get_or_404(team_id)
+        if team.creator_id != current_user.id and current_user.role != 'super_admin':
+            return jsonify({'error': 'Only the team creator can manage applicants'}), 403
+        app = TeamApplicant.query.get_or_404(applicant_id)
+        if app.team_request_id != team_id:
+            return jsonify({'error': 'Applicant not found for this team'}), 400
+        app.status = 'approved' if action == 'approve' else 'rejected'
+        db.session.commit()
+        return jsonify({'success': True, 'status': app.status})
 
     @app.route('/api/mentorship/send', methods=['POST'])
     @login_required
@@ -2546,7 +2579,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     def api_search():
         q = request.args.get('q', '').strip().lower()
-        if not q:
+        if not q or len(q) < 2:
             return jsonify({'users': [], 'schools': [], 'achievements': []})
         if len(q) > 200:
             return jsonify({'users': [], 'schools': [], 'achievements': []})
@@ -2572,7 +2605,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 is_typing = diff < 4
             return jsonify({'messages': [{'id': m.id, 'sender_id': m.sender_id, 'text': m.text, 'timestamp': m.timestamp, 'is_read': m.is_read} for m in msgs], 'is_typing': is_typing})
         # Gather user contacts ordered by latest message
-        msgs = ChatMessage.query.filter((ChatMessage.sender_id == current_user.id) | (ChatMessage.receiver_id == current_user.id)).order_by(ChatMessage.timestamp.desc()).limit(200).all()
+        msgs = ChatMessage.query.filter((ChatMessage.sender_id == current_user.id) | (ChatMessage.receiver_id == current_user.id)).order_by(ChatMessage.id.desc()).limit(200).all()
         ordered_ids = []
         seen = set()
         for m in msgs:
@@ -2722,11 +2755,17 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 return jsonify({'error': 'Already friends'}), 400
             if existing.user_id == target_id and existing.connected_user_id == current_user.id:
                 existing.status = 'accepted'
+                # Also accept reverse pending to prevent duplicate notifications
+                rev = Connection.query.filter_by(user_id=current_user.id, connected_user_id=target_id, status='pending').first()
+                if rev:
+                    rev.status = 'accepted'
                 n = Notification(user_id=target_id, title=f"{sanitize_text(current_user.name, 100)} accepted your friend request", type="friend_accept", from_user=current_user.name)
                 db.session.add(n)
                 db.session.commit()
                 return jsonify({'success': True, 'accepted': True})
-            return jsonify({'error': 'Request already exists'}), 400
+            if existing.user_id == current_user.id and existing.connected_user_id == target_id and existing.status == 'pending':
+                return jsonify({'error': 'Request already exists'}), 400
+            return jsonify({'error': 'Already friends'}), 400
         conn = Connection(user_id=current_user.id, connected_user_id=target_id, status='pending')
         db.session.add(conn)
         n = Notification(user_id=target_id, title=f"{sanitize_text(current_user.name, 100)} sent you a friend request", type="friend_request", from_user=current_user.name)
@@ -2748,6 +2787,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return jsonify({'error': 'Not found'}), 404
         if action == 'accept':
             conn.status = 'accepted'
+            # Also accept reverse pending to prevent duplicate notifications
+            rev = Connection.query.filter_by(user_id=conn.connected_user_id, connected_user_id=conn.user_id, status='pending').first()
+            if rev:
+                rev.status = 'accepted'
             n = Notification(user_id=conn.user_id, title=f"{sanitize_text(current_user.name, 100)} accepted your friend request", type="friend_accept", from_user=current_user.name)
             db.session.add(n)
         else:
@@ -2887,6 +2930,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'success': True, 'redirect': '/'})
 
     @app.route('/api/debug-email', methods=['GET'])
+    @login_required
     @limiter.limit("3 per 10 minutes")
     def debug_email():
         key = os.environ.get('RESEND_API_KEY', '')

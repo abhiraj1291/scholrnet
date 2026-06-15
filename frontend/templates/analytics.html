@@ -56,106 +56,128 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+var ACHIEVEMENTS_DATA = [
+  {% for a in achievements %}
+  {
+    category: {{ a.category|tojson|safe }},
+    verification_status: {{ a.verification_status|tojson|safe }}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+</script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
-  function loadAnalytics() {
-    fetch('/api/analytics')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var empty = document.getElementById('chartEmpty');
-        if (!data || (!data.categories || data.categories.length === 0) && (data.total || 0) === 0) {
-          empty.classList.remove('hidden');
-          return;
-        }
-        empty.classList.add('hidden');
+  var achievements = ACHIEVEMENTS_DATA;
 
-        // Summary cards
-        document.getElementById('summaryAchievements').textContent = data.total || 0;
-        document.getElementById('summaryVerified').textContent = data.verified || 0;
-        document.getElementById('summaryPending').textContent = data.pending || 0;
-        document.getElementById('summaryProjects').textContent = data.projects || 0;
+  // Compute analytics from data
+  var total = achievements.length;
+  var verified = achievements.filter(function(a) { return a.verification_status === 'Verified'; }).length;
+  var pending = achievements.filter(function(a) { return a.verification_status === 'Pending'; }).length;
+  var notVerified = total - verified - pending;
 
-        // Bar chart - Achievements by Category
-        var catLabels = [];
-        var catData = [];
-        if (data.categories) {
-          data.categories.forEach(function(c) {
-            catLabels.push(c.name || c.category || 'Other');
-            catData.push(c.count || 0);
-          });
-        }
+  var catMap = {};
+  achievements.forEach(function(a) {
+    var cat = a.category || 'Other';
+    catMap[cat] = (catMap[cat] || 0) + 1;
+  });
+  var categories = Object.keys(catMap).map(function(k) { return { name: k, count: catMap[k] }; });
 
-        var ctx1 = document.getElementById('categoryChart').getContext('2d');
-        new Chart(ctx1, {
-          type: 'bar',
-          data: {
-            labels: catLabels,
-            datasets: [{
-              label: 'Achievements',
-              data: catData,
-              backgroundColor: [
-                'rgba(10,102,194,0.7)',
-                'rgba(249,115,22,0.7)',
-                'rgba(16,185,129,0.7)',
-                'rgba(139,92,246,0.7)',
-                'rgba(239,68,68,0.7)',
-                'rgba(245,158,11,0.7)'
-              ],
-              borderRadius: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: { stepSize: 1 }
-              }
-            }
-          }
-        });
+  var data = {
+    total: total,
+    verified: verified,
+    pending: pending,
+    projects: 0,
+    categories: categories
+  };
 
-        // Doughnut chart - Verification Status
-        var ctx2 = document.getElementById('verificationChart').getContext('2d');
-        new Chart(ctx2, {
-          type: 'doughnut',
-          data: {
-            labels: ['Verified', 'Pending', 'Not Verified'],
-            datasets: [{
-              data: [
-                data.verified || 0,
-                data.pending || 0,
-                (data.total - data.verified - data.pending) || 0
-              ],
-              backgroundColor: [
-                'rgba(16,185,129,0.8)',
-                'rgba(245,158,11,0.8)',
-                'rgba(148,163,184,0.8)'
-              ],
-              borderWidth: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: { font: { size: 11 } }
-              }
-            }
-          }
-        });
-      })
-      .catch(function() {
-        document.getElementById('chartEmpty').classList.remove('hidden');
-      });
+  var empty = document.getElementById('chartEmpty');
+  if (!data || (!data.categories || data.categories.length === 0) && (data.total || 0) === 0) {
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  // Summary cards
+  document.getElementById('summaryAchievements').textContent = data.total || 0;
+  document.getElementById('summaryVerified').textContent = data.verified || 0;
+  document.getElementById('summaryPending').textContent = data.pending || 0;
+  document.getElementById('summaryProjects').textContent = data.projects || 0;
+
+  // Bar chart - Achievements by Category
+  var catLabels = [];
+  var catData = [];
+  if (data.categories) {
+    data.categories.forEach(function(c) {
+      catLabels.push(c.name || c.category || 'Other');
+      catData.push(c.count || 0);
+    });
   }
 
-  loadAnalytics();
+  var ctx1 = document.getElementById('categoryChart').getContext('2d');
+  new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: catLabels,
+      datasets: [{
+        label: 'Achievements',
+        data: catData,
+        backgroundColor: [
+          'rgba(10,102,194,0.7)',
+          'rgba(249,115,22,0.7)',
+          'rgba(16,185,129,0.7)',
+          'rgba(139,92,246,0.7)',
+          'rgba(239,68,68,0.7)',
+          'rgba(245,158,11,0.7)'
+        ],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
+        }
+      }
+    }
+  });
+
+  // Doughnut chart - Verification Status
+  var ctx2 = document.getElementById('verificationChart').getContext('2d');
+  new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: ['Verified', 'Pending', 'Not Verified'],
+      datasets: [{
+        data: [
+          data.verified || 0,
+          data.pending || 0,
+          (data.total - data.verified - data.pending) || 0
+        ],
+        backgroundColor: [
+          'rgba(16,185,129,0.8)',
+          'rgba(245,158,11,0.8)',
+          'rgba(148,163,184,0.8)'
+        ],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 11 } }
+        }
+      }
+    }
+  });
 });
 </script>
 {% endblock %}
