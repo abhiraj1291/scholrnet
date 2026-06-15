@@ -120,6 +120,12 @@
           <div class="cf-turnstile" style="margin-bottom:0.875rem;" data-sitekey="{{ turnstile_site_key }}" data-theme="light"></div>
           <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
           {% endif %}
+          <div class="field">
+            <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;line-height:1.5;">
+              <input type="checkbox" name="terms_accepted" value="1" required style="margin-top:0.15rem;width:auto;">
+              <span>I agree to the <a href="{{ url_for('terms_page') }}" target="_blank" style="color:var(--primary);text-decoration:underline;">Terms of Service</a> and <a href="{{ url_for('privacy_page') }}" target="_blank" style="color:var(--primary);text-decoration:underline;">Privacy Policy</a></span>
+            </label>
+          </div>
           <button type="submit" class="btn-submit">Create Account</button>
         </form>
 

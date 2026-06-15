@@ -447,6 +447,42 @@ def register_routes(app, bcrypt, login_manager, limiter):
     except Exception as e:
         print(f"AUTO-MIGRATE: connections unique indexes failed: {e}")
 
+    # Add terms/privacy columns to users table
+    try:
+        with db.engine.connect() as conn:
+            for col, col_type in [
+                ('terms_accepted', 'BOOLEAN DEFAULT FALSE'),
+                ('terms_accepted_at', 'TIMESTAMP'),
+                ('terms_version', 'VARCHAR(20) DEFAULT \'\''),
+                ('privacy_accepted_at', 'TIMESTAMP'),
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {col_type}"))
+                except Exception:
+                    pass
+            conn.commit()
+        print("AUTO-MIGRATE: Added terms/privacy columns to users table")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: terms/privacy columns failed: {e}")
+
+    # Create policy_versions table
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS policy_versions (
+                    id SERIAL PRIMARY KEY,
+                    policy_type VARCHAR(20) NOT NULL,
+                    version VARCHAR(20) NOT NULL,
+                    content TEXT DEFAULT '',
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    published BOOLEAN DEFAULT FALSE
+                )
+            """))
+            conn.commit()
+        print("AUTO-MIGRATE: Created policy_versions table")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: policy_versions table failed: {e}")
+
     @app.context_processor
     def inject_globals():
         return {'schools': []}
@@ -607,6 +643,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def about_page():
         return render_template('about.html')
 
+    @app.route('/terms')
+    def terms_page():
+        return render_template('terms.html')
+
+    @app.route('/privacy')
+    def privacy_page():
+        return render_template('privacy.html')
+
     @app.route('/api/leads', methods=['POST'])
     def api_lead_capture():
         try:
@@ -656,6 +700,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
         urls = [
             f'<url><loc>{base}/</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>',
             f'<url><loc>{base}/about</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>',
+            f'<url><loc>{base}/terms</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>',
+            f'<url><loc>{base}/privacy</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>',
             f'<url><loc>{base}/public</loc><priority>0.7</priority><changefreq>daily</changefreq></url>',
             f'<url><loc>{base}/login</loc><priority>0.3</priority><changefreq>monthly</changefreq></url>',
             f'<url><loc>{base}/register</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>',
@@ -787,6 +833,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 school = sanitize_text(request.form.get('school', ''), 200)
                 role = request.form.get('role', 'student')
                 username = request.form.get('username', '').strip().lower()
+                terms_accepted = request.form.get('terms_accepted')
+
+                if not terms_accepted:
+                    return render_template('auth/register.html', error="You must accept the Terms of Service and Privacy Policy", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
 
                 if not name or not email or not password:
                     return render_template('auth/register.html', error="All fields are required", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
@@ -825,10 +875,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 otp = str(random.randint(100000, 999999))
                 from datetime import datetime, timedelta
                 otp_expires = datetime.utcnow() + timedelta(minutes=10)
+                now_utc = datetime.utcnow()
                 user = User(name=name, email=email, password_hash=hashed, school=school, role=role,
                             avatar=avatar, grade="Class XII", bio="Active ScholrNet Member",
                             username=username or None,
-                            email_otp=otp, email_otp_expires=otp_expires)
+                            email_otp=otp, email_otp_expires=otp_expires,
+                            terms_accepted=True, terms_accepted_at=now_utc, terms_version="1.0",
+                            privacy_accepted_at=now_utc)
                 db.session.add(user)
                 db.session.commit()
                 send_email(email, 'Verify your ScholrNet email',
@@ -3278,6 +3331,39 @@ def register_routes(app, bcrypt, login_manager, limiter):
             'total': logs.total, 'pages': logs.pages, 'page': page,
             'actions': [a[0] for a in actions]
         })
+
+    @app.route('/api/admin/policy/stats')
+    @login_required
+    def api_admin_policy_stats():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        total_users = User.query.count()
+        accepted = User.query.filter(User.terms_accepted == True).count()
+        current_version = '1.0'
+        versions = PolicyVersion.query.filter_by(published=True).order_by(PolicyVersion.id.desc()).all()
+        return jsonify({
+            'total_users': total_users,
+            'accepted_count': accepted,
+            'acceptance_rate': round(accepted / total_users * 100, 1) if total_users else 0,
+            'current_version': current_version,
+            'versions': [{'id': v.id, 'type': v.policy_type, 'version': v.version, 'created_at': str(v.created_at)[:10] if v.created_at else ''} for v in versions]
+        })
+
+    @app.route('/api/admin/policy/update', methods=['POST'])
+    @login_required
+    def api_admin_policy_update():
+        if current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        data = request.json or {}
+        policy_type = data.get('policy_type', '').strip()
+        version = data.get('version', '').strip()
+        content = data.get('content', '').strip()
+        if not policy_type or not version:
+            return jsonify({'error': 'Policy type and version required'}), 400
+        pv = PolicyVersion(policy_type=policy_type, version=version, content=content, published=True)
+        db.session.add(pv)
+        db.session.commit()
+        return jsonify({'success': True, 'id': pv.id})
 
     @app.route('/api/schools/list')
     @login_required

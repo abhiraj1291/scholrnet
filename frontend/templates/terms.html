@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — ScholrNet</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <meta name="description" content="ScholrNet Terms of Service — rules and guidelines for using the student platform, including accounts, content, clubs, messaging, and prohibited activities.">
+  <meta property="og:title" content="Terms of Service — ScholrNet">
+  <meta property="og:description" content="Rules and guidelines for using the ScholrNet student platform.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://scholrnet.in/terms">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Terms of Service — ScholrNet">
+  <link rel="canonical" href="https://scholrnet.in/terms" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <style>
+    .policy{padding:3rem 1.5rem 5rem}
+    .policy-inner{max-width:760px;margin:0 auto}
+    .policy h1{font-size:clamp(1.75rem,3vw,2.25rem);font-weight:800;letter-spacing:-0.02em;margin-bottom:0.25rem;color:var(--text)}
+    .policy .last-updated{font-size:0.85rem;color:var(--text-muted);margin-bottom:2rem}
+    .policy .toc{background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.25rem 1.5rem;margin-bottom:2rem}
+    .policy .toc h2{font-size:0.9rem;font-weight:700;margin-bottom:0.75rem;color:var(--text)}
+    .policy .toc ol{list-style:decimal;padding-left:1.25rem;font-size:0.85rem;line-height:2;color:var(--text-secondary)}
+    .policy .toc a{color:var(--primary);text-decoration:none}
+    .policy .toc a:hover{text-decoration:underline}
+    .policy section{margin-bottom:2rem}
+    .policy section h2{font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;padding-top:0.5rem}
+    .policy section p,.policy section li{font-size:0.9rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0.5rem}
+    .policy section ul,.policy section ol{padding-left:1.25rem;margin-bottom:0.5rem}
+    .policy section li{margin-bottom:0.25rem}
+    .policy .back-top{display:inline-block;font-size:0.8rem;color:var(--primary);font-weight:600;margin-top:0.5rem;text-decoration:none}
+    .policy .back-top:hover{text-decoration:underline}
+    .policy-footer{text-align:center;padding:2rem 1.5rem;border-top:1px solid var(--border-light);font-size:0.85rem;color:var(--text-muted)}
+    .policy-footer a{color:var(--primary);text-decoration:none}
+    .policy-footer a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo" aria-label="ScholrNet Home">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
+      </a>
+      <div class="nav-links">
+        <a href="/#features" class="nav-link">Features</a>
+        <a href="/#how-it-works" class="nav-link">How It Works</a>
+        <a href="/blog" class="nav-link">Resources</a>
+        <a href="/about" class="nav-link">About</a>
+        <a href="/#faq" class="nav-link">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+      </div>
+      <button class="nav-mobile-toggle" aria-label="Toggle menu" onclick="toggleMobileNav()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="nav-mobile hidden" id="mobileNav">
+      <a href="/#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
+      <a href="/#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
+      <a href="/blog" class="nav-link" onclick="toggleMobileNav()">Resources</a>
+      <a href="/about" class="nav-link" onclick="toggleMobileNav()">About</a>
+      <a href="/#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
+      <div class="nav-mobile-actions">
+        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="policy">
+    <div class="policy-inner">
+      <h1>Terms of Service</h1>
+      <p class="last-updated">Last Updated: June 15, 2026 | Version 1.0</p>
+
+      <div class="toc">
+        <h2>Table of Contents</h2>
+        <ol>
+          <li><a href="#acceptance">Acceptance of Terms</a></li>
+          <li><a href="#eligibility">User Eligibility</a></li>
+          <li><a href="#accounts">User Accounts</a></li>
+          <li><a href="#content">User Content</a></li>
+          <li><a href="#guidelines">Community Guidelines</a></li>
+          <li><a href="#messaging">Networking and Messaging Rules</a></li>
+          <li><a href="#clubs">Clubs and Groups</a></li>
+          <li><a href="#opportunities">Opportunities and Third-Party Content</a></li>
+          <li><a href="#ip">Intellectual Property</a></li>
+          <li><a href="#prohibited">Prohibited Activities</a></li>
+          <li><a href="#suspension">Account Suspension and Termination</a></li>
+          <li><a href="#disclaimer">Disclaimer of Warranties</a></li>
+          <li><a href="#liability">Limitation of Liability</a></li>
+          <li><a href="#changes">Changes to Terms</a></li>
+          <li><a href="#contact">Contact Information</a></li>
+        </ol>
+      </div>
+
+      <section id="acceptance">
+        <h2>1. Acceptance of Terms</h2>
+        <p>By accessing or using ScholrNet ("the Platform"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you must not use the Platform. These Terms apply to all visitors, users, and others who access or use the Platform.</p>
+        <p>ScholrNet reserves the right to update or modify these Terms at any time. Changes will be effective immediately upon posting. Continued use of the Platform after changes constitutes acceptance of the revised Terms. We will notify users of material changes via email or platform notification.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="eligibility">
+        <h2>2. User Eligibility</h2>
+        <p>ScholrNet is designed for students, teachers, school administrators, mentors, and educational institutions. By creating an account, you represent that:</p>
+        <ul>
+          <li>You are at least 13 years of age. If you are between 13 and 18, you confirm that you have obtained parental or legal guardian consent to use the Platform.</li>
+          <li>All registration information you provide is accurate, current, and complete.</li>
+          <li>You will maintain the accuracy of your account information and update it as necessary.</li>
+          <li>You are not prohibited from using the Platform under applicable law.</li>
+        </ul>
+        <p>ScholrNet reserves the right to refuse service, suspend accounts, or remove content at its sole discretion.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="accounts">
+        <h2>3. User Accounts</h2>
+        <p>You are responsible for safeguarding the password and credentials used to access your account. You agree not to share your password, let others access your account, or do anything that might compromise your account security.</p>
+        <p>You are solely responsible for any activity that occurs under your account. Notify ScholrNet immediately at <a href="mailto:scolrnetsupport@gmail.com">scolrnetsupport@gmail.com</a> if you suspect unauthorized use of your account.</p>
+        <p>You may not create multiple accounts for disruptive purposes or impersonate any person or entity. Accounts found to be fraudulent or misleading may be suspended or terminated.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="content">
+        <h2>4. User Content</h2>
+        <p>You retain ownership of any content you submit, post, or display on ScholrNet, including achievements, projects, profile information, posts, comments, and messages ("User Content"). By submitting User Content, you grant ScholrNet a non-exclusive, royalty-free, worldwide license to host, store, display, and distribute your content on the Platform for the purpose of operating and improving the service.</p>
+        <p>You represent and warrant that:</p>
+        <ul>
+          <li>You own or have the necessary rights to your User Content.</li>
+          <li>Your User Content does not infringe the intellectual property rights, privacy rights, or any other rights of any third party.</li>
+          <li>Your User Content complies with these Terms and all applicable laws.</li>
+        </ul>
+        <p>ScholrNet may remove or refuse to display User Content that violates these Terms or is otherwise objectionable, without prior notice.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="guidelines">
+        <h2>5. Community Guidelines</h2>
+        <p>ScholrNet is committed to maintaining a safe, respectful, and constructive environment for all users. You agree to:</p>
+        <ul>
+          <li>Treat other users with respect and courtesy.</li>
+          <li>Share accurate information about your achievements and credentials.</li>
+          <li>Use the Platform for its intended educational and career-development purposes.</li>
+          <li>Report inappropriate content or behavior to the ScholrNet team.</li>
+        </ul>
+        <p>The following are strictly prohibited:</p>
+          <ul>
+            <li>Harassment, bullying, intimidation, or threats of any kind.</li>
+            <li>Hate speech, discriminatory language, or content targeting protected characteristics.</li>
+            <li>Sharing false or misleading information about academic credentials, achievements, or opportunities.</li>
+            <li>Posting spam, promotional content without authorization, or irrelevant repetitive messages.</li>
+            <li>Distributing malware, viruses, or harmful code.</li>
+          </ul>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="messaging">
+        <h2>6. Networking and Messaging Rules</h2>
+        <p>ScholrNet provides messaging and networking features to facilitate communication between students, teachers, mentors, and peers. You agree to:</p>
+        <ul>
+          <li>Use messaging features for legitimate educational and professional communication.</li>
+          <li>Not send unsolicited promotional messages, spam, or repetitive content.</li>
+          <li>Not harass, threaten, or intimidate other users through direct messages.</li>
+          <li>Respect other users' boundaries and cease communication if asked.</li>
+        </ul>
+        <p>ScholrNet reserves the right to monitor messages for violations of these Terms, but does not guarantee active monitoring. Report abusive messaging to <a href="mailto:scolrnetsupport@gmail.com">scolrnetsupport@gmail.com</a>.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="clubs">
+        <h2>7. Clubs and Groups</h2>
+        <p>ScholrNet allows users to create and join clubs and groups for shared interests, academic collaboration, and extracurricular activities. Club creators and moderators are responsible for managing their group's content and ensuring compliance with these Terms.</p>
+        <p>By creating or joining a club, you agree to:</p>
+        <ul>
+          <li>Follow the club's stated purpose and guidelines.</li>
+          <li>Not use clubs for commercial promotion without authorization.</li>
+          <li>Ensure club content is appropriate for a student audience.</li>
+        </ul>
+        <p>ScholrNet may remove clubs or moderate club content that violates these Terms. Club creators may be held accountable for violations occurring within their clubs.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="opportunities">
+        <h2>8. Opportunities and Third-Party Content</h2>
+        <p>ScholrNet aggregates and displays opportunities including internships, scholarships, hackathons, competitions, research programs, and other educational activities. These opportunities may be posted by third parties and are provided for informational purposes.</p>
+        <p>ScholrNet does not endorse, guarantee, or verify any third-party opportunity unless explicitly stated. Users apply to opportunities at their own discretion and risk. ScholrNet is not responsible for the quality, accuracy, or outcome of any third-party opportunity.</p>
+        <p>Users who post opportunities represent that they have the authority to do so and that the information provided is accurate and not misleading.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="ip">
+        <h2>9. Intellectual Property</h2>
+        <p>The ScholrNet name, logo, design, and platform code are owned by ScholrNet and protected by applicable intellectual property laws. You may not copy, modify, distribute, sell, or lease any part of the Platform without explicit written permission.</p>
+        <p>You may not use the ScholrNet name, logo, or branding in a way that suggests endorsement or affiliation without prior written consent.</p>
+        <p>All content submitted by users remains their own intellectual property. ScholrNet claims no ownership over your User Content.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="prohibited">
+        <h2>10. Prohibited Activities</h2>
+        <p>In addition to violations listed in other sections, the following activities are strictly prohibited on ScholrNet:</p>
+        <ul>
+          <li>Attempting to access another user's account without authorization.</li>
+          <li>Using automated tools, bots, or scripts to interact with the Platform in ways that violate these Terms.</li>
+          <li>Interfering with the proper functioning of the Platform, including overloading servers or networks.</li>
+          <li>Reverse-engineering, decompiling, or disassembling the Platform.</li>
+          <li>Using the Platform for any illegal activity or to promote illegal activities.</li>
+          <li>Collecting user information without their consent.</li>
+          <li>Impersonating ScholrNet staff, moderators, or representatives.</li>
+        </ul>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="suspension">
+        <h2>11. Account Suspension and Termination</h2>
+        <p>ScholrNet reserves the right to suspend or terminate any account at any time, without prior notice, for violations of these Terms or for any reason deemed necessary to protect the Platform and its users.</p>
+        <p>Upon termination, your right to use the Platform immediately ceases. ScholrNet may retain certain data as required by law or for legitimate business purposes. You may request account deletion by contacting <a href="mailto:scolrnetsupport@gmail.com">scolrnetsupport@gmail.com</a>.</p>
+        <p>If you believe your account was suspended in error, you may appeal by emailing <a href="mailto:scolrnetsupport@gmail.com">scolrnetsupport@gmail.com</a>.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="disclaimer">
+        <h2>12. Disclaimer of Warranties</h2>
+        <p>ScholrNet is provided "as is" and "as available" without warranties of any kind, either express or implied. ScholrNet does not guarantee that the Platform will be uninterrupted, secure, or error-free, or that defects will be corrected.</p>
+        <p>ScholrNet makes no warranty regarding the accuracy, reliability, or completeness of any content, opportunities, or information on the Platform.</p>
+        <p>Users assume all risk for their use of the Platform and any decisions made based on information obtained through it.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="liability">
+        <h2>13. Limitation of Liability</h2>
+        <p>To the maximum extent permitted by law, ScholrNet and its founders, operators, and contributors shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of the Platform.</p>
+        <p>This includes, but is not limited to, damages for loss of profits, data, goodwill, or other intangible losses, even if ScholrNet has been advised of the possibility of such damages.</p>
+        <p>ScholrNet's total liability for any claims arising under these Terms shall not exceed the amount you have paid to use the Platform (if any).</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="changes">
+        <h2>14. Changes to Terms</h2>
+        <p>ScholrNet reserves the right to modify these Terms at any time. When material changes are made, we will notify users via email or through a platform notification. Continued use of the Platform after changes are posted constitutes acceptance of the modified Terms.</p>
+        <p>We encourage you to review these Terms periodically. The "Last Updated" date at the top of this page indicates when the Terms were last revised.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="contact">
+        <h2>15. Contact Information</h2>
+        <p>If you have questions, concerns, or requests regarding these Terms, please contact us:</p>
+        <p>
+          Email: <a href="mailto:scolrnetsupport@gmail.com">scolrnetsupport@gmail.com</a><br>
+          Platform: <a href="https://scholrnet.in">https://scholrnet.in</a>
+        </p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="24">
+          <p class="footer-desc">The academic trust network for students, teachers, and schools.</p>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Product</h4>
+          <a href="/#features" class="footer-link">Features</a>
+          <a href="/#how-it-works" class="footer-link">How It Works</a>
+          <a href="/blog" class="footer-link">Resources</a>
+          <a href="/#faq" class="footer-link">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Company</h4>
+          <a href="/about" class="footer-link">About Us</a>
+          <a href="/terms" class="footer-link">Terms of Service</a>
+          <a href="/privacy" class="footer-link">Privacy Policy</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Community</h4>
+          <a href="{{ url_for('public_timeline') }}" class="footer-link">Public Timeline</a>
+          <a href="{{ url_for('register') }}" class="footer-link">Join Now</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Support</h4>
+          <a href="mailto:scolrnetsupport@gmail.com" class="footer-link">Contact Us</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 ScholrNet. Built for the academic community.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v=5"></script>
+</body>
+</html>

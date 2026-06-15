@@ -117,6 +117,36 @@
       <div class="shimmer" style="height:6rem;width:100%;"></div>
     </div>
   </div>
+
+  <!-- Policy Management -->
+  <div class="card mb-3">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="scale" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        <span class="font-bold text-sm">Policy Management</span>
+      </div>
+    </div>
+    <div id="policyStats" class="text-sm text-muted mb-3">Loading...</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div>
+        <label class="text-xs font-bold text-muted block mb-1">Policy Type</label>
+        <select id="policyTypeSelect" class="w-full">
+          <option value="terms">Terms of Service</option>
+          <option value="privacy">Privacy Policy</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-muted block mb-1">Version</label>
+        <input type="text" id="policyVersionInput" class="w-full" placeholder="e.g. 2.0">
+      </div>
+    </div>
+    <div class="mb-2 mt-2">
+      <label class="text-xs font-bold text-muted block mb-1">Content (optional, for archival)</label>
+      <textarea id="policyContentInput" rows="3" class="w-full" placeholder="Optional notes about changes..."></textarea>
+    </div>
+    <button onclick="publishPolicy()" class="btn btn-primary btn-sm">Publish Version</button>
+    <div id="policyResult" class="text-xs mt-2"></div>
+  </div>
 </div>
 
 <script>
@@ -463,6 +493,47 @@ document.addEventListener('DOMContentLoaded', function() {
   loadSchools();
   loadAds();
   loadPosts();
+  loadPolicyStats();
 });
+
+function loadPolicyStats() {
+  fetch('/api/admin/policy/stats')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('policyStats');
+      if (!el) return;
+      var html = 'Current version: <strong>' + d.current_version + '</strong> &middot; ';
+      html += 'Users accepted: <strong>' + d.accepted_count + '/' + d.total_users + '</strong> (' + d.acceptance_rate + '%)';
+      if (d.versions && d.versions.length) {
+        html += '<br><span class="text-xs">Published versions: ' + d.versions.map(function(v) { return v.type + ' v' + v.version + ' (' + v.created_at + ')'; }).join(', ') + '</span>';
+      }
+      el.innerHTML = html;
+    })
+    .catch(function() {});
+}
+
+function publishPolicy() {
+  var type = document.getElementById('policyTypeSelect').value;
+  var version = document.getElementById('policyVersionInput').value.trim();
+  var content = document.getElementById('policyContentInput').value.trim();
+  if (!version) { showToast('Version is required', 'info'); return; }
+  fetch('/api/admin/policy/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ policy_type: type, version: version, content: content })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      showToast('Version ' + version + ' published!', 'success');
+      document.getElementById('policyVersionInput').value = '';
+      document.getElementById('policyContentInput').value = '';
+      loadPolicyStats();
+    } else {
+      showToast(d.error || 'Error', 'info');
+    }
+  })
+  .catch(function() { showToast('Error publishing version', 'info'); });
+}
 </script>
 {% endblock %}

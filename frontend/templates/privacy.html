@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — ScholrNet</title>
+  <link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+  <meta name="description" content="ScholrNet Privacy Policy — how we collect, use, and protect your personal information on the student platform.">
+  <meta property="og:title" content="Privacy Policy — ScholrNet">
+  <meta property="og:description" content="How ScholrNet handles your data, privacy, and security.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://scholrnet.in/privacy">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Privacy Policy — ScholrNet">
+  <link rel="canonical" href="https://scholrnet.in/privacy" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <style>
+    .policy{padding:3rem 1.5rem 5rem}
+    .policy-inner{max-width:760px;margin:0 auto}
+    .policy h1{font-size:clamp(1.75rem,3vw,2.25rem);font-weight:800;letter-spacing:-0.02em;margin-bottom:0.25rem;color:var(--text)}
+    .policy .last-updated{font-size:0.85rem;color:var(--text-muted);margin-bottom:2rem}
+    .policy .toc{background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.25rem 1.5rem;margin-bottom:2rem}
+    .policy .toc h2{font-size:0.9rem;font-weight:700;margin-bottom:0.75rem;color:var(--text)}
+    .policy .toc ol{list-style:decimal;padding-left:1.25rem;font-size:0.85rem;line-height:2;color:var(--text-secondary)}
+    .policy .toc a{color:var(--primary);text-decoration:none}
+    .policy .toc a:hover{text-decoration:underline}
+    .policy section{margin-bottom:2rem}
+    .policy section h2{font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;padding-top:0.5rem}
+    .policy section p,.policy section li{font-size:0.9rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0.5rem}
+    .policy section ul{padding-left:1.25rem;margin-bottom:0.5rem}
+    .policy section li{margin-bottom:0.25rem}
+    .policy .back-top{display:inline-block;font-size:0.8rem;color:var(--primary);font-weight:600;margin-top:0.5rem;text-decoration:none}
+    .policy .back-top:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo" aria-label="ScholrNet Home">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
+      </a>
+      <div class="nav-links">
+        <a href="/#features" class="nav-link">Features</a>
+        <a href="/#how-it-works" class="nav-link">How It Works</a>
+        <a href="/blog" class="nav-link">Resources</a>
+        <a href="/about" class="nav-link">About</a>
+        <a href="/#faq" class="nav-link">FAQ</a>
+      </div>
+      <div class="nav-actions">
+        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+      </div>
+      <button class="nav-mobile-toggle" aria-label="Toggle menu" onclick="toggleMobileNav()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="nav-mobile hidden" id="mobileNav">
+      <a href="/#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
+      <a href="/#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
+      <a href="/blog" class="nav-link" onclick="toggleMobileNav()">Resources</a>
+      <a href="/about" class="nav-link" onclick="toggleMobileNav()">About</a>
+      <a href="/#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
+      <div class="nav-mobile-actions">
+        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="policy">
+    <div class="policy-inner">
+      <h1>Privacy Policy</h1>
+      <p class="last-updated">Last Updated: June 15, 2026 | Version 1.0</p>
+
+      <div class="toc">
+        <h2>Table of Contents</h2>
+        <ol>
+          <li><a href="#info-collect">Information We Collect</a></li>
+          <li><a href="#account-info">Account Information</a></li>
+          <li><a href="#profile-info">Profile Information</a></li>
+          <li><a href="#user-content">User-Generated Content</a></li>
+          <li><a href="#analytics">Analytics Data</a></li>
+          <li><a href="#cookies">Cookies and Local Storage</a></li>
+          <li><a href="#how-used">How Information Is Used</a></li>
+          <li><a href="#how-shared">How Information Is Shared</a></li>
+          <li><a href="#retention">Data Retention</a></li>
+          <li><a href="#security">Security Practices</a></li>
+          <li><a href="#children">Children's Privacy</a></li>
+          <li><a href="#rights">User Rights</a></li>
+          <li><a href="#deletion">Account Deletion</a></li>
+          <li><a href="#contact-privacy">Contact Information</a></li>
+          <li><a href="#updates">Policy Updates</a></li>
+        </ol>
+      </div>
+
+      <section id="info-collect">
+        <h2>1. Information We Collect</h2>
+        <p>ScholrNet collects information you provide directly, information automatically collected when you use the Platform, and information from third parties where applicable. We collect only the data necessary to operate and improve the Platform.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="account-info">
+        <h2>2. Account Information</h2>
+        <p>When you create an account, we collect:</p>
+        <ul>
+          <li>Your full name</li>
+          <li>Email address</li>
+          <li>Password (stored as a salted bcrypt hash — never in plain text)</li>
+          <li>School name and grade (optional but recommended)</li>
+        </ul>
+        <p>If you sign in using Google or GitHub OAuth, we receive your name, email, and profile photo from that provider. We do not store your OAuth tokens beyond what is required for authentication.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="profile-info">
+        <h2>3. Profile Information</h2>
+        <p>You may choose to add additional information to your profile, including:</p>
+        <ul>
+          <li>Bio and personal description</li>
+          <li>Profile photo or avatar</li>
+          <li>Username</li>
+          <li>Skills and interests</li>
+          <li>Theme preferences</li>
+          <li>Referral code</li>
+        </ul>
+        <p>Profile information is visible to other users you connect with, and certain fields (username, name, school) may be visible on the public timeline or shareable profile links.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="user-content">
+        <h2>4. User-Generated Content</h2>
+        <p>We collect and store content you create on the Platform, including:</p>
+        <ul>
+          <li>Achievements and their supporting documents (certificates, descriptions)</li>
+          <li>Projects and associated details</li>
+          <li>Experience entries</li>
+          <li>Posts, comments, and messages</li>
+          <li>Club memberships and club-related content</li>
+        </ul>
+        <p>You control the visibility of your content. ScholrNet does not share your content with third parties except as described in this policy or with your explicit consent.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="analytics">
+        <h2>5. Analytics Data</h2>
+        <p>We automatically collect certain information when you access the Platform:</p>
+        <ul>
+          <li>Pages visited and features used</li>
+          <li>Browser type and version</li>
+          <li>Device type and operating system</li>
+          <li>Approximate geographic location (based on IP address)</li>
+          <li>Referral source</li>
+          <li>Time and duration of visits</li>
+        </ul>
+        <p>This data is aggregated and used to improve the Platform, optimize performance, and understand usage patterns. We do not sell this data to third parties.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="cookies">
+        <h2>6. Cookies and Local Storage</h2>
+        <p>ScholrNet uses cookies and local browser storage for essential functionality:</p>
+        <ul>
+          <li><strong>Session cookies:</strong> To keep you logged in during your session.</li>
+          <li><strong>Local storage:</strong> To remember preferences, such as dismissed modals and theme settings.</li>
+        </ul>
+        <p>We do not use third-party tracking cookies, advertising cookies, or any form of cross-site tracking. Analytics data is collected server-side and does not rely on client-side cookies.</p>
+        <p>You can disable cookies in your browser settings, but this may affect the functionality of the Platform.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="how-used">
+        <h2>7. How Information Is Used</h2>
+        <p>ScholrNet uses collected information to:</p>
+        <ul>
+          <li>Operate, maintain, and improve the Platform</li>
+          <li>Authenticate your identity and secure your account</li>
+          <li>Connect you with opportunities, clubs, and other users</li>
+          <li>Verify achievements through school administrators</li>
+          <li>Send important service-related communications (e.g., password resets, policy changes)</li>
+          <li>Prevent abuse, fraud, and violations of our Terms</li>
+          <li>Generate anonymous usage statistics</li>
+        </ul>
+        <p>We do not use your data for targeted advertising or sell it to any third party.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="how-shared">
+        <h2>8. How Information Is Shared</h2>
+        <p>ScholrNet shares your information only in the following circumstances:</p>
+        <ul>
+          <li><strong>With your consent:</strong> When you choose to share your profile link or make content public.</li>
+          <li><strong>With school administrators:</strong> For the purpose of verifying achievements. Only the information necessary for verification is shared.</li>
+          <li><strong>With service providers:</strong> We use third-party services for hosting (Vercel), database (Supabase PostgreSQL), file storage (Supabase Storage), email (Resend), and authentication (Firebase). These providers are contractually bound to protect your data and may not use it for any other purpose.</li>
+          <li><strong>Legal compliance:</strong> If required by law or in response to a valid legal request.</li>
+        </ul>
+        <p>We do not share personal information with advertisers or data brokers.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="retention">
+        <h2>9. Data Retention</h2>
+        <p>We retain your account information and content for as long as your account is active. If you delete your account, we delete or anonymize your personal data within 30 days, except where retention is required by law.</p>
+        <p>Aggregated and anonymized analytics data may be retained indefinitely for statistical purposes.</p>
+        <p>Messages and content visible to other users (such as comments on a public post) may remain visible after account deletion, stripped of personal identifiers.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="security">
+        <h2>10. Security Practices</h2>
+        <p>ScholrNet takes reasonable measures to protect your information:</p>
+        <ul>
+          <li>Passwords are hashed using bcrypt before storage.</li>
+          <li>All connections use TLS/SSL encryption.</li>
+          <li>Database connections are encrypted and authenticated.</li>
+          <li>Session cookies are HTTP-only and use SameSite=Lax.</li>
+          <li>Two-factor authentication is available for account protection.</li>
+          <li>Security headers (CSP, HSTS, X-Frame-Options) are applied to all responses.</li>
+          <li>Regular security updates are applied to dependencies.</li>
+        </ul>
+        <p>No platform can guarantee complete security. We encourage users to use strong passwords and enable two-factor authentication.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="children">
+        <h2>11. Children's Privacy</h2>
+        <p>ScholrNet is designed for students aged 13 and above. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal data, we will delete it promptly.</p>
+        <p>Users between 13 and 18 years of age confirm during registration that they have parental or guardian consent to use the Platform.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="rights">
+        <h2>12. User Rights</h2>
+        <p>Depending on your jurisdiction, you may have the following rights regarding your data:</p>
+        <ul>
+          <li><strong>Access:</strong> Request a copy of the personal data we hold about you.</li>
+          <li><strong>Correction:</strong> Update or correct inaccurate information.</li>
+          <li><strong>Deletion:</strong> Request deletion of your account and associated data.</li>
+          <li><strong>Portability:</strong> Request a machine-readable export of your data.</li>
+          <li><strong>Objection:</strong> Object to certain data processing activities.</li>
+        </ul>
+        <p>To exercise any of these rights, contact us at <a href="mailto:scolrnetsupport@gmail.com">scolrnetsupport@gmail.com</a>. We will respond within 30 days.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="deletion">
+        <h2>13. Account Deletion</h2>
+        <p>You may request account deletion at any time by contacting <a href="mailto:scolrnetsupport@gmail.com">scolrnetsupport@gmail.com</a>. Upon verification of your identity, we will:</p>
+        <ul>
+          <li>Delete or anonymize your personal data within 30 days.</li>
+          <li>Remove your profile from public listings.</li>
+          <li>Retain only data required by law or for legitimate security purposes (e.g., logs of policy violations).</li>
+        </ul>
+        <p>Some content you have shared with others (e.g., comments on posts, club messages) may remain visible after deletion, stripped of your name and personal identifiers.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="contact-privacy">
+        <h2>14. Contact Information</h2>
+        <p>If you have questions, concerns, or requests regarding your privacy or this policy, please contact us:</p>
+        <p>
+          Email: <a href="mailto:scolrnetsupport@gmail.com">scolrnetsupport@gmail.com</a><br>
+          Platform: <a href="https://scholrnet.in">https://scholrnet.in</a>
+        </p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+
+      <section id="updates">
+        <h2>15. Policy Updates</h2>
+        <p>We may update this Privacy Policy from time to time. When material changes are made, we will notify users via email or through a platform notification. Continued use of the Platform after changes constitutes acceptance of the updated policy.</p>
+        <p>We encourage you to review this policy periodically. The "Last Updated" date at the top of this page indicates when the policy was last revised.</p>
+        <a href="#top" class="back-top">&uarr; Back to top</a>
+      </section>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="24">
+          <p class="footer-desc">The academic trust network for students, teachers, and schools.</p>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Product</h4>
+          <a href="/#features" class="footer-link">Features</a>
+          <a href="/#how-it-works" class="footer-link">How It Works</a>
+          <a href="/blog" class="footer-link">Resources</a>
+          <a href="/#faq" class="footer-link">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Company</h4>
+          <a href="/about" class="footer-link">About Us</a>
+          <a href="/terms" class="footer-link">Terms of Service</a>
+          <a href="/privacy" class="footer-link">Privacy Policy</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Community</h4>
+          <a href="{{ url_for('public_timeline') }}" class="footer-link">Public Timeline</a>
+          <a href="{{ url_for('register') }}" class="footer-link">Join Now</a>
+        </div>
+        <div class="footer-col">
+          <h4 class="footer-heading">Support</h4>
+          <a href="mailto:scolrnetsupport@gmail.com" class="footer-link">Contact Us</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 ScholrNet. Built for the academic community.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v=5"></script>
+</body>
+</html>

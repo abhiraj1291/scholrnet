@@ -35,9 +35,22 @@ class User(UserMixin, db.Model):
     reset_otp_expires = db.Column(db.DateTime, nullable=True)
     referral_code = db.Column(db.String(20), unique=True, nullable=True)
     referral_badge = db.Column(db.Boolean, default=False)
+    terms_accepted = db.Column(db.Boolean, default=False)
+    terms_accepted_at = db.Column(db.DateTime, nullable=True)
+    terms_version = db.Column(db.String(20), default="")
+    privacy_accepted_at = db.Column(db.DateTime, nullable=True)
 
     achievements = db.relationship('Achievement', backref='user', lazy=True)
     projects = db.relationship('Project', backref='user', lazy=True)
+
+class PolicyVersion(db.Model):
+    __tablename__ = 'policy_versions'
+    id = db.Column(db.Integer, primary_key=True)
+    policy_type = db.Column(db.String(20), nullable=False, index=True)
+    version = db.Column(db.String(20), nullable=False)
+    content = db.Column(db.Text, default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    published = db.Column(db.Boolean, default=False)
 
 class Achievement(db.Model):
     __tablename__ = 'achievements'
