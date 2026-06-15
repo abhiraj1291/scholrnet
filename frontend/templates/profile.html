@@ -374,13 +374,21 @@
 
 <div id="jsDiag" style="padding:8px;margin:8px;border-radius:8px;font-size:13px;font-family:monospace;background:#fff3cd;color:#856404;border:1px solid #ffc107;">JS: starting...</div>
 <script>
-document.getElementById('jsDiag').textContent = 'JS: parsing variables...';
+try {
+var diag = document.getElementById('jsDiag');
+if (!diag) { throw new Error('jsDiag not found'); }
+diag.textContent = 'JS: diag found, parsing vars...';
 var puserId = {{ puser.id }};
+diag.textContent = 'JS: puserId=' + puserId;
 var puserName = {{ puser.name|tojson }};
+diag.textContent = 'JS: puserName ok';
 var puserAvatar = {{ puser.avatar|tojson if puser.avatar else '""' }};
+diag.textContent = 'JS: puserAvatar ok';
 var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }};
+diag.textContent = 'JS: puserAvatarUrl ok';
 var isOwn = {{ 'true' if is_own else 'false' }};
-document.getElementById('jsDiag').textContent = 'JS: variables OK, defining fetchWithRetry...';
+diag.textContent = 'JS: all vars ok';
+} catch(e) { document.getElementById('jsDiag').textContent = 'JS ERROR: ' + e.message; }
 
 function fetchWithRetry(url, retries, delay) {
   if (retries === undefined) retries = 2;
