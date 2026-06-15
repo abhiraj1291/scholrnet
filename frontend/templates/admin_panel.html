@@ -33,6 +33,7 @@
         <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Create School</button>
       </form>
     </div>
+    <input type="text" id="schoolSearch" class="w-full mb-3" placeholder="Search schools by name..." inputmode="search" autocomplete="off" style="font-size:0.8rem;padding:0.5rem 0.75rem;display:none;">
     <div id="schoolsList"></div>
   </div>
 
@@ -203,6 +204,9 @@ document.addEventListener('DOMContentLoaded', function() {
             el.className = 'p-3 rounded-xl mb-2';
             el.style.background = 'var(--bg-hover)';
             el.id = 'school-' + s.id;
+            el.setAttribute('data-student-count', s.student_count || 0);
+            el.setAttribute('data-verified-count', s.verified_count || 0);
+            el.setAttribute('data-club-count', s.club_count || 0);
             el.innerHTML =
               '<div class="flex items-start gap-3">' +
                 '<i data-lucide="building-2" style="width:1.5rem;height:1.5rem;color:var(--primary);flex-shrink:0;margin-top:0.15rem;"></i>' +
@@ -211,6 +215,11 @@ document.addEventListener('DOMContentLoaded', function() {
                   '<div class="text-xs text-muted">ID: ' + s.id + (s.location ? ' &middot; ' + escapeHtml(s.location) : '') + (s.tagline ? ' &middot; ' + escapeHtml(s.tagline) : '') + '</div>' +
                   (s.admin_email ? '<div class="text-xs mt-1" style="color:var(--text-muted);">Login: <code style="background:var(--bg);padding:0.1rem 0.35rem;border-radius:0.25rem;font-size:0.65rem;">' + escapeHtml(s.admin_email) + '</code></div>' : '') +
                   (s.verification_code ? '<div class="text-xs mt-1" style="color:var(--text-muted);">Code: <code style="background:var(--bg);padding:0.1rem 0.35rem;border-radius:0.25rem;font-size:0.65rem;">' + escapeHtml(s.verification_code) + '</code></div>' : '') +
+                  '<div class="flex gap-3 mt-1 text-xs text-muted">' +
+                    '<span><strong>' + (s.student_count || 0) + '</strong> students</span>' +
+                    '<span><strong>' + (s.verified_count || 0) + '</strong> verified</span>' +
+                    '<span><strong>' + (s.club_count || 0) + '</strong> clubs</span>' +
+                  '</div>' +
                 '</div>' +
                 '<div class="flex items-center gap-1 flex-shrink-0">' +
                   '<button class="btn btn-sm edit-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '" data-location="' + escapeHtml(s.location) + '" data-tagline="' + escapeHtml(s.tagline) + '" data-about="' + escapeHtml(s.about) + '" data-established="' + escapeHtml(s.established) + '" title="Edit"><i data-lucide="pencil" style="width:0.875rem;height:0.875rem;"></i></button>' +
@@ -222,6 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
             list.appendChild(el);
           });
           lucide.createIcons();
+          document.getElementById('schoolSearch').style.display = 'block';
 
           // Edit school
           document.querySelectorAll('.edit-school').forEach(function(btn) {
@@ -337,6 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
           });
         } else {
           list.innerHTML = '<div class="text-center text-muted text-sm py-4">No schools registered</div>';
+          document.getElementById('schoolSearch').style.display = 'none';
         }
       })
       .catch(function() {});
@@ -494,6 +505,19 @@ document.addEventListener('DOMContentLoaded', function() {
   loadAds();
   loadPosts();
   loadPolicyStats();
+
+  // School search filtering
+  document.getElementById('schoolSearch').addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    var cards = document.getElementById('schoolsList').children;
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      if (card.id && card.id.indexOf('school-') === 0) {
+        var nameEl = card.querySelector('.text-sm.font-bold');
+        card.style.display = (nameEl && nameEl.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+      }
+    }
+  });
 });
 
 function loadPolicyStats() {

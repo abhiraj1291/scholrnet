@@ -570,7 +570,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     def short_ts():
-        return "Just now"
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     def active_ads():
         try:
@@ -1488,7 +1488,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'success': True, 'post': {
             'id': post.id, 'title': post.title, 'content': post.content, 'likes': post.likes,
             'author_name': post.author_name, 'author_avatar': post.author_avatar,
-            'badge_text': post.badge_text, 'timestamp': post.timestamp
+            'badge_text': post.badge_text, 'timestamp': post.timestamp,
+            'author_id': post.author_id
         }})
 
     @app.route('/api/post/<int:post_id>/like', methods=['POST'])
@@ -1552,6 +1553,32 @@ def register_routes(app, bcrypt, login_manager, limiter):
         db.session.delete(post)
         db.session.commit()
         audit_log('delete_post', 'post', post_id)
+        return jsonify({'success': True})
+
+    @app.route('/api/post/<int:post_id>/edit', methods=['POST'])
+    @login_required
+    @limiter.limit("20 per minute")
+    def api_edit_post(post_id):
+        post = Post.query.get_or_404(post_id)
+        if post.author_id != current_user.id and current_user.role != 'super_admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        data = request.json or {}
+        if 'title' in data:
+            post.title = sanitize_text(data['title'], 200)
+        if 'content' in data:
+            post.content = sanitize_text(data['content'], 10000)
+        if 'tags' in data:
+            tags_raw = data['tags']
+            if isinstance(tags_raw, str):
+                tags_raw = [sanitize_text(t, 50) for t in tags_raw.split(',') if t.strip()]
+            elif isinstance(tags_raw, list):
+                tags_raw = [sanitize_text(str(t), 50) for t in tags_raw if t]
+            post.tags = json.dumps(tags_raw[:20])
+        if 'badge_text' in data:
+            post.badge_text = sanitize_text(data['badge_text'], 100)
+        post.timestamp = short_ts()
+        db.session.commit()
+        audit_log('edit_post', 'post', post_id)
         return jsonify({'success': True})
 
     @app.route('/api/achievement/create', methods=['POST'])
@@ -2462,6 +2489,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
             all_comments = Comment.query.filter(Comment.post_id.in_(post_ids)).order_by(Comment.id.asc()).all()
             for c in all_comments:
                 comments_by_post.setdefault(c.post_id, []).append({'id': c.id, 'author': c.author, 'text': c.text, 'timestamp': c.timestamp})
+        def fmt_ts(p):
+            ts = p.timestamp
+            if ts == 'Just now' or not ts:
+                if p.created_at:
+                    return p.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                return None
+            return ts
         return jsonify({
             'posts': [{
                 'id': p.id, 'title': p.title, 'content': p.content, 'type': p.type,
@@ -2469,6 +2503,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'likes_count': p.likes or 0, 'is_liked': p.id in liked_ids,
                 'tags': json.loads(p.tags) if p.tags else [],
                 'comments': comments_by_post.get(p.id, []),
+                'timestamp': fmt_ts(p),
                 'author': {'id': p.author_id, 'name': p.author_name, 'school': p.author_school, 'avatar': p.author_avatar,
                           'avatar_url': authors.get(p.author_id).avatar_url if p.author_id and p.author_id in authors else '',
                           'role': authors.get(p.author_id).role if p.author_id and p.author_id in authors else '',
@@ -3256,11 +3291,17 @@ def register_routes(app, bcrypt, login_manager, limiter):
         result = []
         for s in schools:
             admin = User.query.filter_by(school=s.name, role='admin').first()
+            student_count = User.query.filter_by(school=s.name, role='student').count()
+            verified_count = User.query.filter_by(verified_school_id=s.id, school_verified=True).count()
+            club_count = Club.query.filter(Club.name.ilike(f'%{s.name}%')).count()
             result.append({
                 'id': s.id, 'name': s.name, 'location': s.location or '',
                 'tagline': s.tagline or '', 'about': s.about or '',
                 'established': s.established or '', 'verification_code': s.verification_code or '',
-                'admin_email': admin.email if admin else ''
+                'admin_email': admin.email if admin else '',
+                'student_count': student_count,
+                'verified_count': verified_count,
+                'club_count': club_count
             })
         return jsonify({'schools': result})
 
@@ -3341,7 +3382,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
         # Remove school reference from users
         User.query.filter_by(verified_school_id=school_id).update({'verified_school_id': None, 'school_verified': False})
         User.query.filter_by(school=school.name).update({'school': ''})
+        # Remove related records
         SchoolAnnouncement.query.filter_by(school_id=school_id).delete()
+        VerificationRequest.query.filter_by(school_id=school_id).delete()
         audit_log('delete_school', 'school', school_id, f'name={school.name}')
         db.session.delete(school)
         db.session.commit()
@@ -3539,6 +3582,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
                     conn.commit()
                 mig.append("added users.verified_school_id")
+            # Add created_at to posts + backfill timestamps
+            if 'created_at' not in posts_cols:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE posts ADD COLUMN created_at TIMESTAMP"))
+                    conn.execute(text("UPDATE posts SET created_at = NOW() - INTERVAL '1 day' * (SELECT MAX(id) - posts.id + 1 FROM posts) WHERE created_at IS NULL"))
+                    conn.commit()
+                mig.append("added posts.created_at + backfill")
         except Exception as e:
             return jsonify({"error": str(e), "ran": mig}), 500
         audit_log('migrate_db', 'database', detail=f'changes={len(mig)}')
