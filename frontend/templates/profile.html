@@ -372,16 +372,12 @@
   </div>
 </div>
 
-<div id="jsDiag" style="padding:8px;margin:8px;border-radius:8px;font-size:13px;font-family:monospace;background:#fff3cd;color:#856404;border:1px solid #ffc107;">JS: starting...</div>
 <script>
-function _diag(m) { try { var e=document.getElementById('jsDiag'); if(e) e.textContent=m; } catch(_) {} document.title='D:'+m.slice(0,60); }
-try {
-var puserId = {{ puser.id }}; _diag('puserId='+puserId);
-var puserName = {{ puser.name|tojson }}; _diag('puserName ok');
-var puserAvatar = {{ puser.avatar|tojson if puser.avatar else '""' }}; _diag('puserAvatar ok');
-var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }}; _diag('puserAvatarUrl ok');
-var isOwn = {{ 'true' if is_own else 'false' }}; _diag('all vars ok');
-} catch(e) { _diag('ERR:'+e.message); }
+var puserId = {{ puser.id }};
+var puserName = {{ puser.name|tojson }};
+var puserAvatar = {{ puser.avatar|tojson if puser.avatar else '""' }};
+var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }};
+var isOwn = {{ 'true' if is_own else 'false' }};
 
 function fetchWithRetry(url, retries, delay) {
   if (retries === undefined) retries = 2;
