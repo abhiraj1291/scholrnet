@@ -247,7 +247,8 @@ body { padding-top: 6.5rem; display: flex; flex-direction: column; min-height: 1
 .profile-avatar { width: 3.5rem; height: 3.5rem; border-radius: 1rem; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1rem; }
 .profile-name { font-weight: 900; font-size: 1.125rem; }
 .profile-school { font-size: 0.75rem; color: var(--text-muted); }
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
+@media (max-width: 480px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 .stat-box { padding: 0.5rem; background: var(--bg-hover); border-radius: 0.75rem; text-align: center; }
 .stat-num { font-weight: 900; font-size: 1.125rem; }
 .stat-label { font-size: 0.625rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
