@@ -97,7 +97,6 @@ class Post(db.Model):
     video_url = db.Column(db.String(500), default="")
     image_url = db.Column(db.Text, default="")
     club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=True, index=True)
-    created_at = db.Column(db.DateTime, nullable=True)
 
 class Comment(db.Model):
     __tablename__ = 'comments'

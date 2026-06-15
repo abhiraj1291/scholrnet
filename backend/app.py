@@ -2491,9 +2491,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 comments_by_post.setdefault(c.post_id, []).append({'id': c.id, 'author': c.author, 'text': c.text, 'timestamp': c.timestamp})
         def fmt_ts(p):
             ts = p.timestamp
-            if ts == 'Just now' or not ts:
-                if p.created_at:
-                    return p.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            if not ts or ts == 'Just now':
                 return None
             return ts
         return jsonify({
@@ -3582,13 +3580,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
                     conn.commit()
                 mig.append("added users.verified_school_id")
-            # Add created_at to posts + backfill timestamps
-            if 'created_at' not in posts_cols:
-                with db.engine.connect() as conn:
-                    conn.execute(text("ALTER TABLE posts ADD COLUMN created_at TIMESTAMP"))
-                    conn.execute(text("UPDATE posts SET created_at = NOW() - INTERVAL '1 day' * (SELECT MAX(id) - posts.id + 1 FROM posts) WHERE created_at IS NULL"))
-                    conn.commit()
-                mig.append("added posts.created_at + backfill")
         except Exception as e:
             return jsonify({"error": str(e), "ran": mig}), 500
         audit_log('migrate_db', 'database', detail=f'changes={len(mig)}')
