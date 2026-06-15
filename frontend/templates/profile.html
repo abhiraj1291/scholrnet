@@ -374,9 +374,9 @@
 
 <script>
 var puserId = {{ puser.id }};
-var puserName = '{{ puser.name|replace("'", "\\'") }}';
-var puserAvatar = '{{ puser.avatar or "" }}';
-var puserAvatarUrl = '{{ puser.avatar_url or "" }}';
+var puserName = {{ puser.name|tojson }};
+var puserAvatar = {{ puser.avatar|tojson if puser.avatar else '""' }};
+var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }};
 var isOwn = {{ 'true' if is_own else 'false' }};
 
 function fetchWithRetry(url, retries, delay) {
