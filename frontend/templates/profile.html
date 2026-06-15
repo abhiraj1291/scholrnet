@@ -742,16 +742,6 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
   var editingExpId = null;
   function openEditExpFromData(btn) {
     editingExpId = parseInt(btn.getAttribute('data-id'));
-    document.getElementById('editExpCompany').value = company;
-    document.getElementById('editExpRole').value = role;
-    document.getElementById('editExpDesc').value = desc;
-    document.getElementById('editExpSkills').value = skills;
-    document.getElementById('editExpStart').value = start;
-    document.getElementById('editExpEnd').value = end;
-    document.getElementById('editExpCurrent').checked = current;
-    document.getElementById('editExpModal').classList.remove('hidden');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
     document.getElementById('editExpCompany').value = btn.getAttribute('data-company');
     document.getElementById('editExpRole').value = btn.getAttribute('data-role');
     document.getElementById('editExpDesc').value = btn.getAttribute('data-desc');
