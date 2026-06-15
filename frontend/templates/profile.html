@@ -372,12 +372,15 @@
   </div>
 </div>
 
+<div id="jsDiag" style="padding:8px;margin:8px;border-radius:8px;font-size:13px;font-family:monospace;background:#fff3cd;color:#856404;border:1px solid #ffc107;">JS: starting...</div>
 <script>
+document.getElementById('jsDiag').textContent = 'JS: parsing variables...';
 var puserId = {{ puser.id }};
 var puserName = {{ puser.name|tojson }};
 var puserAvatar = {{ puser.avatar|tojson if puser.avatar else '""' }};
 var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }};
 var isOwn = {{ 'true' if is_own else 'false' }};
+document.getElementById('jsDiag').textContent = 'JS: variables OK, defining fetchWithRetry...';
 
 function fetchWithRetry(url, retries, delay) {
   if (retries === undefined) retries = 2;
@@ -390,7 +393,7 @@ function fetchWithRetry(url, retries, delay) {
           if (ct.indexOf('application/json') === -1 && ct.indexOf('text/json') === -1) {
             return r.text().then(function(t) {
               try { return JSON.parse(t); }
-              catch(e) { throw new Error('Not JSON'); }
+              catch(e) { throw new Error('Not JSON: ' + t.slice(0,200)); }
             });
           }
           return r.json();
@@ -404,8 +407,10 @@ function fetchWithRetry(url, retries, delay) {
     attempt(retries);
   });
 }
+document.getElementById('jsDiag').textContent = 'JS: fn defs OK, waiting DOMContentLoaded...';
 
 document.addEventListener('DOMContentLoaded', function() {
+document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
   {% if is_own %}
   // Toggle achievement form
   document.getElementById('toggleAchievementForm').addEventListener('click', function() {
@@ -868,12 +873,17 @@ document.addEventListener('DOMContentLoaded', function() {
   {% endif %}
 
   function loadFriends() {
+    document.getElementById('jsDiag').textContent = 'JS: loadFriends fetching...';
     var url = isOwn ? '/api/friend/list' : '/api/user/' + puserId + '/connections';
     fetchWithRetry(url)
       .then(function(d) {
+        document.getElementById('jsDiag').textContent = 'JS: friends data received, count=' + ((d.friends||d.connections||[]).length);
         var list = document.getElementById('friendsList');
         var count = document.getElementById('friendsCount');
-        if (!list) return;
+        if (!list) {
+          document.getElementById('jsDiag').textContent = 'JS: ERROR #friendsList not found!';
+          return;
+        }
         list.innerHTML = '';
         var items = d.friends || d.connections || [];
         if (items.length > 0) {
@@ -895,17 +905,23 @@ document.addEventListener('DOMContentLoaded', function() {
           if (count) count.textContent = '0';
         }
       })
-      .catch(function() {
+      .catch(function(e) {
+        document.getElementById('jsDiag').textContent = 'JS: friends fetch failed: ' + (e.message || e);
         var list = document.getElementById('friendsList');
         if (list) list.innerHTML = '<p class="text-xs text-muted text-center py-2">Could not load connections</p>';
       });
   }
 
   function loadClubs() {
+    document.getElementById('jsDiag').textContent = 'JS: loadClubs fetching...';
     fetchWithRetry('/api/user/' + puserId + '/clubs')
       .then(function(d) {
+        document.getElementById('jsDiag').textContent = 'JS: clubs data received, count=' + (d.clubs||[]).length;
         var list = document.getElementById('profileClubsList');
-        if (!list) return;
+        if (!list) {
+          document.getElementById('jsDiag').textContent = 'JS: ERROR #profileClubsList not found!';
+          return;
+        }
         list.innerHTML = '';
         if (d.clubs && d.clubs.length > 0) {
           d.clubs.forEach(function(c) {
@@ -923,7 +939,8 @@ document.addEventListener('DOMContentLoaded', function() {
           list.innerHTML = '<p class="text-xs text-muted text-center py-2">No clubs joined yet</p>';
         }
       })
-      .catch(function() {
+      .catch(function(e) {
+        document.getElementById('jsDiag').textContent = 'JS: clubs fetch failed: ' + (e.message || e);
         var list = document.getElementById('profileClubsList');
         if (list) list.innerHTML = '<p class="text-xs text-muted text-center py-2">Could not load clubs</p>';
       });
@@ -1176,9 +1193,13 @@ document.addEventListener('DOMContentLoaded', function() {
   loadAchievements();
   loadProjects();
   loadExperiences();
+  document.getElementById('jsDiag').textContent = 'JS: calling loadFriends()...';
   loadFriends();
+  document.getElementById('jsDiag').textContent = 'JS: loadFriends returned, calling loadClubs()...';
   loadClubs();
+  document.getElementById('jsDiag').textContent = 'JS: loadClubs returned, calling loadProfile()...';
   loadProfile();
+  document.getElementById('jsDiag').textContent = 'JS: all load functions called OK';
   {% if is_own %}
   loadFriendRequests();
   {% endif %}
