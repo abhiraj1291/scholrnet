@@ -643,6 +643,14 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def about_page():
         return render_template('about.html')
 
+    @app.route('/contact')
+    def contact_page():
+        return render_template('contact.html')
+
+    @app.route('/schools')
+    def schools_page():
+        return render_template('schools.html')
+
     @app.route('/terms')
     def terms_page():
         return render_template('terms.html')
@@ -650,6 +658,24 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/privacy')
     def privacy_page():
         return render_template('privacy.html')
+
+    @app.route('/api/contact', methods=['POST'])
+    def api_contact():
+        try:
+            data = request.json or {}
+            name = (data.get('name') or '').strip()
+            email = (data.get('email') or '').strip().lower()
+            subject = (data.get('subject') or '').strip()
+            message = (data.get('message') or '').strip()
+            if not all([name, email, subject, message]):
+                return jsonify({'success': False, 'error': 'All fields required'}), 400
+            if '@' not in email:
+                return jsonify({'success': False, 'error': 'Valid email required'}), 400
+            print(f"[Contact] {name} <{email}> | {subject}: {message[:200]}")
+            return jsonify({'success': True, 'message': 'Message received. We\'ll get back to you soon.'})
+        except Exception as e:
+            print(f"[Contact] Error: {e}")
+            return jsonify({'success': False, 'error': 'Server error'}), 500
 
     @app.route('/api/leads', methods=['POST'])
     def api_lead_capture():
@@ -700,6 +726,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
         urls = [
             f'<url><loc>{base}/</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>',
             f'<url><loc>{base}/about</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>',
+            f'<url><loc>{base}/contact</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>',
+            f'<url><loc>{base}/schools</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>',
             f'<url><loc>{base}/terms</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>',
             f'<url><loc>{base}/privacy</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>',
             f'<url><loc>{base}/public</loc><priority>0.7</priority><changefreq>daily</changefreq></url>',

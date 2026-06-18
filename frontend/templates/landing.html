@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=6">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=7">
   <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
   <link rel="canonical" href="https://scholrnet.in" />
   <script type="application/ld+json">
@@ -74,7 +74,9 @@
         <a href="#features" class="nav-link">Features</a>
         <a href="#how-it-works" class="nav-link">How It Works</a>
         <a href="{{ url_for('blog_index') }}" class="nav-link">Resources</a>
+        <a href="{{ url_for('schools_page') }}" class="nav-link">For Schools</a>
         <a href="{{ url_for('about_page') }}" class="nav-link">About</a>
+        <a href="{{ url_for('contact_page') }}" class="nav-link">Contact</a>
         <a href="#faq" class="nav-link">FAQ</a>
       </div>
       <div class="nav-actions">
@@ -89,7 +91,9 @@
       <a href="#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
       <a href="#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
       <a href="{{ url_for('blog_index') }}" class="nav-link" onclick="toggleMobileNav()">Resources</a>
+      <a href="{{ url_for('schools_page') }}" class="nav-link" onclick="toggleMobileNav()">For Schools</a>
       <a href="{{ url_for('about_page') }}" class="nav-link" onclick="toggleMobileNav()">About</a>
+      <a href="{{ url_for('contact_page') }}" class="nav-link" onclick="toggleMobileNav()">Contact</a>
       <a href="#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
       <div class="nav-mobile-actions">
         <a href="{{ url_for('login') }}" class="btn-ghost" onclick="toggleMobileNav()">Sign In</a>
@@ -452,6 +456,8 @@
         <div class="footer-col">
           <h4 class="footer-heading">Company</h4>
           <a href="{{ url_for('about_page') }}" class="footer-link">About Us</a>
+          <a href="{{ url_for('schools_page') }}" class="footer-link">For Schools</a>
+          <a href="{{ url_for('blog_index') }}" class="footer-link">Resources</a>
           <a href="{{ url_for('terms_page') }}" class="footer-link">Terms of Service</a>
           <a href="{{ url_for('privacy_page') }}" class="footer-link">Privacy Policy</a>
         </div>
@@ -459,10 +465,14 @@
           <h4 class="footer-heading">Community</h4>
           <a href="{{ url_for('public_timeline') }}" class="footer-link">Public Timeline</a>
           <a href="{{ url_for('register') }}" class="footer-link">Join Now</a>
+          <a href="https://linkedin.com/in/abhiraj129" target="_blank" rel="noopener" class="footer-link">LinkedIn</a>
+          <a href="https://instagram.com/scholrnet" target="_blank" rel="noopener" class="footer-link">Instagram</a>
+          <a href="https://twitter.com/scholrnet" target="_blank" rel="noopener" class="footer-link">Twitter</a>
         </div>
         <div class="footer-col">
           <h4 class="footer-heading">Support</h4>
-          <a href="mailto:scolrnetsupport@gmail.com" class="footer-link">Contact Us</a>
+          <a href="{{ url_for('contact_page') }}" class="footer-link">Contact Us</a>
+          <a href="mailto:scolrnetsupport@gmail.com" class="footer-link">Email</a>
         </div>
       </div>
       <div class="footer-bottom">
@@ -487,6 +497,6 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/landing.js') }}?v=6"></script>
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v=7"></script>
 </body>
 </html>
