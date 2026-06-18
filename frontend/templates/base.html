@@ -159,7 +159,7 @@
       </button>
     </nav>
 
-    <div id="tab-more-dropdown" class="hidden" style="position:absolute;right:0.75rem;top:100%;margin-top:0;width:180px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:200;overflow:hidden;">
+    <div id="tab-more-dropdown" class="hidden" style="position:absolute;right:0.75rem;top:100%;margin-top:0;width:180px;max-width:calc(100vw - 1.5rem);background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);z-index:200;overflow:hidden;">
       {% for endpoint, icon, label in more_tabs %}
       <a href="{{ url_for(endpoint) }}" class="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-hover" style="text-decoration:none;color:var(--text);border-bottom:1px solid var(--border);">
         <i data-lucide="{{ icon }}" style="width:16px;height:16px;color:var(--text-muted);"></i> {{ label }}
