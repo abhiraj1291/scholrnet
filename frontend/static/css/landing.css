@@ -272,11 +272,26 @@ img{max-width:100%;height:auto;display:block}
    Mobile (< 48rem) — tighter layout overrides
    ═══════════════════════════════════════════════ */
 @media(max-width:48rem){
-  /* 1. Hero — tighter, hide visual, simplify CTAs */
+  /* 1. Hero — tighter, compact visual cards, simplify CTAs */
   .hero{padding:1rem 0.75rem 1.5rem}
-  .hero-inner{gap:1rem}
-  .hero-title{font-size:clamp(1.25rem,5vw,2.65rem)}
-  .hero-visual{display:none!important}
+  .hero-inner{gap:0.75rem}
+  .hero-title{font-size:clamp(1.25rem,5vw,2.65rem);margin-bottom:0.375rem}
+  .hero-sub{margin-bottom:0.75rem}
+  .hero-cta{margin-bottom:1rem}
+  .hero-visual{display:flex;flex-direction:row;gap:0.5rem;margin-top:0.25rem;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:0.25rem}
+  .hero-visual::-webkit-scrollbar{display:none}
+  .hero-card{flex:0 0 auto;min-width:0;scroll-snap-align:start;padding:0.5rem 0.75rem;box-shadow:var(--shadow-sm)}
+  .hero-card-1{width:140px}
+  .hero-card-2,.hero-card-3{width:160px}
+  .hero-card-header{margin-bottom:0.25rem}
+  .hero-card-avatar{width:22px;height:22px;font-size:0.55rem}
+  .hero-card-name{font-size:0.7rem}
+  .hero-card-badge{font-size:0.6rem}
+  .hero-card-body{gap:0.375rem}
+  .hero-card-stat{font-size:0.6rem}
+  .hero-card-title{font-size:0.75rem}
+  .hero-card-meta{font-size:0.6rem}
+  .hero-card-tag{font-size:0.55rem;padding:0.0625rem 0.25rem;margin-bottom:0.125rem}
   .hero-cta .btn-outline{background:none;border:none;padding:0.25rem 0;font-size:0.8rem;min-height:36px;color:var(--text-secondary);box-shadow:none;width:auto;align-self:center}
   .hero-cta .btn-outline:hover{background:none;color:var(--primary)}
 
