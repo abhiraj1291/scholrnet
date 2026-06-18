@@ -34,17 +34,47 @@
     });
   });
 
-  // Mobile nav toggle
+  // Mobile nav toggle — smooth slide animation
   window.toggleMobileNav = function() {
     var el = document.getElementById('mobileNav');
-    if (el) el.classList.toggle('hidden');
+    if (el) {
+      el.classList.toggle('nav-open');
+      var btn = document.querySelector('.nav-mobile-toggle');
+      if (btn) {
+        btn.setAttribute('aria-expanded', el.classList.contains('nav-open'));
+        btn.setAttribute('aria-label', el.classList.contains('nav-open') ? 'Close menu' : 'Open menu');
+      }
+    }
   };
+
+  // Init mobile toggle aria
+  (function() {
+    var btn = document.querySelector('.nav-mobile-toggle');
+    if (btn && !btn.getAttribute('aria-expanded')) {
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open menu');
+    }
+  })();
 
   // Close mobile nav on escape
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       var el = document.getElementById('mobileNav');
-      if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
+      if (el && el.classList.contains('nav-open')) {
+        el.classList.remove('nav-open');
+        var btn = document.querySelector('.nav-mobile-toggle');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    }
+  });
+
+  // Close mobile nav on outside tap
+  document.addEventListener('click', function(e) {
+    var el = document.getElementById('mobileNav');
+    var toggle = document.querySelector('.nav-mobile-toggle');
+    if (el && el.classList.contains('nav-open') && !el.contains(e.target) && toggle && !toggle.contains(e.target)) {
+      el.classList.remove('nav-open');
+      toggle.setAttribute('aria-expanded', 'false');
     }
   });
 
