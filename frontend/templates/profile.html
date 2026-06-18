@@ -380,8 +380,8 @@ var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }}
 var isOwn = {{ 'true' if is_own else 'false' }};
 
 function fetchWithRetry(url, retries, delay) {
-  if (retries === undefined) retries = 2;
-  if (delay === undefined) delay = 2000;
+  if (retries === undefined) retries = 1;
+  if (delay === undefined) delay = 500;
   return new Promise(function(resolve, reject) {
     function attempt(n) {
       fetch(url)
@@ -933,6 +933,81 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
       });
   }
 
+  function loadBundle() {
+    document.getElementById('jsDiag').textContent = 'JS: loadBundle fetching...';
+    var bundleUrl = '/api/user/' + puserId + '/profile-bundle';
+    fetchWithRetry(bundleUrl)
+      .then(function(d) {
+        document.getElementById('jsDiag').textContent = 'JS: bundle received';
+        // Profile stats
+        document.getElementById('pStatVerified').textContent = d.verified_achievements || 0;
+        document.getElementById('pStatProjects').textContent = d.projects || 0;
+        var cc = document.getElementById('pStatClubs');
+        if (cc) cc.textContent = d.clubs || 0;
+        var fc = document.getElementById('pStatFriends');
+        if (fc) fc.textContent = d.friends || 0;
+        if (d.skills && d.skills.length > 0) {
+          var skillsEl = document.getElementById('profileSkills');
+          skillsEl.innerHTML = d.skills.map(function(s) { return '<span class="skill">' + s + '</span>'; }).join('');
+        }
+        // Friends list
+        var list = document.getElementById('friendsList');
+        var count = document.getElementById('friendsCount');
+        if (list) {
+          list.innerHTML = '';
+          var items = d.connections || [];
+          if (items.length > 0) {
+            if (count) count.textContent = items.length;
+            items.forEach(function(f) {
+              var mutualText = (f.mutual > 0) ? '<span class="text-xs text-muted">' + f.mutual + ' mutual</span>' : '';
+              var nameLink = f.username ? '/u/' + f.username : '/profile/' + f.id;
+              var el = document.createElement('div');
+              el.className = 'flex items-center gap-3 p-2 rounded-xl mb-2';
+              el.style.background = 'var(--bg-hover)';
+              el.innerHTML =
+                avatarHtml(f, 'sm') +
+                '<div><a href="' + nameLink + '" class="font-bold text-xs hover:underline">' + escapeHtml(f.name) + '</a><div class="text-xs text-muted">' + escapeHtml(f.school || '') + ' ' + mutualText + '</div></div>';
+              list.appendChild(el);
+            });
+          } else {
+            list.innerHTML = '<p class="text-xs text-muted text-center py-2">No connections yet</p>';
+            if (count) count.textContent = '0';
+          }
+        }
+        // Clubs list
+        var clubsList = document.getElementById('profileClubsList');
+        if (clubsList) {
+          clubsList.innerHTML = '';
+          if (d.clubs_list && d.clubs_list.length > 0) {
+            d.clubs_list.forEach(function(c) {
+              var el = document.createElement('a');
+              el.href = '/club/' + c.id;
+              el.style.textDecoration = 'none';
+              el.style.color = 'inherit';
+              el.className = 'flex items-center justify-between p-2 rounded-xl mb-2';
+              el.style.background = 'var(--bg-hover)';
+              el.innerHTML = '<div><div class="font-bold text-xs">' + escapeHtml(c.name) + '</div><div class="text-xs text-muted">' + c.member_count + ' members &middot; ' + c.role.toUpperCase() + '</div></div><i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--text-muted);"></i>';
+              clubsList.appendChild(el);
+            });
+          } else {
+            clubsList.innerHTML = '<p class="text-xs text-muted text-center py-2">No clubs joined yet</p>';
+          }
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      })
+      .catch(function(e) {
+        document.getElementById('jsDiag').textContent = 'JS: bundle fetch failed: ' + (e.message || e);
+        ['pStatVerified','pStatProjects','pStatClubs','pStatFriends'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = '--';
+        });
+        var list = document.getElementById('friendsList');
+        if (list) list.innerHTML = '<p class="text-xs text-muted text-center py-2">Could not load connections</p>';
+        var clubsList = document.getElementById('profileClubsList');
+        if (clubsList) clubsList.innerHTML = '<p class="text-xs text-muted text-center py-2">Could not load clubs</p>';
+      });
+  }
+
   function loadFriendRequests() {
     fetch('/api/friend/requests')
       .then(function(r) { return r.json(); })
@@ -1180,13 +1255,9 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
   loadAchievements();
   loadProjects();
   loadExperiences();
-  document.getElementById('jsDiag').textContent = 'JS: calling loadFriends()...';
-  loadFriends();
-  document.getElementById('jsDiag').textContent = 'JS: loadFriends returned, calling loadClubs()...';
-  loadClubs();
-  document.getElementById('jsDiag').textContent = 'JS: loadClubs returned, calling loadProfile()...';
-  loadProfile();
-  document.getElementById('jsDiag').textContent = 'JS: all load functions called OK';
+  document.getElementById('jsDiag').textContent = 'JS: calling loadBundle()...';
+  loadBundle();
+  document.getElementById('jsDiag').textContent = 'JS: loadBundle called OK';
   {% if is_own %}
   loadFriendRequests();
   {% endif %}
