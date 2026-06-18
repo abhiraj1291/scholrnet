@@ -2622,64 +2622,6 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'skills': [], 'friend_status': 'none'
             })
 
-    @app.route('/api/user/<int:user_id>/profile-bundle')
-    @login_required
-    def api_user_profile_bundle(user_id):
-        try:
-            puser = User.query.get(user_id)
-            if not puser:
-                return jsonify({'error': 'User not found'}), 404
-            v_count = Achievement.query.filter_by(user_id=user_id, verification_status='Verified').count()
-            p_count = Project.query.filter_by(user_id=user_id).count()
-            f_count = _friend_count(user_id)
-            c_count = ClubMember.query.filter_by(user_id=user_id).count()
-            a_count = Achievement.query.filter_by(user_id=user_id).count()
-            skills = []
-            for pj in Project.query.filter_by(user_id=user_id).all():
-                if pj.skills:
-                    for s in pj.skills.split(','):
-                        s = s.strip()
-                        if s and s not in skills:
-                            skills.append(s)
-            sent = Connection.query.filter_by(user_id=user_id, status='accepted').all()
-            received = Connection.query.filter_by(connected_user_id=user_id, status='accepted').all()
-            conn_ids = set()
-            for c in sent: conn_ids.add(c.connected_user_id)
-            for c in received: conn_ids.add(c.user_id)
-            my_sent = Connection.query.filter_by(user_id=current_user.id, status='accepted').all()
-            my_received = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all()
-            my_ids = set()
-            for c in my_sent: my_ids.add(c.connected_user_id)
-            for c in my_received: my_ids.add(c.user_id)
-            conn_users = User.query.filter(User.id.in_(conn_ids)).all() if conn_ids else []
-            memberships = ClubMember.query.filter_by(user_id=user_id).all()
-            clubs = []
-            if memberships:
-                club_ids = [m.club_id for m in memberships]
-                club_map = {}
-                for c in Club.query.filter(Club.id.in_(club_ids)).all():
-                    club_map[c.id] = c
-                clubs = [{'id': m.club_id, 'name': club_map[m.club_id].name if m.club_id in club_map else 'Unknown',
-                    'member_count': club_map[m.club_id].member_count if m.club_id in club_map else 0,
-                    'role': m.role} for m in memberships]
-            return jsonify({
-                'verified_achievements': v_count, 'projects': p_count, 'clubs': c_count,
-                'friends': f_count, 'achievements': a_count, 'collaborations': 0,
-                'skills': skills,
-                'connections': [{
-                    'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(),
-                    'avatar_url': u.avatar_url, 'school': u.school, 'username': u.username,
-                    'mutual': len(my_ids & {u.id})
-                } for u in conn_users],
-                'clubs_list': clubs
-            })
-        except Exception:
-            return jsonify({
-                'verified_achievements': 0, 'projects': 0, 'clubs': 0, 'friends': 0,
-                'achievements': 0, 'collaborations': 0, 'skills': [],
-                'connections': [], 'clubs_list': []
-            })
-
     @app.route('/api/user/<int:user_id>/achievements')
     @login_required
     def api_user_achievements(user_id):
