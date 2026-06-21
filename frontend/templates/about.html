@@ -85,13 +85,33 @@
     .about-cta p{font-size:1rem;color:var(--text-secondary);max-width:480px;margin:0 auto 1.75rem;line-height:1.7}
     .about-cta .btn-primary.btn-lg{box-shadow:0 4px 14px rgba(108,59,245,0.3)}
     .about-team-text{font-size:0.95rem;color:var(--text-secondary);line-height:1.75;max-width:600px;margin:1rem auto 0}
+    .about-grid-reversed .about-visual-reversed{order:-1}
     @media(max-width:48rem){
       .about-grid{grid-template-columns:1fr;gap:2rem}
+      .about-grid-reversed .about-visual-reversed{order:0}
       .about-section{padding:3rem 1.5rem}
       .about-mission-grid{grid-template-columns:1fr}
       .about-values{grid-template-columns:1fr}
       .founder-grid{grid-template-columns:1fr;gap:2rem}
       .about-hero{padding:3rem 1.5rem}
+    }
+    @media(max-width:30rem){
+      .about-hero{min-height:auto;padding:2rem 1rem}
+      .about-section{padding:2rem 1rem}
+      .about-card{padding:1.25rem}
+      .founder-avatar{width:80px;height:80px;font-size:1.75rem}
+      .about-mission-grid{gap:1rem}
+      .about-mission-item{padding:1rem}
+      .about-values{gap:1rem}
+      .about-value{padding:1rem}
+    }
+    @media(max-width:22.5rem){
+      .about-hero{padding:1.5rem 0.75rem}
+      .about-section{padding:1.5rem 0.75rem}
+      .about-card{padding:1rem}
+      .founder-avatar{width:64px;height:64px;font-size:1.5rem}
+      .about-mission-item{padding:0.75rem}
+      .about-value{padding:0.75rem}
     }
   </style>
 </head>
@@ -120,7 +140,7 @@
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
-    <div class="nav-mobile hidden" id="mobileNav">
+    <div class="nav-mobile" id="mobileNav">
       <a href="/#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
       <a href="/#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
       <a href="/blog" class="nav-link" onclick="toggleMobileNav()">Resources</a>
@@ -170,15 +190,8 @@
   <!-- Why We Built ScholrNet -->
   <section class="about-section">
     <div class="about-inner">
-      <div class="about-grid" style="direction:rtl;grid-template-columns:1fr 1fr;">
-        <div style="direction:ltr;">
-          <span class="about-label">Why We Built It</span>
-          <h2 class="about-title">Opportunities should find the right students</h2>
-          <p class="about-text">The internet has more opportunities than ever — online courses, global competitions, research programs, startup internships, scholarships. But they're buried in newsletters, Twitter threads, LinkedIn posts, and college notice boards.</p>
-          <p class="about-text">Most students don't have time to hunt across platforms. Many don't even know what's available to them. And when they do find something, they often hesitate to apply because their profile doesn't stand out.</p>
-          <p class="about-text">ScholrNet aggregates opportunities in one feed, tailored to students. And it gives every student a credible, verifiable profile — so your application speaks for itself.</p>
-        </div>
-        <div class="about-visual" style="direction:ltr;">
+      <div class="about-grid about-grid-reversed">
+        <div class="about-visual-reversed">
           <div class="about-card">
             <div style="display:flex;flex-direction:column;gap:1rem;">
               <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg-alt);border-radius:var(--radius-sm);">
@@ -191,6 +204,13 @@
               </div>
             </div>
           </div>
+        </div>
+        <div>
+          <span class="about-label">Why We Built It</span>
+          <h2 class="about-title">Opportunities should find the right students</h2>
+          <p class="about-text">The internet has more opportunities than ever — online courses, global competitions, research programs, startup internships, scholarships. But they're buried in newsletters, Twitter threads, LinkedIn posts, and college notice boards.</p>
+          <p class="about-text">Most students don't have time to hunt across platforms. Many don't even know what's available to them. And when they do find something, they often hesitate to apply because their profile doesn't stand out.</p>
+          <p class="about-text">ScholrNet aggregates opportunities in one feed, tailored to students. And it gives every student a credible, verifiable profile — so your application speaks for itself.</p>
         </div>
       </div>
     </div>

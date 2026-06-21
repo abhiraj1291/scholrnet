@@ -352,7 +352,7 @@ class Lead(db.Model):
     name = db.Column(db.String(100), default="")
     email = db.Column(db.String(200), nullable=False, index=True)
     source = db.Column(db.String(50), default="landing")
-    created_at = db.Column(db.String(30), default="")
+    created_at = db.Column(db.String(40), default="")
 
 class Referral(db.Model):
     __tablename__ = 'referrals'

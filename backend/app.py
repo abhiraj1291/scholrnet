@@ -165,46 +165,49 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     import traceback, sys
 
-    # Always ensure critical users table columns exist (needed for registration/login/etc.)
-    try:
-        from sqlalchemy import text, inspect
-        inspector = inspect(db.engine)
-        users_cols = [c['name'] for c in inspector.get_columns('users')]
-        with db.engine.connect() as conn:
-            if 'school_verified' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE"))
-            if 'verified_school_id' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
-            if 'totp_secret' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(32) DEFAULT ''"))
-            if 'totp_enabled' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT FALSE"))
-            if 'totp_backup_codes' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN totp_backup_codes TEXT DEFAULT ''"))
-            if 'email_verified' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"))
-            if 'email_verify_token' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(128) DEFAULT ''"))
-            if 'reset_password_token' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(128) DEFAULT ''"))
-            if 'reset_password_token_expires' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token_expires VARCHAR(30) DEFAULT ''"))
-            if 'email_otp' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN email_otp VARCHAR(6) DEFAULT ''"))
-            if 'email_otp_expires' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN email_otp_expires TIMESTAMP"))
-            if 'reset_otp' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN reset_otp VARCHAR(6) DEFAULT ''"))
-            if 'reset_otp_expires' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN reset_otp_expires TIMESTAMP"))
-            if 'referral_code' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN referral_code VARCHAR(20) DEFAULT NULL"))
-                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)"))
-            if 'referral_badge' not in users_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN referral_badge BOOLEAN DEFAULT FALSE"))
-            conn.commit()
-    except Exception as e:
-        print(f"AUTO-MIGRATE: users column migration failed: {e}")
+    # Gate migrations behind a flag to save 200-500ms on cold starts
+    if not app.config.get('MIGRATIONS_RAN', False):
+        app.config['MIGRATIONS_RAN'] = True
+        # Always ensure critical users table columns exist (needed for registration/login/etc.)
+        try:
+            from sqlalchemy import text, inspect
+            inspector = inspect(db.engine)
+            users_cols = [c['name'] for c in inspector.get_columns('users')]
+            with db.engine.connect() as conn:
+                if 'school_verified' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE"))
+                if 'verified_school_id' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
+                if 'totp_secret' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(32) DEFAULT ''"))
+                if 'totp_enabled' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT FALSE"))
+                if 'totp_backup_codes' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN totp_backup_codes TEXT DEFAULT ''"))
+                if 'email_verified' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"))
+                if 'email_verify_token' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verify_token VARCHAR(128) DEFAULT ''"))
+                if 'reset_password_token' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(128) DEFAULT ''"))
+                if 'reset_password_token_expires' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_password_token_expires VARCHAR(30) DEFAULT ''"))
+                if 'email_otp' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_otp VARCHAR(6) DEFAULT ''"))
+                if 'email_otp_expires' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_otp_expires TIMESTAMP"))
+                if 'reset_otp' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_otp VARCHAR(6) DEFAULT ''"))
+                if 'reset_otp_expires' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reset_otp_expires TIMESTAMP"))
+                if 'referral_code' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN referral_code VARCHAR(20) DEFAULT NULL"))
+                    conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)"))
+                if 'referral_badge' not in users_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN referral_badge BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+        except Exception as e:
+            print(f"AUTO-MIGRATE: users column migration failed: {e}")
 
 
 
@@ -516,7 +519,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not content_type:
             ext = path.rsplit('.', 1)[-1].lower() if '.' in path else ''
             content_type = MIME_TYPES.get(ext, 'application/octet-stream')
-        import urllib.request
+        import urllib.request, ssl
+        ctx = ssl.create_default_context()
         req = urllib.request.Request(
             f"{supabase_url}/storage/v1/object/{bucket}/{path}",
             data=file_data,
@@ -527,7 +531,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             method="POST",
         )
         try:
-            urllib.request.urlopen(req, timeout=25)
+            urllib.request.urlopen(req, timeout=25, context=ctx)
             return f"{supabase_url}/storage/v1/object/public/{bucket}/{path}"
         except Exception:
             return None
@@ -579,6 +583,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 q = q.filter((Ad.target_role == '') | (Ad.target_role == current_user.role))
             return q.order_by(Ad.id.desc()).limit(20).all()
         except Exception:
+            import traceback; traceback.print_exc()
             return Ad.query.limit(20).all()
 
     def get_all_posts():
@@ -660,40 +665,42 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return render_template('privacy.html')
 
     @app.route('/api/contact', methods=['POST'])
+    @limiter.limit("10 per hour")
     def api_contact():
         try:
             data = request.json or {}
-            name = (data.get('name') or '').strip()
-            email = (data.get('email') or '').strip().lower()
-            subject = (data.get('subject') or '').strip()
-            message = (data.get('message') or '').strip()
+            name = sanitize_text(data.get('name', ''), 200)
+            email = sanitize_text(data.get('email', ''), 200).strip().lower()
+            subject = sanitize_text(data.get('subject', ''), 200)
+            message = sanitize_text(data.get('message', ''), 2000)
             if not all([name, email, subject, message]):
                 return jsonify({'success': False, 'error': 'All fields required'}), 400
             if '@' not in email:
                 return jsonify({'success': False, 'error': 'Valid email required'}), 400
             print(f"[Contact] {name} <{email}> | {subject}: {message[:200]}")
             return jsonify({'success': True, 'message': 'Message received. We\'ll get back to you soon.'})
-        except Exception as e:
-            print(f"[Contact] Error: {e}")
+        except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'success': False, 'error': 'Server error'}), 500
 
     @app.route('/api/leads', methods=['POST'])
+    @limiter.limit("10 per hour")
     def api_lead_capture():
         try:
             data = request.json or {}
-            email = (data.get('email') or '').strip().lower()
-            name = (data.get('name') or '').strip()
+            email = sanitize_text(data.get('email', ''), 200).strip().lower()
+            name = sanitize_text(data.get('name', ''), 100)
             if not email or '@' not in email:
                 return jsonify({'success': False, 'error': 'Valid email required'}), 400
             exists = Lead.query.filter_by(email=email).first()
             if not exists:
-                from datetime import datetime, timezone
                 lead = Lead(name=name, email=email, source='landing', created_at=str(datetime.now(timezone.utc)))
                 db.session.add(lead)
                 db.session.commit()
             return jsonify({'success': True})
-        except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+        except Exception:
+            import traceback; traceback.print_exc()
+            return jsonify({'success': False, 'error': 'Server error'}), 500
 
     @app.route('/robots.txt')
     def robots_txt():
@@ -718,7 +725,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         today = str(datetime.now(timezone.utc).date())
         base = request.url_root.rstrip('/')
         schools = School.query.order_by(School.id.desc()).limit(100).all()
-        blog_posts = BlogPost.query.filter_by(published=True).all()
+        blog_posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.id.desc()).limit(100).all()
         opportunities = Opportunity.query.order_by(Opportunity.id.desc()).limit(100).all()
         clubs = Club.query.order_by(Club.id.desc()).limit(100).all()
         users = User.query.filter(User.username.isnot(None), User.username != '').order_by(User.id.desc()).limit(500).all()
@@ -922,7 +929,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return render_template('auth/register.html', error=f"Registration error: {e}", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
+            import traceback; traceback.print_exc()
+            return render_template('auth/register.html', error='Registration error. Please try again.', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
 
     @app.route('/verify-email-otp', methods=['GET', 'POST'])
     @login_required
@@ -950,8 +958,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 return redirect(url_for('dashboard'))
             except Exception as e:
                 import traceback; traceback.print_exc()
-                return render_template('auth/verify_otp.html', error=f'Verification error: {e}')
-        return render_template('auth/verify_otp.html', email=current_user.email, otp=current_user.email_otp)
+                return render_template('auth/verify_otp.html', error='Verification error')
+        return render_template('auth/verify_otp.html', email=current_user.email)
 
     @app.route('/api/verify-email/resend-otp', methods=['POST'])
     @login_required
@@ -971,7 +979,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         session['resend_otp_at'] = datetime.utcnow().timestamp()
         send_email(current_user.email, 'Verify your ScholrNet email',
             email_otp_body(current_user.name, otp, 'Verify Your Email'))
-        return jsonify({'success': True, 'otp': otp})
+        return jsonify({'success': True})
 
     @app.route('/verify-email/<token>')
     def verify_email(token):
@@ -1108,10 +1116,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
             return render_template('feed.html',
                 user=current_user
             )
-        except Exception as e:
-            print(f"DASHBOARD ERROR: {e}")
+        except Exception:
             traceback.print_exc()
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': 'An unexpected error occurred'}), 500
 
     @app.route('/profile')
     @login_required
@@ -1183,9 +1190,11 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/public')
     def public_timeline():
         posts = Post.query.order_by(Post.id.desc()).limit(50).all()
+        author_ids = {p.author_id for p in posts if p.author_id}
+        authors = {u.id: u for u in User.query.filter(User.id.in_(author_ids)).all()} if author_ids else {}
         enriched = []
         for p in posts:
-            author = User.query.get(p.author_id) if p.author_id else None
+            author = authors.get(p.author_id) if p.author_id else None
             enriched.append({
                 'id': p.id,
                 'title': p.title,
@@ -1223,7 +1232,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/blog')
     def blog_index():
-        posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.id.desc()).all()
+        posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.id.desc()).limit(50).all()
         return render_template('blog_index.html', posts=posts)
 
     @app.route('/blog/<path:slug>')
@@ -1298,6 +1307,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         )
 
     @app.route('/api/username/check', methods=['GET'])
+    @limiter.limit("30 per minute")
     def api_username_check():
         u = request.args.get('u', '').strip().lower()
         if not u:
@@ -1446,19 +1456,38 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     @limiter.limit("30 per minute")
     def api_create_post():
+        errors = []
         if request.content_type and 'multipart/form-data' in request.content_type:
             data = request.form
             uploaded = request.files.getlist('files')
+            MAX_FILES = 10
+            MAX_FILE_SIZE = 5 * 1024 * 1024
+            if len(uploaded) > MAX_FILES:
+                return jsonify({'error': f'Max {MAX_FILES} files per post'}), 400
             image_urls = []
-            for f in uploaded:
+            for f in uploaded[:MAX_FILES]:
                 if f and f.filename:
                     ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
                     allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov'}
-                    if ext in allowed_ext:
-                        safe_name = f"{uuid.uuid4().hex[:16]}_{current_user.id}.{ext}"
-                        url = _save_to_supabase(f.read(), 'uploads', safe_name)
-                        if url:
-                            image_urls.append(url)
+                    if ext not in allowed_ext:
+                        errors.append(f'{f.filename}: type .{ext} not allowed')
+                        continue
+                    f.seek(0, os.SEEK_END)
+                    size = f.tell()
+                    f.seek(0)
+                    if size > MAX_FILE_SIZE:
+                        errors.append(f'{f.filename}: exceeds 5MB limit')
+                        continue
+                    valid, msg = validate_file_type(f, allowed_ext, ['image/', 'video/'])
+                    if not valid:
+                        errors.append(f'{f.filename}: {msg}')
+                        continue
+                    safe_name = f"{uuid.uuid4().hex[:16]}_{current_user.id}.{ext}"
+                    url = _save_to_supabase(f.read(), 'uploads', safe_name)
+                    if url:
+                        image_urls.append(url)
+                    else:
+                        errors.append(f'{f.filename}: upload failed')
             image_url = '|||'.join(image_urls)
         else:
             data = request.json or {}
@@ -1712,6 +1741,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'is_current': e.is_current, 'created_at': e.created_at.isoformat() if e.created_at else ''
             } for e in exps]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'experiences': []})
 
     @app.route('/api/experience/create', methods=['POST'])
@@ -1818,6 +1848,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'verification_hash': a.verification_hash if current_user.role == 'super_admin' else ''
             } for a in achs]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'achievements': []})
 
     @app.route('/api/projects')
@@ -1828,6 +1859,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             projs = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all()
             return jsonify({'projects': [{'id': p.id, 'title': p.title, 'description': p.description, 'collaborators': p.collaborators, 'link': p.link, 'skills': p.skills, 'verification_status': p.verification_status} for p in projs]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'projects': []})
 
     @app.route('/api/verification/<int:req_id>/action', methods=['POST'])
@@ -2071,6 +2103,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'avatar': club_map[m.club_id].avatar or '' if m.club_id in club_map else '',
                 'role': m.role, 'joined_at': m.joined_at} for m in memberships]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'clubs': []})
 
     @app.route('/api/club/<int:club_id>/join-requests')
@@ -2264,6 +2297,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'success': True})
 
     @app.route('/api/ad/<int:ad_id>/click', methods=['POST'])
+    @limiter.limit("10 per minute")
     def api_ad_click(ad_id):
         ad = Ad.query.get_or_404(ad_id)
         ad.clicks = Ad.clicks + 1
@@ -2271,6 +2305,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'success': True})
 
     @app.route('/api/ad/<int:ad_id>/impression', methods=['POST'])
+    @limiter.limit("30 per minute")
     def api_ad_impression(ad_id):
         ad = Ad.query.get_or_404(ad_id)
         ad.impressions = Ad.impressions + 1
@@ -2553,12 +2588,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
         })
 
     def _friend_count(user_id):
-        sent = Connection.query.filter_by(user_id=user_id, status='accepted').all()
-        received = Connection.query.filter_by(connected_user_id=user_id, status='accepted').all()
-        ids = set()
-        for c in sent: ids.add(c.connected_user_id)
-        for c in received: ids.add(c.user_id)
-        return len(ids)
+        from sqlalchemy import func as _func
+        sent = db.session.query(_func.count(Connection.id)).filter_by(user_id=user_id, status='accepted').scalar() or 0
+        received = db.session.query(_func.count(Connection.id)).filter_by(connected_user_id=user_id, status='accepted').scalar() or 0
+        return sent + received
 
     @app.route('/api/user/stats')
     @login_required
@@ -2571,6 +2604,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             a_count = Achievement.query.filter_by(user_id=current_user.id).count()
             return jsonify({'verified_achievements': v_count, 'projects': p_count, 'clubs': c_count, 'friends': f_count, 'achievements': a_count, 'collaborations': 0})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'verified_achievements': 0, 'projects': 0, 'clubs': 0, 'friends': 0, 'achievements': 0, 'collaborations': 0})
 
     @app.route('/api/user/<int:user_id>/profile')
@@ -2615,6 +2649,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'skills': skills, 'friend_status': friend_status
             })
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({
                 'id': user_id, 'name': '', 'school': '', 'bio': '', 'avatar': '', 'avatar_url': '',
                 'role': 'student', 'grade': '', 'verified_achievements': 0, 'projects': 0,
@@ -2635,6 +2670,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'verification_hash': a.verification_hash if current_user.id == user_id or current_user.role == 'super_admin' else ''
             } for a in achs]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'achievements': []})
 
     @app.route('/api/user/<int:user_id>/projects')
@@ -2648,6 +2684,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'skills': [s.strip() for s in (p.skills or '').split(',') if s.strip()]
             } for p in projs]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'projects': []})
 
     @app.route('/api/ads')
@@ -2901,6 +2938,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'user': {'name': users[r.user_id].name, 'avatar': users[r.user_id].avatar, 'avatar_url': users[r.user_id].avatar_url}
             } for r in reqs if r.user_id in users]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'requests': []})
 
     @app.route('/api/friend/list')
@@ -2915,6 +2953,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
             users = User.query.filter(User.id.in_(ids)).all() if ids else []
             return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school} for u in users]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'friends': []})
 
     @app.route('/api/user/<int:user_id>/connections')
@@ -2938,6 +2977,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 'mutual': len(my_ids & {u.id})
             } for u in users]})
         except Exception:
+            import traceback; traceback.print_exc()
             return jsonify({'connections': []})
 
     @app.route('/api/connection/toggle', methods=['POST'])
@@ -3002,9 +3042,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @limiter.limit("5 per hour")
     def api_logout_all():
         session.regenerate()
-        import secrets
-        app.secret_key = secrets.token_hex(32)
-        return jsonify({'success': True, 'message': 'All sessions invalidated. Please log in again.'})
+        return jsonify({'success': True, 'message': 'Session regenerated. Please log in again on other devices.'})
 
     @app.route('/api/profile/delete-account', methods=['POST'])
     @login_required
@@ -3028,24 +3066,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         session.clear()
         return jsonify({'success': True, 'redirect': '/'})
 
-    @app.route('/api/debug-email', methods=['GET'])
-    @login_required
-    @limiter.limit("3 per 10 minutes")
-    def debug_email():
-        key = os.environ.get('RESEND_API_KEY', '')
-        prefix = key[:8] + '...' if len(key) > 8 else 'NOT SET'
-        try:
-            import http.client, ssl, json
-            body = json.dumps({'from': 'ScholrNet <noreply@scholrnet.in>', 'to': ['abhiraj1291@gmail.com'], 'subject': 'Debug test', 'html': '<p>test</p>'})
-            ctx = ssl.create_default_context()
-            conn = http.client.HTTPSConnection('api.resend.com', context=ctx, timeout=15)
-            conn.request('POST', '/emails', body, {'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'})
-            resp = conn.getresponse()
-            data = resp.read().decode()
-            conn.close()
-            return jsonify({'key_prefix': prefix, 'status': resp.status, 'response': data[:500]})
-        except Exception as e:
-            return jsonify({'key_prefix': prefix, 'error': str(e)}), 500
+
 
     # ---- 2FA ROUTES ----
 
@@ -3073,9 +3094,9 @@ def register_routes(app, bcrypt, login_manager, limiter):
         buf = io.BytesIO()
         img.save(buf, format='PNG')
         qr_b64 = base64.b64encode(buf.getvalue()).decode()
-        import secrets, string
+        import secrets, string, hashlib
         backup_codes = [''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(10)) for _ in range(5)]
-        current_user.totp_backup_codes = json.dumps([bcrypt.generate_password_hash(c).decode('utf-8') for c in backup_codes])
+        current_user.totp_backup_codes = json.dumps([hashlib.sha256(c.encode()).hexdigest() for c in backup_codes])
         db.session.commit()
         return jsonify({'secret': secret, 'uri': uri, 'qr': f'data:image/png;base64,{qr_b64}',
             'backup_codes': backup_codes})
@@ -3131,10 +3152,17 @@ def register_routes(app, bcrypt, login_manager, limiter):
             session.pop('2fa_required', None)
             return jsonify({'success': True, 'redirect': url_for('dashboard')})
         if current_user.totp_backup_codes:
-            import json as _json
+            import json as _json, hashlib as _hashlib
             backup_list = _json.loads(current_user.totp_backup_codes)
             for i, h in enumerate(backup_list):
-                if bcrypt.check_password_hash(h, code):
+                matched = False
+                try:
+                    if bcrypt.check_password_hash(h, code):
+                        matched = True
+                except Exception:
+                    if _hashlib.sha256(code.encode()).hexdigest() == h:
+                        matched = True
+                if matched:
                     backup_list.pop(i)
                     current_user.totp_backup_codes = _json.dumps(backup_list)
                     db.session.commit()
@@ -3379,13 +3407,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not name:
             return jsonify({'success': False, 'error': 'School name required'}), 400
         school = School(name=name, location=sanitize_text(data.get('location', ''), 200), tagline=sanitize_text(data.get('tagline', ''), 200), about=sanitize_text(data.get('about', ''), 1000), established=sanitize_text(data.get('established', ''), 20))
-        # Generate 8-char verification code
         import secrets, string
         school.verification_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
         db.session.add(school)
         db.session.flush()
         email = name.lower().replace(' ', '').replace('.', '')[:30] + '@scholrnet.com'
-        pwd = 'school' + str(school.id)
+        pwd = 'School' + ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10)) + '!'
         existing = User.query.filter_by(email=email).first()
         if existing:
             email = 'school' + str(school.id) + '@scholrnet.com'
@@ -3431,7 +3458,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if not admin:
             return jsonify({'error': 'School admin not found'}), 404
         import secrets, string
-        new_pwd = 'school' + str(school.id) + secrets.choice(string.ascii_lowercase)
+        new_pwd = 'School' + ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12)) + '!'
         admin.password_hash = bcrypt.generate_password_hash(new_pwd).decode('utf-8')
         db.session.commit()
         audit_log('reset_school_password', 'school', school_id, f'admin_email={admin.email}')
@@ -3646,87 +3673,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)"))
                     conn.commit()
                 mig.append("added users.verified_school_id")
-        except Exception as e:
-            return jsonify({"error": str(e), "ran": mig}), 500
+        except Exception:
+            import traceback; traceback.print_exc()
+            return jsonify({"error": "Migration failed", "ran": mig}), 500
         audit_log('migrate_db', 'database', detail=f'changes={len(mig)}')
         return jsonify({"message": "Migration complete", "changes": mig})
 
-    @app.route('/api/test-image-post')
-    @login_required
-    def api_test_image_post():
-        """Create a test post with a known working image URL to verify display."""
-        import urllib.request, struct, zlib
-        def make_png():
-            def chunk(ctype, data):
-                c = ctype + data
-                return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
-            sig = b'\x89PNG\r\n\x1a\n'
-            ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
-            raw = zlib.compress(b'\x00\xff\x00\x00\xff')
-            idat = chunk(b'IDAT', raw)
-            iend = chunk(b'IEND', b'')
-            return sig + ihdr + idat + iend
-        png = make_png()
-        path = f"test_post_{uuid.uuid4().hex[:8]}.png"
-        req = urllib.request.Request(
-            f"{supabase_url}/storage/v1/object/uploads/{path}",
-            data=png,
-            headers={"Authorization": f"Bearer {supabase_key}", "Content-Type": "image/png"},
-            method="POST",
-        )
-        try:
-            urllib.request.urlopen(req, timeout=10)
-        except Exception as e:
-            return jsonify({"error": "Upload failed", "detail": str(e)}), 500
-        url = f"{supabase_url}/storage/v1/object/public/uploads/{path}"
-        post = Post(author_id=current_user.id, author_name=current_user.name, author_avatar=current_user.avatar, author_school=current_user.school, type='achievement', title='Test Post with Image', content='This is a test post to verify images display correctly.', image_url=url, likes=0, tags='[]', timestamp=short_ts())
-        db.session.add(post)
-        db.session.commit()
-        return jsonify({"success": True, "post_id": post.id, "image_url": url, "public_readable": True})
 
-    @app.route('/api/diag-storage')
-    @login_required
-    def api_diag_storage():
-        if current_user.role != 'super_admin':
-            return jsonify({'error': 'Unauthorized'}), 403
-        import urllib.request, urllib.error
-        import io, struct, zlib
-        # Create a real 1x1 red PNG pixel
-        def make_png():
-            def chunk(ctype, data):
-                c = ctype + data
-                return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
-            sig = b'\x89PNG\r\n\x1a\n'
-            ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
-            raw = zlib.compress(b'\x00\xff\x00\x00\xff')
-            idat = chunk(b'IDAT', raw)
-            iend = chunk(b'IEND', b'')
-            return sig + ihdr + idat + iend
-        png_data = make_png()
-        test_path = f"test_img_{uuid.uuid4().hex[:8]}.png"
-        req = urllib.request.Request(
-            f"{supabase_url}/storage/v1/object/uploads/{test_path}",
-            data=png_data,
-            headers={"Authorization": f"Bearer {supabase_key}", "Content-Type": "image/png"},
-            method="POST",
-        )
-        try:
-            resp = urllib.request.urlopen(req, timeout=10)
-            public_url = f"{supabase_url}/storage/v1/object/public/uploads/{test_path}"
-            # Verify public read access
-            read_ok = False
-            try:
-                read_req = urllib.request.Request(public_url, method="GET")
-                read_resp = urllib.request.urlopen(read_req, timeout=10)
-                read_ok = read_resp.status == 200
-            except Exception:
-                pass
-            return jsonify({
-                "success": True,
-                "upload_status": resp.status,
-                "public_url": public_url,
-                "public_readable": read_ok,
-                "html": f'<img src="{public_url}" alt="test image" style="width:200px;height:200px;border:2px solid red;">',
-            })
-        except urllib.error.HTTPError as e:
-            return jsonify({"success": False, "error": f"HTTP {e.code}: {e.reason}", "body": e.read().decode() if e.fp else ""}), 500

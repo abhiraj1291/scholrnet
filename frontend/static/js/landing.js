@@ -120,7 +120,7 @@
       body: JSON.stringify({ name: name, email: email })
     }).then(function(r) { return r.json(); }).then(function(d) {
       status.textContent = d.success ? "You're on the list!" : d.error || 'Something went wrong.';
-      if (d.success) document.getElementById('leadEmail').value = '';
+      if (d.success) { document.getElementById('leadEmail').value = ''; document.getElementById('leadName').value = ''; }
     }).catch(function() {
       status.textContent = 'Network error. Try again.';
     });
@@ -157,8 +157,8 @@
     if (modalForm) {
       modalForm.addEventListener('submit', function(ev) {
         ev.preventDefault();
-        var name = modalForm.querySelector('#leadName') || modalForm.querySelector('input[type="text"]');
-        var email = modalForm.querySelector('#leadEmail') || modalForm.querySelector('input[type="email"]');
+        var name = document.getElementById('leadNameModal');
+        var email = document.getElementById('leadEmailModal');
         var status = modal.querySelector('.cta-email-status');
         if (!email || !email.value.trim()) { if (status) status.textContent = 'Please enter your email.'; return; }
         if (status) status.textContent = 'Saving...';
