@@ -1223,18 +1223,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     def explore_page():
         try:
-            trends = Post.query.order_by(Post.likes.desc()).limit(20).all()
             suggested_clubs = Club.query.order_by(Club.id.desc()).limit(12).all()
             member_club_ids = {m.club_id for m in ClubMember.query.filter_by(user_id=current_user.id).all()}
             upcoming_opps = Opportunity.query.order_by(Opportunity.id.desc()).limit(10).all()
-            achiever_ids = [r[0] for r in db.session.query(Achievement.user_id).distinct().limit(20).all()]
-            top_achievers = User.query.filter(User.id.in_(achiever_ids), User.id != current_user.id).order_by(User.id.desc()).limit(10).all() if achiever_ids else []
             return render_template('explore.html',
                 user=current_user,
-                trending=trends,
                 suggested_clubs=[c for c in suggested_clubs if c.id not in member_club_ids][:6],
-                opportunities=upcoming_opps,
-                top_achievers=top_achievers
+                opportunities=upcoming_opps
             )
         except Exception:
             import traceback; traceback.print_exc()
@@ -2628,10 +2623,18 @@ def register_routes(app, bcrypt, login_manager, limiter):
             friend_ids.add(c.connected_user_id)
         for c in Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all():
             friend_ids.add(c.user_id)
-        conn_boost = _case((Post.author_id.in_(friend_ids), 100), else_=0) if friend_ids else _literal(0)
-        posts_q = Post.query.filter(Post.club_id.is_(None)).order_by(
-            (conn_boost + Post.likes * 2).desc(), Post.id.desc()
-        ).offset((page-1)*per_page).limit(per_page+1).all()
+        mode = request.args.get('mode', 'feed')
+        if mode == 'explore':
+            # Explore: lower friend boost, higher viral weight
+            conn_boost = _case((Post.author_id.in_(friend_ids), 50), else_=0) if friend_ids else _literal(0)
+            posts_q = Post.query.filter(Post.club_id.is_(None)).order_by(
+                (conn_boost + Post.likes * 10).desc(), Post.id.desc()
+            ).offset((page-1)*per_page).limit(per_page+1).all()
+        else:
+            conn_boost = _case((Post.author_id.in_(friend_ids), 100), else_=0) if friend_ids else _literal(0)
+            posts_q = Post.query.filter(Post.club_id.is_(None)).order_by(
+                (conn_boost + Post.likes * 2).desc(), Post.id.desc()
+            ).offset((page-1)*per_page).limit(per_page+1).all()
         has_more = len(posts_q) > per_page
         posts = posts_q[:per_page]
         post_ids = [p.id for p in posts]
@@ -2671,6 +2674,28 @@ def register_routes(app, bcrypt, login_manager, limiter):
         sent = db.session.query(_func.count(Connection.id)).filter_by(user_id=user_id, status='accepted').scalar() or 0
         received = db.session.query(_func.count(Connection.id)).filter_by(connected_user_id=user_id, status='accepted').scalar() or 0
         return sent + received
+
+    @app.route('/api/trending/topics')
+    @login_required
+    @limiter.limit("30 per minute")
+    def api_trending_topics():
+        try:
+            recent_posts = Post.query.filter(Post.tags.isnot(None), Post.tags != '').order_by(Post.id.desc()).limit(200).all()
+            tag_count = {}
+            for p in recent_posts:
+                try:
+                    tags = json.loads(p.tags) if isinstance(p.tags, str) else (p.tags or [])
+                except (json.JSONDecodeError, TypeError):
+                    tags = p.tags.split(',') if isinstance(p.tags, str) and p.tags else []
+                for t in tags:
+                    t = t.strip().lower()
+                    if t and len(t) < 50:
+                        tag_count[t] = tag_count.get(t, 0) + 1
+            sorted_tags = sorted(tag_count.items(), key=lambda x: -x[1])[:15]
+            return jsonify({'topics': [{'tag': t, 'count': c} for t, c in sorted_tags]})
+        except Exception:
+            import traceback; traceback.print_exc()
+            return jsonify({'topics': []})
 
     @app.route('/api/user/stats')
     @login_required
