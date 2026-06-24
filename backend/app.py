@@ -1219,6 +1219,76 @@ def register_routes(app, bcrypt, login_manager, limiter):
         meta_desc = (opp.description or '')[:200]
         return render_template('opportunity_detail.html', opp=opp, meta_title=meta_title, meta_desc=meta_desc)
 
+    @app.route('/explore')
+    @login_required
+    def explore_page():
+        try:
+            trends = Post.query.order_by(Post.likes.desc()).limit(20).all()
+            suggested_clubs = Club.query.order_by(Club.id.desc()).limit(12).all()
+            member_club_ids = {m.club_id for m in ClubMember.query.filter_by(user_id=current_user.id).all()}
+            upcoming_opps = Opportunity.query.order_by(Opportunity.id.desc()).limit(10).all()
+            achiever_ids = [r[0] for r in db.session.query(Achievement.user_id).distinct().limit(20).all()]
+            top_achievers = User.query.filter(User.id.in_(achiever_ids), User.id != current_user.id).order_by(User.id.desc()).limit(10).all() if achiever_ids else []
+            return render_template('explore.html',
+                user=current_user,
+                trending=trends,
+                suggested_clubs=[c for c in suggested_clubs if c.id not in member_club_ids][:6],
+                opportunities=upcoming_opps,
+                top_achievers=top_achievers
+            )
+        except Exception:
+            import traceback; traceback.print_exc()
+            return render_template('error.html', code=500, title='Something Went Wrong', message='Could not load explore page.', emoji='🔍'), 500
+
+    @app.route('/api/opportunities/recommended')
+    @login_required
+    def api_opportunities_recommended():
+        try:
+            grade = (current_user.grade or '').lower()
+            school = (current_user.school or '').lower()
+            user_tags = set()
+            for a in Achievement.query.filter_by(user_id=current_user.id).limit(20).all():
+                if a.category:
+                    user_tags.add(a.category.lower())
+            for p in Project.query.filter_by(user_id=current_user.id).limit(20).all():
+                if p.skills:
+                    for s in p.skills.split(','):
+                        s = s.strip().lower()
+                        if s:
+                            user_tags.add(s)
+            ops = Opportunity.query.order_by(Opportunity.id.desc()).limit(50).all()
+            scored = []
+            for op in ops:
+                score = 0
+                desc = (op.description or '').lower()
+                name = (op.name or '').lower()
+                elg = (op.eligibility or '').lower()
+                if grade and grade in elg:
+                    score += 30
+                if school and school in desc:
+                    score += 20
+                for tag in user_tags:
+                    if tag in name or tag in desc:
+                        score += 10
+                if op.deadline:
+                    try:
+                        from datetime import datetime as _dt
+                        dl = _dt.strptime(op.deadline, '%Y-%m-%d') if '-' in op.deadline else None
+                        if dl and dl > _dt.now():
+                            days_left = (dl - _dt.now()).days
+                            score += max(0, 30 - days_left)
+                    except Exception:
+                        pass
+                scored.append((score, op))
+            scored.sort(key=lambda x: -x[0])
+            top = [{'id': o.id, 'name': o.name, 'type': o.type, 'provider': o.provider,
+                    'deadline': o.deadline, 'description': (o.description or '')[:200],
+                    'prize_pool': o.prize_pool, 'score': s} for s, o in scored[:10]]
+            return jsonify({'opportunities': top})
+        except Exception:
+            import traceback; traceback.print_exc()
+            return jsonify({'opportunities': []})
+
     @app.route('/school/<int:school_id>/<path:slug>')
     def school_page(school_id, slug):
         school = School.query.get(school_id)
@@ -2552,7 +2622,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
         if page > 1000:
             return jsonify({'posts': [], 'has_more': False})
         per_page = 10
-        posts_q = Post.query.filter(Post.club_id.is_(None)).order_by(Post.id.desc()).offset((page-1)*per_page).limit(per_page+1).all()
+        from sqlalchemy import case as _case, literal as _literal
+        friend_ids = set()
+        for c in Connection.query.filter_by(user_id=current_user.id, status='accepted').all():
+            friend_ids.add(c.connected_user_id)
+        for c in Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all():
+            friend_ids.add(c.user_id)
+        conn_boost = _case((Post.author_id.in_(friend_ids), 100), else_=0) if friend_ids else _literal(0)
+        posts_q = Post.query.filter(Post.club_id.is_(None)).order_by(
+            (conn_boost + Post.likes * 2).desc(), Post.id.desc()
+        ).offset((page-1)*per_page).limit(per_page+1).all()
         has_more = len(posts_q) > per_page
         posts = posts_q[:per_page]
         post_ids = [p.id for p in posts]
@@ -2956,6 +3035,44 @@ def register_routes(app, bcrypt, login_manager, limiter):
             import traceback; traceback.print_exc()
             return jsonify({'friends': []})
 
+    @app.route('/api/friend/suggestions')
+    @login_required
+    def api_friend_suggestions():
+        try:
+            existing_ids = set()
+            for c in Connection.query.filter(
+                (Connection.user_id == current_user.id) | (Connection.connected_user_id == current_user.id)
+            ).all():
+                existing_ids.add(c.user_id)
+                existing_ids.add(c.connected_user_id)
+            existing_ids.add(current_user.id)
+            # Same school students
+            same_school = []
+            if current_user.school:
+                same_school_q = User.query.filter(
+                    User.school == current_user.school,
+                    ~User.id.in_(existing_ids)
+                ).limit(10).all()
+                same_school = [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or u.name[:2].upper(), 'reason': 'Same school'} for u in same_school_q]
+            # Mutual friends
+            mutual_ids = set()
+            friend_ids = existing_ids - {current_user.id}
+            for fid in friend_ids:
+                for c in Connection.query.filter(
+                    ((Connection.user_id == fid) | (Connection.connected_user_id == fid)),
+                    Connection.status == 'accepted'
+                ).limit(20).all():
+                    other = c.connected_user_id if c.user_id == fid else c.user_id
+                    if other not in existing_ids:
+                        mutual_ids.add(other)
+            mutual_users = User.query.filter(User.id.in_(mutual_ids)).limit(10).all() if mutual_ids else []
+            mutual = [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or u.name[:2].upper(), 'reason': 'Mutual connection'} for u in mutual_users]
+            suggested = (same_school + mutual)[:10]
+            return jsonify({'suggestions': suggested})
+        except Exception:
+            import traceback; traceback.print_exc()
+            return jsonify({'suggestions': []})
+
     @app.route('/api/user/<int:user_id>/connections')
     @login_required
     def api_user_connections(user_id):
@@ -3044,6 +3161,54 @@ def register_routes(app, bcrypt, login_manager, limiter):
         session.regenerate()
         return jsonify({'success': True, 'message': 'Session regenerated. Please log in again on other devices.'})
 
+    def _cascade_delete_user(uid):
+        """Delete all user data across 20+ tables. Posts are anonymized, clubs are cleaned up."""
+        # 1. Anonymize posts (keep content visible, remove user link)
+        posts = Post.query.filter_by(author_id=uid).all()
+        for p in posts:
+            p.author_id = None
+            p.author_name = 'Deleted User'
+            p.author_avatar = ''
+        # 2. Handle clubs owned by user — delete members, join requests, then club
+        owned_clubs = Club.query.filter_by(owner_id=uid).all()
+        for c in owned_clubs:
+            ClubMember.query.filter_by(club_id=c.id).delete()
+            ClubJoinRequest.query.filter_by(club_id=c.id).delete()
+            Post.query.filter_by(club_id=c.id).update({Post.club_id: None})
+            db.session.delete(c)
+        # 3. Delete user achievements, projects, experiences
+        Achievement.query.filter_by(user_id=uid).delete()
+        Project.query.filter_by(user_id=uid).delete()
+        Experience.query.filter_by(user_id=uid).delete()
+        # 4. Delete connections (both directions)
+        Connection.query.filter(
+            (Connection.user_id == uid) | (Connection.connected_user_id == uid)
+        ).delete(synchronize_session=False)
+        # 5. Delete chat data
+        ChatMessage.query.filter(
+            (ChatMessage.sender_id == uid) | (ChatMessage.receiver_id == uid)
+        ).delete(synchronize_session=False)
+        ChatTyping.query.filter(
+            (ChatTyping.user_id == uid) | (ChatTyping.contact_id == uid)
+        ).delete(synchronize_session=False)
+        # 6. Delete notifications, likes, event registrations
+        Notification.query.filter_by(user_id=uid).delete()
+        UserLike.query.filter_by(user_id=uid).delete()
+        EventRegistration.query.filter_by(user_id=uid).delete()
+        # 7. Delete club memberships and join requests
+        ClubMember.query.filter_by(user_id=uid).delete()
+        ClubJoinRequest.query.filter_by(user_id=uid).delete()
+        # 8. Delete verification requests, mentorship requests, referrals
+        VerificationRequest.query.filter_by(user_id=uid).delete()
+        MentorshipRequest.query.filter_by(student_id=uid).delete()
+        Referral.query.filter_by(referrer_id=uid).delete()
+        # 9. Delete team requests, audit logs
+        TeamRequest.query.filter_by(creator_id=uid).delete()
+        AuditLog.query.filter_by(user_id=uid).delete()
+        # 10. Finally delete the user
+        User.query.filter_by(id=uid).delete()
+        db.session.commit()
+
     @app.route('/api/profile/delete-account', methods=['POST'])
     @login_required
     @limiter.limit("3 per hour")
@@ -3060,8 +3225,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
         except Exception:
             return jsonify({'success': False, 'error': 'Incorrect password'}), 403
         uid = current_user.id
-        User.query.filter_by(id=uid).delete()
-        db.session.commit()
+        _cascade_delete_user(uid)
         logout_user()
         session.clear()
         return jsonify({'success': True, 'redirect': '/'})

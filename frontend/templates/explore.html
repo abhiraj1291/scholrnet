@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid-3">
+  <aside class="sidebar sidebar-left">
+    <div class="card">
+      <h3 class="text-sm font-bold mb-2" style="color:var(--text)">People You May Know</h3>
+      <div id="suggestionsList">
+        <div class="skeleton" style="height:48px;margin-bottom:0.5rem;"></div>
+        <div class="skeleton" style="height:48px;margin-bottom:0.5rem;"></div>
+        <div class="skeleton" style="height:48px;"></div>
+      </div>
+    </div>
+    <div class="card mt-2">
+      <h3 class="text-sm font-bold mb-2" style="color:var(--text)">Top Achievers</h3>
+      {% for u in top_achievers %}
+      <a href="/profile/{{ u.id }}" class="flex items-center gap-2 py-1.5" style="text-decoration:none;">
+        <div class="profile-avatar" style="width:32px;height:32px;font-size:0.65rem;flex-shrink:0;">{{ u.avatar or u.name[:2]|upper }}</div>
+        <div>
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text)">{{ u.name }}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted)">{{ u.school or '' }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <main class="feed">
+    <div class="card mb-2">
+      <h2 class="text-lg font-black" style="color:var(--text)">Explore</h2>
+      <p class="text-sm text-muted">Trending posts, clubs, and opportunities</p>
+    </div>
+
+    <div class="card mb-2">
+      <h3 class="text-sm font-bold mb-2" style="color:var(--text)">Trending Posts</h3>
+      {% for p in trending[:5] %}
+      <div class="flex items-start gap-2 py-2" style="border-bottom:1px solid var(--border-light);">
+        <div class="profile-avatar" style="width:28px;height:28px;font-size:0.6rem;flex-shrink:0;">{{ p.author_avatar or p.author_name[:2]|upper }}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text)">{{ p.author_name }}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">{{ p.title or (p.content[:80] ~ '...' if p.content else '') }}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.25rem;">{{ p.likes or 0 }} likes</div>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-sm text-muted">No trending posts yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <h3 class="text-sm font-bold mb-2" style="color:var(--text)">Upcoming Opportunities</h3>
+      {% for op in opportunities %}
+      <div class="py-1.5" style="border-bottom:1px solid var(--border-light);">
+        <div style="font-size:0.8rem;font-weight:600;color:var(--text)">{{ op.name }}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted)">{{ op.type }} &middot; {{ op.provider or '' }}{% if op.deadline %} &middot; Deadline: {{ op.deadline }}{% endif %}</div>
+      </div>
+      {% else %}
+      <p class="text-sm text-muted">No opportunities listed yet.</p>
+      {% endfor %}
+    </div>
+  </main>
+
+  <aside class="sidebar sidebar-right">
+    <div class="card">
+      <h3 class="text-sm font-bold mb-2" style="color:var(--text)">Suggested Clubs</h3>
+      {% for c in suggested_clubs %}
+      <a href="/club/{{ c.id }}" class="flex items-center gap-2 py-1.5" style="text-decoration:none;">
+        <div class="profile-avatar" style="width:32px;height:32px;font-size:0.65rem;flex-shrink:0;background:var(--primary-light);color:var(--primary);">{{ c.name[:2]|upper }}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text)">{{ c.name }}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted)">{{ c.member_count or 0 }} members</div>
+        </div>
+      </a>
+      {% else %}
+      <p class="text-sm text-muted">No clubs yet.</p>
+      {% endfor %}
+    </div>
+    <div class="card mt-2">
+      <h3 class="text-sm font-bold mb-2" style="color:var(--text)">Recommended Opportunities</h3>
+      <div id="recommendedOpps">
+        <div class="skeleton" style="height:40px;margin-bottom:0.5rem;"></div>
+        <div class="skeleton" style="height:40px;margin-bottom:0.5rem;"></div>
+        <div class="skeleton" style="height:40px;"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+fetch('/api/friend/suggestions').then(function(r) { return r.json(); }).then(function(d) {
+  var el = document.getElementById('suggestionsList');
+  if (!d.suggestions || !d.suggestions.length) {
+    el.innerHTML = '<p class="text-sm text-muted">No suggestions yet.</p>';
+    return;
+  }
+  el.innerHTML = d.suggestions.map(function(u) {
+    return '<a href="/profile/' + u.id + '" class="flex items-center gap-2 py-1.5" style="text-decoration:none;">' +
+      '<div class="profile-avatar" style="width:32px;height:32px;font-size:0.65rem;flex-shrink:0;">' + (u.avatar || u.name.slice(0,2).toUpperCase()) + '</div>' +
+      '<div><div style="font-size:0.8rem;font-weight:600;color:var(--text)">' + u.name + '</div>' +
+      '<div style="font-size:0.7rem;color:var(--text-muted)">' + u.reason + '</div></div></a>';
+  }).join('');
+}).catch(function() {});
+
+fetch('/api/opportunities/recommended').then(function(r) { return r.json(); }).then(function(d) {
+  var el = document.getElementById('recommendedOpps');
+  if (!d.opportunities || !d.opportunities.length) {
+    el.innerHTML = '<p class="text-sm text-muted">No recommendations yet. Add achievements to get personalized suggestions.</p>';
+    return;
+  }
+  el.innerHTML = d.opportunities.map(function(o) {
+    return '<div class="py-1.5" style="border-bottom:1px solid var(--border-light);">' +
+      '<div style="font-size:0.8rem;font-weight:600;color:var(--text)">' + o.name + '</div>' +
+      '<div style="font-size:0.7rem;color:var(--text-muted)">' + o.type + (o.deadline ? ' &middot; ' + o.deadline : '') + '</div></div>';
+  }).join('');
+}).catch(function() {});
+</script>
+{% endblock %}
