@@ -1666,16 +1666,22 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/api/post/<int:post_id>/delete', methods=['POST'])
     @login_required
+    @limiter.limit("10 per minute")
     def api_delete_post(post_id):
         post = Post.query.get_or_404(post_id)
         if current_user.role != 'super_admin' and post.author_id != current_user.id:
             return jsonify({'error': 'Unauthorized'}), 403
-        Comment.query.filter_by(post_id=post_id).delete()
-        UserLike.query.filter_by(post_id=post_id).delete()
-        db.session.delete(post)
-        db.session.commit()
-        audit_log('delete_post', 'post', post_id)
-        return jsonify({'success': True})
+        try:
+            Comment.query.filter_by(post_id=post_id).delete()
+            UserLike.query.filter_by(post_id=post_id).delete()
+            db.session.delete(post)
+            db.session.commit()
+            audit_log('delete_post', 'post', post_id)
+            return jsonify({'success': True})
+        except Exception:
+            db.session.rollback()
+            import traceback; traceback.print_exc()
+            return jsonify({'error': 'Could not delete post'}), 500
 
     @app.route('/api/post/<int:post_id>/edit', methods=['POST'])
     @login_required
@@ -2964,7 +2970,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/notifications/read', methods=['POST'])
     @login_required
     def api_notifications_read():
-        Notification.query.filter_by(user_id=current_user.id, unread=True).update({'unread': False})
+        Notification.query.filter_by(user_id=current_user.id, unread=True).delete()
         db.session.commit()
         return jsonify({'success': True})
 

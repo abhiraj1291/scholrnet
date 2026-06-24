@@ -184,6 +184,10 @@
       </span>
     </div>
     <div id="chat-body" class="hidden">
+      <div class="flex border-b" style="border-color:var(--border);">
+        <button id="chatTabFriends" class="chat-tab active" onclick="switchChatTab('friends')">Friends</button>
+        <button id="chatTabGroups" class="chat-tab" onclick="switchChatTab('groups')">Groups</button>
+      </div>
       <div id="chat-contact-list"></div>
       <div id="new-chat-view" class="hidden">
         <div class="flex items-center gap-2 p-2" style="border-bottom:1px solid var(--border);">

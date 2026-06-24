@@ -4,6 +4,7 @@ let chatContacts = [];
 let activeChatId = null;
 let activeChatType = 'user';
 let chatPollInterval = null;
+let chatTabFilter = 'friends';
 
 // ===== Shared helpers =====
 
@@ -127,6 +128,19 @@ function refreshMessages(contactId) {
   });
 }
 
+// ===== Chat Tab Switching =====
+
+function switchChatTab(tab) {
+  chatTabFilter = tab;
+  document.getElementById('chatTabFriends').classList.toggle('active', tab === 'friends');
+  document.getElementById('chatTabGroups').classList.toggle('active', tab === 'groups');
+  renderChatContacts();
+  var pageTabFriends = document.getElementById('pageChatTabFriends');
+  var pageTabGroups = document.getElementById('pageChatTabGroups');
+  if (pageTabFriends) pageTabFriends.classList.toggle('active', tab === 'friends');
+  if (pageTabGroups) pageTabGroups.classList.toggle('active', tab === 'groups');
+}
+
 // ===== Chat Drawer (footer drawer) =====
 
 function loadChatContacts() {
@@ -140,12 +154,14 @@ function renderChatContacts() {
   const list = document.getElementById('chat-contact-list');
   if (!list) return;
   list.innerHTML = '';
-  if (chatContacts.length === 0) {
-    list.innerHTML = '<div class="text-center text-muted text-xs py-6">No conversations yet.<br>Click <i data-lucide="plus" style="width:12px;height:12px;display:inline;"></i> to start a chat</div>';
+  var filtered = chatTabFilter === 'groups' ? chatContacts.filter(function(c) { return c.type === 'club'; }) : chatContacts.filter(function(c) { return c.type !== 'club'; });
+  if (filtered.length === 0) {
+    var msg = chatTabFilter === 'groups' ? 'No group chats yet. Join a club to start.' : 'No conversations yet. Click <i data-lucide="plus" style="width:12px;height:12px;display:inline;"></i> to start a chat';
+    list.innerHTML = '<div class="text-center text-muted text-xs py-6">' + msg + '</div>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
     return;
   }
-  chatContacts.forEach(function(c) {
+  filtered.forEach(function(c) {
     const div = document.createElement('div');
     div.className = 'chat-contact';
     if (c.type === 'club') {
@@ -280,11 +296,13 @@ function loadPageChatContacts() {
     if (!list) return;
     list.innerHTML = '';
     var contacts = data.contacts || [];
-    if (contacts.length === 0) {
-      list.innerHTML = '<div class="text-center text-muted text-xs py-6">No conversations yet.</div>';
+    var filtered = chatTabFilter === 'groups' ? contacts.filter(function(c) { return c.type === 'club'; }) : contacts.filter(function(c) { return c.type !== 'club'; });
+    if (filtered.length === 0) {
+      var msg = chatTabFilter === 'groups' ? 'No group chats yet. Join a club to start.' : 'No conversations yet.';
+      list.innerHTML = '<div class="text-center text-muted text-xs py-6">' + msg + '</div>';
       return;
     }
-    contacts.forEach(function(c) {
+    filtered.forEach(function(c) {
       var div = document.createElement('div');
       div.className = 'chat-contact';
       if (c.type === 'club') {

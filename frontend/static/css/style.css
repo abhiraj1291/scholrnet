@@ -330,16 +330,20 @@ body { padding-top: 6.5rem; }
   position: fixed;
   bottom: 0;
   right: 1rem;
-  width: 20rem;
+  width: 360px;
   max-width: calc(100vw - 2rem);
-  background: var(--bg-card);
+  background: var(--card-bg);
   border: 1px solid var(--border);
+  border-bottom: none;
   border-radius: 1rem 1rem 0 0;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-  z-index: 100;
-  transition: transform 0.3s;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+  z-index: 999;
+  transition: transform 0.3s ease;
 }
 .chat-drawer.minimized { transform: translateY(calc(100% - 3rem)); }
+.chat-tab { flex:1; padding:0.5rem; font-size:0.75rem; font-weight:600; background:none; border:none; color:var(--text-muted); cursor:pointer; transition:all 0.15s; }
+.chat-tab.active { color:var(--primary); border-bottom:2px solid var(--primary); }
+.chat-tab:hover { color:var(--text); }
 .chat-header {
   background: #1e293b;
   color: #fff;

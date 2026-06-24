@@ -6,6 +6,10 @@
       <h2 class="font-bold">Messages</h2>
       <button class="btn btn-primary btn-sm" onclick="showPageNewChat()"><i data-lucide="plus" style="width:14px;height:14px;"></i></button>
     </div>
+    <div class="flex border-b" style="border-color:var(--border);">
+      <button id="pageChatTabFriends" class="chat-tab active" onclick="switchChatTab('friends')">Friends</button>
+      <button id="pageChatTabGroups" class="chat-tab" onclick="switchChatTab('groups')">Groups</button>
+    </div>
     <div id="chatContactList" style="max-height:60vh;overflow-y:auto;"></div>
     <div id="chatSearchView" class="hidden">
       <div class="p-3 border-b" style="border-color:var(--border);">
