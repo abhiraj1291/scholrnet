@@ -207,34 +207,7 @@ img{max-width:100%;height:auto;display:block}
 .cta-badges{display:flex;align-items:center;justify-content:center;gap:0.25rem;margin-top:1rem;flex-wrap:wrap}
 .cta-badge{font-size:0.7rem;color:rgba(255,255,255,0.8);font-weight:500}
 .cta-badge-dot{color:rgba(255,255,255,0.4)}
-.cta-email-form{margin-top:1.25rem}
-.cta-email-label{font-size:0.75rem;color:rgba(255,255,255,0.6);margin-bottom:0.5rem}
-.cta-email-inner{display:flex;flex-direction:column;gap:0.5rem;max-width:400px;margin:0 auto}
-.cta-input{padding:0.625rem 0.875rem;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:1rem;outline:none;width:100%;font-family:inherit;transition:background 0.15s;min-height:44px;box-sizing:border-box}
-.cta-input::placeholder{color:rgba(255,255,255,0.45)}
-.cta-input:focus{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4)}
-.cta-submit{padding:0.625rem 1.25rem;font-size:0.85rem;background:#fff;color:var(--primary);border:1px solid #fff;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;transition:all 0.15s;font-family:inherit;min-height:44px}
-.cta-submit:hover{background:rgba(255,255,255,0.9)}
-.cta-email-status{font-size:0.75rem;color:rgba(255,255,255,0.7);margin-top:0.5rem;min-height:1.25rem}
-@media(min-width:48rem){.cta-section{padding:5rem 1.5rem}.cta-title{margin-bottom:0.75rem}.cta-sub{margin-bottom:2rem}.cta-section .btn-primary{width:auto}.cta-email-inner{flex-direction:row}.cta-input{width:auto;flex:1;min-width:180px}}
-
-/* Exit Intent Modal */
-.exit-modal{position:fixed;inset:0;z-index:999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);padding:1rem}
-.exit-modal.visible{display:flex}
-.exit-modal-card{background:var(--bg-card);border-radius:var(--radius-lg);padding:2rem;max-width:400px;width:100%;box-shadow:var(--shadow-lg);text-align:center;position:relative;animation:modalIn 0.3s ease;margin:1rem}
-@keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.exit-modal-close{position:absolute;top:0.75rem;right:0.75rem;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.25rem;padding:0.5rem;line-height:1;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background 0.15s}
-.exit-modal-close:hover{background:var(--bg-alt)}
-.exit-modal h2{font-size:1.25rem;font-weight:800;color:var(--text);margin-bottom:0.5rem}
-.exit-modal p{font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.5rem;line-height:1.6}
-.exit-modal .cta-email-inner{max-width:100%}
-.exit-modal .cta-input{background:var(--bg-alt);border-color:var(--border);color:var(--text);min-width:0}
-.exit-modal .cta-input::placeholder{color:var(--text-muted)}
-.exit-modal .cta-input:focus{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light)}
-.exit-modal .cta-submit{background:var(--primary);color:#fff;border-color:var(--primary);min-height:44px}
-.exit-modal .cta-submit:hover{background:var(--primary-hover)}
-.exit-modal .exit-no-thanks{display:inline-block;margin-top:1rem;font-size:0.75rem;color:var(--text-muted);cursor:pointer;padding:0.5rem;min-height:44px}
-.exit-modal .exit-no-thanks:hover{color:var(--text)}
+@media(min-width:48rem){.cta-section{padding:5rem 1.5rem}.cta-title{margin-bottom:0.75rem}.cta-sub{margin-bottom:2rem}.cta-section .btn-primary{width:auto}}
 
 /* ═══════════════════════════════════════════════
    Footer — Sticky Bottom
@@ -350,7 +323,6 @@ img{max-width:100%;height:auto;display:block}
   .hero-card-2,.hero-card-3{width:140px}
   .section{padding:1.5rem 0.75rem}
   .feature-card{padding:1rem}
-  .exit-modal-card{padding:1.25rem;margin:0.5rem}
   .footer-grid{gap:0.75rem}
 }
 

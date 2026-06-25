@@ -380,28 +380,23 @@ var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }}
 var isOwn = {{ 'true' if is_own else 'false' }};
 
 function fetchWithRetry(url, retries, delay) {
-  if (retries === undefined) retries = 0;
-  if (delay === undefined) delay = 1000;
-  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  var timeout = setTimeout(function() { if (controller) controller.abort(); }, 12000);
+  if (retries === undefined) retries = 2;
+  if (delay === undefined) delay = 2000;
   return new Promise(function(resolve, reject) {
     function attempt(n) {
-      var opts = { signal: controller ? controller.signal : undefined };
-      fetch(url, opts)
+      fetch(url)
         .then(function(r) {
-          clearTimeout(timeout);
           var ct = r.headers.get('content-type') || '';
           if (ct.indexOf('application/json') === -1 && ct.indexOf('text/json') === -1) {
             return r.text().then(function(t) {
               try { return JSON.parse(t); }
-              catch(e) { throw new Error('Not JSON: ' + t.slice(0,200)); }
+              catch(e) { throw new Error('Not JSON'); }
             });
           }
           return r.json();
         })
         .then(function(d) { resolve(d); })
         .catch(function(e) {
-          if (e.name === 'AbortError') { reject(new Error('Timeout')); return; }
           if (n > 0) { setTimeout(function() { attempt(n - 1); }, delay); }
           else { reject(e); }
         });

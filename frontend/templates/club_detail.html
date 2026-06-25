@@ -245,8 +245,7 @@ function deleteClub(id) {
       if (d.success) { showToast('Club deleted', 'success'); window.location.href = '/clubs'; }
       else { showToast(d.error || 'Failed', 'info'); }
     })
-    .catch(function() { showToast('Network error', 'info'); }
-  );
+    .catch(function() { showToast('Network error', 'info'); });
 }
 
 // Avatar / Cover upload
