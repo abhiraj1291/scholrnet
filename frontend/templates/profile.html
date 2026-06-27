@@ -372,6 +372,7 @@
   </div>
 </div>
 
+<div id="jsDiag" style="display:none"></div>
 <script>
 var puserId = {{ puser.id }};
 var puserName = {{ puser.name|tojson }};
@@ -507,7 +508,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
             });
           });
         } else {
-          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No achievements yet.</div>';
+          list.innerHTML = '<div class="text-center" style="padding:1.5rem 0;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.5rem;"><circle cx="12" cy="8" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg><p style="font-size:0.8rem;color:#d0d0e0;margin:0;">No achievements yet.</p>' + (isOwn ? '<a href="#" onclick="document.getElementById(\'toggleAchievementForm\').click();return false;" style="font-size:0.75rem;color:#6C3BF5;font-weight:600;text-decoration:none;margin-top:0.5rem;display:inline-block;">Add your first achievement</a>' : '') + '</div>';
         }
       })
       .catch(function() {});
@@ -550,7 +551,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
           });
           lucide.createIcons();
         } else {
-          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No projects yet.</div>';
+          list.innerHTML = '<div class="text-center" style="padding:1.5rem 0;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.5rem;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><p style="font-size:0.8rem;color:#d0d0e0;margin:0;">No projects yet.</p>' + (isOwn ? '<a href="#" onclick="document.getElementById(\'toggleProjectForm\').click();return false;" style="font-size:0.75rem;color:#6C3BF5;font-weight:600;text-decoration:none;margin-top:0.5rem;display:inline-block;">Add your first project</a>' : '') + '</div>';
         }
       })
       .catch(function() {});
@@ -888,7 +889,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
           });
           if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
-          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No connections yet</p>';
+          list.innerHTML = '<div class="text-center" style="padding:1.5rem 0;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.5rem;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><p style="font-size:0.8rem;color:#d0d0e0;margin:0;">No connections yet</p></div>';
           if (count) count.textContent = '0';
         }
       })
@@ -923,7 +924,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
           });
           if (typeof lucide !== 'undefined') lucide.createIcons();
         } else {
-          list.innerHTML = '<p class="text-xs text-muted text-center py-2">No clubs joined yet</p>';
+          list.innerHTML = '<div class="text-center" style="padding:1.5rem 0;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.5rem;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><p style="font-size:0.8rem;color:#d0d0e0;margin:0;">No clubs joined yet</p><a href="/clubs" style="font-size:0.75rem;color:#6C3BF5;font-weight:600;text-decoration:none;margin-top:0.5rem;display:inline-block;">Browse clubs</a></div>';
         }
       })
       .catch(function(e) {

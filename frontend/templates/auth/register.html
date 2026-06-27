@@ -18,34 +18,47 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
   <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
   <style>
-    body{background:var(--bg-alt);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+    body{background:linear-gradient(135deg,#f6f7fb 0%,#f0edff 100%);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
     .auth-wrapper{display:flex;gap:2.5rem;max-width:64rem;width:100%;align-items:center}
     .auth-visual{flex:1;display:none;flex-direction:column;align-items:center}
-    .auth-visual .auth-tagline{font-size:1.75rem;font-weight:700;color:var(--text);line-height:1.3;margin-top:1.5rem;text-align:center;max-width:24rem;letter-spacing:-0.02em}
-    .auth-visual .auth-tagline span{color:var(--primary)}
+    .auth-visual .auth-tagline{font-size:1.75rem;font-weight:700;color:#0F0F1A;line-height:1.3;margin-top:1.5rem;text-align:center;max-width:24rem;letter-spacing:-0.02em}
+    .auth-visual .auth-tagline span{color:#6C3BF5}
     .auth-container{width:100%;max-width:26rem}
-    .auth-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-md)}
-    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.25rem;color:var(--text);letter-spacing:-0.02em}
-    .auth-card .sub{font-size:0.85rem;color:var(--text-muted);margin:0 0 1.5rem}
-    .auth-card label{font-size:0.8rem;font-weight:600;color:var(--text);display:block;margin-bottom:0.25rem}
-    .auth-card input,.auth-card select{width:100%;padding:0.7rem 0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.875rem;outline:none;box-sizing:border-box;transition:border-color 0.15s,box-shadow 0.15s;background:#fff;color:var(--text);font-family:inherit}
-    .auth-card input:focus,.auth-card select:focus{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light)}
+    .auth-card{background:#fff;border:1px solid #f0f0f5;border-radius:20px;padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.08);position:relative;overflow:hidden}
+    .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6C3BF5,#00C4B8)}
+    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.25rem;color:#0F0F1A;letter-spacing:-0.02em}
+    .auth-card .sub{font-size:0.85rem;color:#5A5A72;margin:0 0 1.5rem}
+    .auth-card label{font-size:0.8rem;font-weight:600;color:#0F0F1A;display:block;margin-bottom:0.25rem}
+    .auth-card input,.auth-card select{width:100%;padding:0.7rem 0.75rem;border:1px solid #e8e8f0;border-radius:10px;font-size:0.875rem;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s;background:#fff;color:#0F0F1A;font-family:inherit}
+    .auth-card input:focus,.auth-card select:focus{border-color:#6C3BF5;box-shadow:0 0 0 3px rgba(108,59,245,0.12);transform:translateY(-1px)}
     .auth-card .field{margin-bottom:0.875rem}
-    .auth-card .btn-submit{width:100%;padding:0.75rem;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:0.9rem;font-weight:600;cursor:pointer;transition:background 0.15s,transform 0.15s;font-family:inherit}
-    .auth-card .btn-submit:hover{background:var(--primary-hover);transform:translateY(-1px)}
-    .auth-card .switch-page{text-align:center;font-size:0.8rem;color:var(--text-muted);margin-top:1rem}
-    .auth-card .switch-page a{font-weight:600;color:var(--primary);text-decoration:none}
+    .auth-card .btn-submit{width:100%;padding:0.75rem;background:#6C3BF5;color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem}
+    .auth-card .btn-submit:hover{background:#5A2ED8;transform:translateY(-2px);box-shadow:0 4px 12px rgba(108,59,245,0.25)}
+    .auth-card .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    .auth-card .btn-submit .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+    .auth-card .btn-submit.loading .spinner{display:block}
+    .auth-card .btn-submit.loading .btn-text{opacity:0.7}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .auth-card .switch-page{text-align:center;font-size:0.8rem;color:#5A5A72;margin-top:1rem}
+    .auth-card .switch-page a{font-weight:600;color:#6C3BF5;text-decoration:none}
     .auth-card .switch-page a:hover{text-decoration:underline}
-    .auth-card .error-msg{background:#fff5f5;border:1px solid #f0c0c0;border-radius:var(--radius-sm);padding:0.75rem;font-size:0.8rem;color:#c0392b;margin-bottom:1rem}
-    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:var(--text-muted)}
-    .auth-footer a{color:var(--primary);text-decoration:none}
+    .auth-card .error-msg{background:#fff5f5;border:1px solid #f0c0c0;border-radius:10px;padding:0.75rem;font-size:0.8rem;color:#c0392b;margin-bottom:1rem}
+    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:#5A5A72}
+    .auth-footer a{color:#6C3BF5;text-decoration:none;display:inline-flex;align-items:center;gap:0.25rem}
     .auth-footer a:hover{text-decoration:underline}
-    .auth-card .status-hint{font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem}
-    .auth-card .status-hint.error{color:var(--accent)}
-    .auth-card .status-hint.success{color:var(--secondary)}
+    .auth-card .status-hint{font-size:0.75rem;color:#5A5A72;margin-top:0.25rem;transition:color 0.15s}
+    .auth-card .status-hint.error{color:#FF6B6B}
+    .auth-card .status-hint.success{color:#00C4B8}
     .auth-card .trust-badges{display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:1.25rem;flex-wrap:wrap}
-    .auth-card .trust-badge{font-size:0.7rem;color:var(--text-muted);display:flex;align-items:center;gap:0.25rem}
-    .auth-card .trust-badge svg{width:12px;height:12px;color:var(--secondary)}
+    .auth-card .trust-badge{font-size:0.7rem;color:#5A5A72;display:flex;align-items:center;gap:0.25rem}
+    .auth-card .trust-badge svg{width:12px;height:12px;color:#00C4B8}
+    .pw-strength{display:flex;gap:0.25rem;margin-top:0.375rem}
+    .pw-bar{flex:1;height:3px;border-radius:2px;background:#e8e8f0;transition:background 0.3s}
+    .pw-bar.active.weak{background:#FF6B6B}
+    .pw-bar.active.medium{background:#FFA726}
+    .pw-bar.active.strong{background:#6BCB77}
+    .pw-bar.active.very-strong{background:#00C4B8}
+    .pw-label{font-size:0.65rem;color:#5A5A72;margin-top:0.2rem}
     @media(min-width:48rem){.auth-visual{display:flex}}
     @media(max-width:30rem){.auth-card{padding:1.25rem}.auth-card h1{font-size:1.15rem}}
   </style>
@@ -97,6 +110,13 @@
           <div class="field">
             <label for="regPassword">Password</label>
             <input type="password" id="regPassword" name="password" placeholder="Min. 6 characters" required minlength="6" autocomplete="new-password">
+            <div class="pw-strength" id="pwStrength">
+              <div class="pw-bar" data-index="0"></div>
+              <div class="pw-bar" data-index="1"></div>
+              <div class="pw-bar" data-index="2"></div>
+              <div class="pw-bar" data-index="3"></div>
+            </div>
+            <div class="pw-label" id="pwLabel"></div>
           </div>
           <div class="field">
             <label for="regUsername">Username <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
@@ -126,7 +146,7 @@
               <span>I agree to the <a href="{{ url_for('terms_page') }}" target="_blank" style="color:var(--primary);text-decoration:underline;">Terms of Service</a> and <a href="{{ url_for('privacy_page') }}" target="_blank" style="color:var(--primary);text-decoration:underline;">Privacy Policy</a></span>
             </label>
           </div>
-          <button type="submit" class="btn-submit">Create Account</button>
+          <button type="submit" class="btn-submit" id="regSubmit"><span class="spinner"></span><span class="btn-text">Create Account</span></button>
         </form>
 
         <div class="trust-badges">
@@ -165,6 +185,32 @@
           }, 300);
         });
       }
+
+      // Password strength
+      var pwInput = document.getElementById('regPassword');
+      var pwBars = document.querySelectorAll('#pwStrength .pw-bar');
+      var pwLabel = document.getElementById('pwLabel');
+      if (pwInput) {
+        pwInput.addEventListener('input', function() {
+          var val = this.value;
+          var score = 0;
+          if (val.length >= 6) score++;
+          if (val.length >= 10) score++;
+          if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score++;
+          if (/\d/.test(val) && /[^a-zA-Z0-9]/.test(val)) score++;
+          var levels = ['', 'weak', 'medium', 'strong', 'very-strong'];
+          var labels = ['', 'Weak', 'Medium', 'Strong', 'Very strong'];
+          pwBars.forEach(function(bar, i) {
+            bar.className = 'pw-bar' + (i < score ? ' active ' + levels[score] : '');
+          });
+          pwLabel.textContent = score > 0 ? labels[score] : '';
+        });
+      }
+
+      // Loading spinner
+      document.querySelector('form').addEventListener('submit', function() {
+        document.getElementById('regSubmit').classList.add('loading');
+      });
     })();
   </script>
 </body>

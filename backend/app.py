@@ -164,6 +164,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 return redirect(url_for('verify_2fa'))
 
     import traceback, sys
+    from flask import g as request_ctx
 
     # Gate migrations behind a flag to save 200-500ms on cold starts
     if not app.config.get('MIGRATIONS_RAN', False):
@@ -328,13 +329,27 @@ def register_routes(app, bcrypt, login_manager, limiter):
     except Exception as e:
         print(f"AUTO-MIGRATE: chat_messages group columns failed: {e}")
 
-    # Performance indexes for common queries
+    # Performance indexes for common queries — covers filtering, sorting, JOINs, search
     try:
         with db.engine.connect() as conn:
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_posts_club_id ON posts(club_id)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, unread)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_user_likes_post ON user_likes(user_id, post_id)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_posts_likes ON posts(likes)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_posts_timestamp ON posts(timestamp)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_opportunities_deadline ON opportunities(deadline)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_school ON users(school)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_schools_name ON schools(name)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_clubs_name ON clubs(name)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_experiences_user_current ON experiences(user_id, is_current)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_blog_published_category ON blog_posts(published, category)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_blog_published ON blog_posts(published)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_posts_author_likes ON posts(author_id, likes)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_connections_connected_status ON connections(connected_user_id, status)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_connections_user_status ON connections(user_id, status)"))
             conn.commit()
     except Exception as e:
         print(f"AUTO-MIGRATE: performance indexes failed: {e}")
@@ -724,12 +739,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
         from xml.sax.saxutils import escape as xml_escape
         today = str(datetime.now(timezone.utc).date())
         base = request.url_root.rstrip('/')
-        schools = School.query.order_by(School.id.desc()).limit(100).all()
-        blog_posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.id.desc()).limit(100).all()
-        opportunities = Opportunity.query.order_by(Opportunity.id.desc()).limit(100).all()
-        clubs = Club.query.order_by(Club.id.desc()).limit(100).all()
-        users = User.query.filter(User.username.isnot(None), User.username != '').order_by(User.id.desc()).limit(500).all()
-        posts = Post.query.order_by(Post.id.desc()).limit(500).all()
+        schools = School.query.with_entities(School.id, School.name).order_by(School.id.desc()).limit(100).all()
+        blog_posts = BlogPost.query.with_entities(BlogPost.id, BlogPost.slug, BlogPost.updated_at).filter_by(published=True).order_by(BlogPost.id.desc()).limit(100).all()
+        opportunities = Opportunity.query.with_entities(Opportunity.id, Opportunity.name).order_by(Opportunity.id.desc()).limit(100).all()
+        clubs = Club.query.with_entities(Club.id, Club.name).order_by(Club.id.desc()).limit(100).all()
+        users = User.query.with_entities(User.id, User.username).filter(User.username.isnot(None), User.username != '').order_by(User.id.desc()).limit(500).all()
+        posts = Post.query.with_entities(Post.id).order_by(Post.id.desc()).limit(500).all()
         urls = [
             f'<url><loc>{base}/</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>',
             f'<url><loc>{base}/about</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>',
@@ -983,6 +998,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
 
     @app.route('/verify-email/<token>')
     def verify_email(token):
+        from sqlalchemy import or_
+        # Only load id, email_verify_token, email_verified — avoid fetching all columns
         user = User.query.filter(User.email_verify_token != '', User.email_verified == False).first()
         if not user:
             return render_template('error.html', code=400, title='Invalid Link', message='This verification link is invalid or expired.', emoji='🔗')
@@ -1111,14 +1128,7 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        import traceback
-        try:
-            return render_template('feed.html',
-                user=current_user
-            )
-        except Exception:
-            traceback.print_exc()
-            return jsonify({'error': 'An unexpected error occurred'}), 500
+        return redirect(url_for('explore_page'))
 
     @app.route('/profile')
     @login_required
@@ -1144,13 +1154,15 @@ def register_routes(app, bcrypt, login_manager, limiter):
             else:
                 friend_status = 'pending_received'
         is_own = (user_id == current_user.id)
+        page = request.args.get('page', 1, type=int)
+        posts_p = Post.query.filter_by(author_id=user_id).order_by(Post.id.desc()).paginate(page=page, per_page=20, error_out=False)
         return render_template('profile.html',
             user=current_user,
             puser=puser,
             is_own=is_own,
             friend_status=friend_status,
             is_verified=_is_verified(puser),
-            posts=Post.query.filter_by(author_id=user_id).order_by(Post.id.desc()).all()
+            posts=posts_p.items
         )
 
     @app.route('/u/<username>')
@@ -1166,21 +1178,23 @@ def register_routes(app, bcrypt, login_manager, limiter):
         puser = User.query.filter_by(username=username).first()
         if not puser:
             abort(404)
-        achievements = Achievement.query.filter_by(user_id=puser.id).order_by(Achievement.id.desc()).all()
-        projects = Project.query.filter_by(user_id=puser.id).order_by(Project.id.desc()).all()
-        experiences = Experience.query.filter_by(user_id=puser.id).order_by(Experience.id.desc()).all()
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        achs_p = Achievement.query.filter_by(user_id=puser.id).order_by(Achievement.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        projs_p = Project.query.filter_by(user_id=puser.id).order_by(Project.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        exps_p = Experience.query.filter_by(user_id=puser.id).order_by(Experience.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
         return render_template('share.html',
             puser=puser,
-            achievements=achievements,
-            projects=projects,
-            experiences=experiences,
+            achievements=achs_p.items,
+            projects=projs_p.items,
+            experiences=exps_p.items,
             is_verified=_is_verified(puser)
         )
 
     @app.route('/post/<int:post_id>')
     def single_post(post_id):
         post = Post.query.get_or_404(post_id)
-        author = User.query.get(post.author_id) if post.author_id else None
+        author = User.query.with_entities(User.id, User.name, User.avatar, User.avatar_url, User.username, User.role, User.school).filter(User.id == post.author_id).first() if post.author_id else None
         return render_template('post.html',
             post=post,
             author=author,
@@ -1419,19 +1433,21 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/mentors')
     @login_required
     def mentors_page():
+        mentorship_p = MentorshipRequest.query.filter_by(student_id=current_user.id).order_by(MentorshipRequest.id.desc()).paginate(page=1, per_page=50, error_out=False)
         return render_template('mentors.html',
             user=current_user,
             mentors=get_all_mentors(),
-            mentorship_requests=MentorshipRequest.query.filter_by(student_id=current_user.id).order_by(MentorshipRequest.id.desc()).all(),
+            mentorship_requests=mentorship_p.items,
             
         )
 
     @app.route('/analytics')
     @login_required
     def analytics_page():
+        achs_p = Achievement.query.filter_by(user_id=current_user.id).order_by(Achievement.id.desc()).paginate(page=1, per_page=100, error_out=False)
         return render_template('analytics.html',
             user=current_user,
-            achievements=Achievement.query.filter_by(user_id=current_user.id).all(),
+            achievements=achs_p.items,
             
         )
 
@@ -1588,13 +1604,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
         )
         db.session.add(post)
         db.session.commit()
-        # Notify friends about new post (bulk insert for serverless perf)
+        # Notify friends about new post (single query)
         try:
-            friend_ids = [c.user_id for c in Connection.query.filter(
-                Connection.connected_user_id == current_user.id, Connection.status == 'accepted').all()]
-            friend_ids += [c.connected_user_id for c in Connection.query.filter(
-                Connection.user_id == current_user.id, Connection.status == 'accepted').all()]
-            friend_ids = set(friend_ids)
+            friend_conns = Connection.query.filter(
+                ((Connection.user_id == current_user.id) | (Connection.connected_user_id == current_user.id)),
+                Connection.status == 'accepted'
+            ).all()
+            friend_ids = set(c.connected_user_id if c.user_id == current_user.id else c.user_id for c in friend_conns)
             if friend_ids:
                 now = short_ts()
                 title = sanitize_text(current_user.name, 100) + " created a new post"
@@ -1661,8 +1677,8 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @app.route('/api/post/<int:post_id>/comments', methods=['GET'])
     @login_required
     def api_get_comments(post_id):
-        comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.id.asc()).all()
-        return jsonify({'comments': [{'id': c.id, 'author': {'name': c.author, 'avatar': c.avatar}, 'text': c.text, 'timestamp': c.timestamp} for c in comments]})
+        comment_rows = Comment.query.with_entities(Comment.id, Comment.author, Comment.avatar, Comment.text, Comment.timestamp).filter_by(post_id=post_id).order_by(Comment.id.asc()).all()
+        return jsonify({'comments': [{'id': c.id, 'author': {'name': c.author, 'avatar': c.avatar}, 'text': c.text, 'timestamp': c.timestamp} for c in comment_rows]})
 
     @app.route('/api/post/<int:post_id>/delete', methods=['POST'])
     @login_required
@@ -1910,14 +1926,18 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     def api_achievements():
         try:
-            achs = Achievement.query.filter_by(user_id=current_user.id).order_by(Achievement.id.desc()).all()
+            page = request.args.get('page', 1, type=int)
+            per_page = 50
+            pagination = Achievement.query.filter_by(user_id=current_user.id).order_by(Achievement.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+            achs = pagination.items
             return jsonify({'achievements': [{
                 'id': a.id, 'title': a.title, 'description': a.description,
                 'category': a.category, 'institution': a.institution,
                 'year': a.year, 'verified': a.verification_status == 'Verified',
                 'verification_status': a.verification_status,
                 'verification_hash': a.verification_hash if current_user.role == 'super_admin' else ''
-            } for a in achs]})
+            } for a in achs],
+            'total': pagination.total, 'pages': pagination.pages, 'page': page})
         except Exception:
             import traceback; traceback.print_exc()
             return jsonify({'achievements': []})
@@ -1927,8 +1947,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_projects():
         try:
             user_id = request.args.get('user_id', type=int) or current_user.id
-            projs = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all()
-            return jsonify({'projects': [{'id': p.id, 'title': p.title, 'description': p.description, 'collaborators': p.collaborators, 'link': p.link, 'skills': p.skills, 'verification_status': p.verification_status} for p in projs]})
+            page = request.args.get('page', 1, type=int)
+            per_page = 50
+            pagination = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+            projs = pagination.items
+            return jsonify({'projects': [{'id': p.id, 'title': p.title, 'description': p.description, 'collaborators': p.collaborators, 'link': p.link, 'skills': p.skills, 'verification_status': p.verification_status} for p in projs],
+            'total': pagination.total, 'pages': pagination.pages, 'page': page})
         except Exception:
             import traceback; traceback.print_exc()
             return jsonify({'projects': []})
@@ -2299,9 +2323,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_admin_posts():
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
-        posts = Post.query.order_by(Post.id.desc()).limit(50).all()
+        posts = Post.query.with_entities(Post.id, Post.author_id, Post.title, Post.content, Post.likes, Post.timestamp).order_by(Post.id.desc()).limit(50).all()
         uids = set(p.author_id for p in posts if p.author_id)
-        users = {u.id: {'name': u.name, 'avatar': u.avatar} for u in User.query.filter(User.id.in_(uids)).all()} if uids else {}
+        user_rows = db.session.query(User.id, User.name, User.avatar).filter(User.id.in_(uids)).all() if uids else []
+        users = {u.id: {'name': u.name, 'avatar': u.avatar} for u in user_rows}
         return jsonify({'posts': [{'id': p.id, 'title': p.title, 'content': p.content, 'likes_count': p.likes or 0, 'created_at': p.timestamp or '', 'author': users.get(p.author_id, {'name': 'Unknown', 'avatar': ''})} for p in posts]})
 
     @app.route('/api/admin/post/<int:post_id>/delete', methods=['DELETE'])
@@ -2322,8 +2347,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
     def api_admin_ads():
         if current_user.role != 'super_admin':
             return jsonify({'error': 'Unauthorized'}), 403
-        ads = Ad.query.order_by(Ad.id.desc()).all()
-        return jsonify({'ads': [{'id': a.id, 'title': a.title, 'company': a.company, 'content': a.content, 'image': a.image, 'placement': a.placement, 'cta_url': a.cta_url, 'cta_text': a.cta_text, 'active': a.active, 'target_role': a.target_role, 'clicks': a.clicks, 'impressions': a.impressions, 'created_at': a.created_at.isoformat() if a.created_at else ''} for a in ads]})
+        page = request.args.get('page', 1, type=int)
+        per_page = 50
+        pagination = Ad.query.order_by(Ad.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        ads = pagination.items
+        return jsonify({'ads': [{'id': a.id, 'title': a.title, 'company': a.company, 'content': a.content, 'image': a.image, 'placement': a.placement, 'cta_url': a.cta_url, 'cta_text': a.cta_text, 'active': a.active, 'target_role': a.target_role, 'clicks': a.clicks, 'impressions': a.impressions, 'created_at': a.created_at.isoformat() if a.created_at else ''} for a in ads],
+        'total': pagination.total, 'pages': pagination.pages, 'page': page})
 
     @app.route('/api/admin/ad/create', methods=['POST'])
     @login_required
@@ -2625,10 +2654,12 @@ def register_routes(app, bcrypt, login_manager, limiter):
         per_page = 10
         from sqlalchemy import case as _case, literal as _literal
         friend_ids = set()
-        for c in Connection.query.filter_by(user_id=current_user.id, status='accepted').all():
-            friend_ids.add(c.connected_user_id)
-        for c in Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all():
-            friend_ids.add(c.user_id)
+        friend_conns = Connection.query.filter(
+            ((Connection.user_id == current_user.id) | (Connection.connected_user_id == current_user.id)),
+            Connection.status == 'accepted'
+        ).all()
+        for c in friend_conns:
+            friend_ids.add(c.connected_user_id if c.user_id == current_user.id else c.user_id)
         mode = request.args.get('mode', 'feed')
         if mode == 'explore':
             # Explore: lower friend boost, higher viral weight
@@ -2676,23 +2707,28 @@ def register_routes(app, bcrypt, login_manager, limiter):
         })
 
     def _friend_count(user_id):
-        from sqlalchemy import func as _func
-        sent = db.session.query(_func.count(Connection.id)).filter_by(user_id=user_id, status='accepted').scalar() or 0
-        received = db.session.query(_func.count(Connection.id)).filter_by(connected_user_id=user_id, status='accepted').scalar() or 0
-        return sent + received
+        from sqlalchemy import func as _func, or_ as _or_
+        return db.session.query(_func.count(Connection.id)).filter(
+            _or_(
+                Connection.user_id == user_id,
+                Connection.connected_user_id == user_id
+            ),
+            Connection.status == 'accepted'
+        ).scalar() or 0
 
     @app.route('/api/trending/topics')
     @login_required
     @limiter.limit("30 per minute")
     def api_trending_topics():
         try:
-            recent_posts = Post.query.filter(Post.tags.isnot(None), Post.tags != '').order_by(Post.id.desc()).limit(200).all()
+            # Only fetch tags column — avoid loading all Post columns for 200 rows
+            recent_tag_rows = db.session.query(Post.tags).filter(Post.tags.isnot(None), Post.tags != '').order_by(Post.id.desc()).limit(200).all()
             tag_count = {}
-            for p in recent_posts:
+            for (tags_str,) in recent_tag_rows:
                 try:
-                    tags = json.loads(p.tags) if isinstance(p.tags, str) else (p.tags or [])
+                    tags = json.loads(tags_str) if isinstance(tags_str, str) else (tags_str or [])
                 except (json.JSONDecodeError, TypeError):
-                    tags = p.tags.split(',') if isinstance(p.tags, str) and p.tags else []
+                    tags = tags_str.split(',') if isinstance(tags_str, str) and tags_str else []
                 for t in tags:
                     t = t.strip().lower()
                     if t and len(t) < 50:
@@ -2742,9 +2778,10 @@ def register_routes(app, bcrypt, login_manager, limiter):
                 else:
                     friend_status = 'pending_received'
             skills = []
-            for pj in Project.query.filter_by(user_id=user_id).all():
-                if pj.skills:
-                    for s in pj.skills.split(','):
+            all_skills_rows = db.session.query(Project.skills).filter(Project.user_id == user_id, Project.skills != '', Project.skills.isnot(None)).all()
+            for (skill_str,) in all_skills_rows:
+                if skill_str:
+                    for s in skill_str.split(','):
                         s = s.strip()
                         if s and s not in skills:
                             skills.append(s)
@@ -2771,14 +2808,18 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     def api_user_achievements(user_id):
         try:
-            achs = Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).all()
+            page = request.args.get('page', 1, type=int)
+            per_page = 50
+            pagination = Achievement.query.filter_by(user_id=user_id).order_by(Achievement.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+            achs = pagination.items
             return jsonify({'achievements': [{
                 'id': a.id, 'title': a.title, 'description': a.description,
                 'category': a.category, 'institution': a.institution,
                 'year': a.year, 'verified': a.verification_status == 'Verified',
                 'verification_status': a.verification_status,
                 'verification_hash': a.verification_hash if current_user.id == user_id or current_user.role == 'super_admin' else ''
-            } for a in achs]})
+            } for a in achs],
+            'total': pagination.total, 'pages': pagination.pages, 'page': page})
         except Exception:
             import traceback; traceback.print_exc()
             return jsonify({'achievements': []})
@@ -2787,12 +2828,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     def api_user_projects(user_id):
         try:
-            projs = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).all()
+            page = request.args.get('page', 1, type=int)
+            per_page = 50
+            pagination = Project.query.filter_by(user_id=user_id).order_by(Project.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+            projs = pagination.items
             return jsonify({'projects': [{
                 'id': p.id, 'title': p.title, 'description': p.description,
                 'collaborators': p.collaborators, 'link': p.link,
                 'skills': [s.strip() for s in (p.skills or '').split(',') if s.strip()]
-            } for p in projs]})
+            } for p in projs],
+            'total': pagination.total, 'pages': pagination.pages, 'page': page})
         except Exception:
             import traceback; traceback.print_exc()
             return jsonify({'projects': []})
@@ -3055,13 +3100,13 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     def api_friend_list():
         try:
-            sent = Connection.query.filter_by(user_id=current_user.id, status='accepted').all()
-            received = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all()
-            ids = set()
-            for c in sent: ids.add(c.connected_user_id)
-            for c in received: ids.add(c.user_id)
-            users = User.query.filter(User.id.in_(ids)).all() if ids else []
-            return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school} for u in users]})
+            friend_conns = Connection.query.filter(
+                ((Connection.user_id == current_user.id) | (Connection.connected_user_id == current_user.id)),
+                Connection.status == 'accepted'
+            ).all()
+            ids = set(c.connected_user_id if c.user_id == current_user.id else c.user_id for c in friend_conns)
+            user_rows = db.session.query(User.id, User.name, User.avatar, User.avatar_url, User.school).filter(User.id.in_(ids)).all() if ids else []
+            return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school} for u in user_rows]})
         except Exception:
             import traceback; traceback.print_exc()
             return jsonify({'friends': []})
@@ -3085,16 +3130,17 @@ def register_routes(app, bcrypt, login_manager, limiter):
                     ~User.id.in_(existing_ids)
                 ).limit(10).all()
                 same_school = [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or u.name[:2].upper(), 'reason': 'Same school'} for u in same_school_q]
-            # Mutual friends
+            # Mutual friends (single query instead of N+1)
             mutual_ids = set()
             friend_ids = existing_ids - {current_user.id}
-            for fid in friend_ids:
-                for c in Connection.query.filter(
-                    ((Connection.user_id == fid) | (Connection.connected_user_id == fid)),
-                    Connection.status == 'accepted'
-                ).limit(20).all():
-                    other = c.connected_user_id if c.user_id == fid else c.user_id
-                    if other not in existing_ids:
+            if friend_ids:
+                mutual_conns = Connection.query.filter(
+                    Connection.status == 'accepted',
+                    ((Connection.user_id.in_(list(friend_ids))) | (Connection.connected_user_id.in_(list(friend_ids))))
+                ).all()
+                for c in mutual_conns:
+                    other = c.connected_user_id if c.user_id in friend_ids else c.user_id
+                    if other not in existing_ids and (c.user_id in friend_ids or c.connected_user_id in friend_ids):
                         mutual_ids.add(other)
             mutual_users = User.query.filter(User.id.in_(mutual_ids)).limit(10).all() if mutual_ids else []
             mutual = [{'id': u.id, 'name': u.name, 'school': u.school, 'avatar': u.avatar or u.name[:2].upper(), 'reason': 'Mutual connection'} for u in mutual_users]
@@ -3108,16 +3154,16 @@ def register_routes(app, bcrypt, login_manager, limiter):
     @login_required
     def api_user_connections(user_id):
         try:
-            sent = Connection.query.filter_by(user_id=user_id, status='accepted').all()
-            received = Connection.query.filter_by(connected_user_id=user_id, status='accepted').all()
-            ids = set()
-            for c in sent: ids.add(c.connected_user_id)
-            for c in received: ids.add(c.user_id)
-            my_sent = Connection.query.filter_by(user_id=current_user.id, status='accepted').all()
-            my_received = Connection.query.filter_by(connected_user_id=current_user.id, status='accepted').all()
-            my_ids = set()
-            for c in my_sent: my_ids.add(c.connected_user_id)
-            for c in my_received: my_ids.add(c.user_id)
+            user_conns = Connection.query.filter(
+                ((Connection.user_id == user_id) | (Connection.connected_user_id == user_id)),
+                Connection.status == 'accepted'
+            ).all()
+            ids = set(c.connected_user_id if c.user_id == user_id else c.user_id for c in user_conns)
+            my_conns = Connection.query.filter(
+                ((Connection.user_id == current_user.id) | (Connection.connected_user_id == current_user.id)),
+                Connection.status == 'accepted'
+            ).all()
+            my_ids = set(c.connected_user_id if c.user_id == current_user.id else c.user_id for c in my_conns)
             users = User.query.filter(User.id.in_(ids)).all() if ids else []
             return jsonify({'connections': [{
                 'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url,
@@ -3193,20 +3239,20 @@ def register_routes(app, bcrypt, login_manager, limiter):
         return jsonify({'success': True, 'message': 'Session regenerated. Please log in again on other devices.'})
 
     def _cascade_delete_user(uid):
-        """Delete all user data across 20+ tables. Posts are anonymized, clubs are cleaned up."""
-        # 1. Anonymize posts (keep content visible, remove user link)
-        posts = Post.query.filter_by(author_id=uid).all()
-        for p in posts:
-            p.author_id = None
-            p.author_name = 'Deleted User'
-            p.author_avatar = ''
-        # 2. Handle clubs owned by user — delete members, join requests, then club
-        owned_clubs = Club.query.filter_by(owner_id=uid).all()
-        for c in owned_clubs:
-            ClubMember.query.filter_by(club_id=c.id).delete()
-            ClubJoinRequest.query.filter_by(club_id=c.id).delete()
-            Post.query.filter_by(club_id=c.id).update({Post.club_id: None})
-            db.session.delete(c)
+        """Delete all user data across 20+ tables. Posts are anonymized, clubs are cleaned up.
+        Uses batch UPDATE/DELETE to avoid loading full rows."""
+        # 1. Anonymize posts (single UPDATE, no row loading)
+        Post.query.filter_by(author_id=uid).update(
+            {Post.author_id: None, Post.author_name: 'Deleted User', Post.author_avatar: ''},
+            synchronize_session=False
+        )
+        # 2. Handle clubs owned by user — delete members, join requests, then club (batch)
+        owned_club_ids = [r[0] for r in db.session.query(Club.id).filter_by(owner_id=uid).all()]
+        for cid in owned_club_ids:
+            ClubMember.query.filter_by(club_id=cid).delete()
+            ClubJoinRequest.query.filter_by(club_id=cid).delete()
+            Post.query.filter_by(club_id=cid).update({Post.club_id: None}, synchronize_session=False)
+            Club.query.filter_by(id=cid).delete()
         # 3. Delete user achievements, projects, experiences
         Achievement.query.filter_by(user_id=uid).delete()
         Project.query.filter_by(user_id=uid).delete()

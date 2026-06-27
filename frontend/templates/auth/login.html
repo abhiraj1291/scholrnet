@@ -22,34 +22,40 @@
   <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
   <style>
-    body{background:var(--bg-alt);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+    body{background:linear-gradient(135deg,#f6f7fb 0%,#f0edff 100%);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
     .auth-wrapper{display:flex;gap:2.5rem;max-width:64rem;width:100%;align-items:center}
     .auth-visual{flex:1;display:none;flex-direction:column;align-items:center}
-    .auth-visual .auth-tagline{font-size:1.75rem;font-weight:700;color:var(--text);line-height:1.3;margin-top:1.5rem;text-align:center;max-width:24rem;letter-spacing:-0.02em}
-    .auth-visual .auth-tagline span{color:var(--primary)}
+    .auth-visual .auth-tagline{font-size:1.75rem;font-weight:700;color:#0F0F1A;line-height:1.3;margin-top:1.5rem;text-align:center;max-width:24rem;letter-spacing:-0.02em}
+    .auth-visual .auth-tagline span{color:#6C3BF5}
     .auth-container{width:100%;max-width:26rem}
-    .auth-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-md)}
-    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.25rem;color:var(--text);letter-spacing:-0.02em}
-    .auth-card .sub{font-size:0.85rem;color:var(--text-muted);margin:0 0 1.5rem}
-    .auth-card label{font-size:0.8rem;font-weight:600;color:var(--text);display:block;margin-bottom:0.25rem}
-    .auth-card input{width:100%;padding:0.7rem 0.75rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.875rem;outline:none;box-sizing:border-box;transition:border-color 0.15s,box-shadow 0.15s;background:#fff;color:var(--text);font-family:inherit}
-    .auth-card input:focus{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-light)}
+    .auth-card{background:#fff;border:1px solid #f0f0f5;border-radius:20px;padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.08);position:relative;overflow:hidden}
+    .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6C3BF5,#00C4B8)}
+    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.25rem;color:#0F0F1A;letter-spacing:-0.02em}
+    .auth-card .sub{font-size:0.85rem;color:#5A5A72;margin:0 0 1.5rem}
+    .auth-card label{font-size:0.8rem;font-weight:600;color:#0F0F1A;display:block;margin-bottom:0.25rem}
+    .auth-card input{width:100%;padding:0.7rem 0.75rem;border:1px solid #e8e8f0;border-radius:10px;font-size:0.875rem;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s;background:#fff;color:#0F0F1A;font-family:inherit}
+    .auth-card input:focus{border-color:#6C3BF5;box-shadow:0 0 0 3px rgba(108,59,245,0.12);transform:translateY(-1px)}
     .auth-card .field{margin-bottom:1rem}
-    .auth-card .forgot{font-size:0.8rem;font-weight:600;color:var(--primary);text-decoration:none;display:inline-block;margin-bottom:1rem}
+    .auth-card .forgot{font-size:0.8rem;font-weight:600;color:#6C3BF5;text-decoration:none;display:inline-block;margin-bottom:1rem}
     .auth-card .forgot:hover{text-decoration:underline}
-    .auth-card .btn-submit{width:100%;padding:0.75rem;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:0.9rem;font-weight:600;cursor:pointer;transition:background 0.15s,transform 0.15s;font-family:inherit}
-    .auth-card .btn-submit:hover{background:var(--primary-hover);transform:translateY(-1px)}
-    .auth-card .divider{display:flex;align-items:center;gap:1rem;margin:1.25rem 0;color:var(--text-muted);font-size:0.8rem}
-    .auth-card .divider::before,.auth-card .divider::after{content:'';flex:1;height:1px;background:var(--border-light)}
-    .auth-card .switch-page{text-align:center;font-size:0.8rem;color:var(--text-muted);margin-top:1rem}
-    .auth-card .switch-page a{font-weight:600;color:var(--primary);text-decoration:none}
+    .auth-card .btn-submit{width:100%;padding:0.75rem;background:#6C3BF5;color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem}
+    .auth-card .btn-submit:hover{background:#5A2ED8;transform:translateY(-2px);box-shadow:0 4px 12px rgba(108,59,245,0.25)}
+    .auth-card .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    .auth-card .btn-submit .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+    .auth-card .btn-submit.loading .spinner{display:block}
+    .auth-card .btn-submit.loading .btn-text{opacity:0.7}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .auth-card .divider{display:flex;align-items:center;gap:1rem;margin:1.25rem 0;color:#5A5A72;font-size:0.8rem}
+    .auth-card .divider::before,.auth-card .divider::after{content:'';flex:1;height:1px;background:#f0f0f5}
+    .auth-card .switch-page{text-align:center;font-size:0.8rem;color:#5A5A72;margin-top:1rem}
+    .auth-card .switch-page a{font-weight:600;color:#6C3BF5;text-decoration:none}
     .auth-card .switch-page a:hover{text-decoration:underline}
-    .auth-card .error-msg{background:#fff5f5;border:1px solid #f0c0c0;border-radius:var(--radius-sm);padding:0.75rem;font-size:0.8rem;color:#c0392b;margin-bottom:1rem}
-    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:var(--text-muted)}
-    .auth-footer a{color:var(--primary);text-decoration:none}
+    .auth-card .error-msg{background:#fff5f5;border:1px solid #f0c0c0;border-radius:10px;padding:0.75rem;font-size:0.8rem;color:#c0392b;margin-bottom:1rem}
+    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:#5A5A72}
+    .auth-footer a{color:#6C3BF5;text-decoration:none;display:inline-flex;align-items:center;gap:0.25rem}
     .auth-footer a:hover{text-decoration:underline}
-    .social-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:0.625rem;padding:0.625rem;border-radius:var(--radius-sm);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.15s;background:#fff;border:1px solid var(--border);color:var(--text);margin-bottom:0.5rem;font-family:inherit}
-    .social-btn:hover{background:var(--bg-alt);border-color:var(--border)}
+    .social-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:0.625rem;padding:0.7rem;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:#fff;border:1px solid #e8e8f0;color:#0F0F1A;margin-bottom:0.5rem;font-family:inherit}
+    .social-btn:hover{background:#f6f7fb;border-color:#6C3BF5;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.06)}
     .social-btn svg{width:1.125rem;height:1.125rem;flex-shrink:0}
     .social-providers{margin-bottom:0.5rem}
     @media(min-width:48rem){.auth-visual{display:flex}}
@@ -108,17 +114,18 @@
 
         <div class="divider">or continue with email</div>
 
-        <form method="POST" id="emailForm">
-          <div class="field">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="your@email.com" required autocomplete="email">
-          </div>
-          <div class="field">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
-          </div>
-          <button type="submit" class="btn-submit">Sign in</button>
-        </form>
+          <form method="POST" id="emailForm">
+            <div class="field">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" placeholder="your@email.com" required autocomplete="email">
+            </div>
+            <div class="field">
+              <label for="password">Password</label>
+              <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-submit" id="loginSubmit"><span class="spinner"></span><span class="btn-text">Sign in</span></button>
+          </form>
+          <script>document.getElementById('emailForm').addEventListener('submit',function(){document.getElementById('loginSubmit').classList.add('loading');});</script>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;">
           <a href="{{ url_for('forgot_password') }}" class="forgot">Forgot password?</a>
         </div>

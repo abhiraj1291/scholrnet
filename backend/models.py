@@ -7,20 +7,20 @@ db = SQLAlchemy()
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    school = db.Column(db.String(200), default="")
+    school = db.Column(db.String(200), default="", index=True)
     grade = db.Column(db.String(50), default="")
     bio = db.Column(db.Text, default="")
     avatar = db.Column(db.String(10), default="")
     avatar_url = db.Column(db.String(300), default="")
-    role = db.Column(db.String(20), default="student")
+    role = db.Column(db.String(20), default="student", index=True)
     theme_color = db.Column(db.String(30), default="navy")
     groq_api_key = db.Column(db.String(200), default="")
     username = db.Column(db.String(30), unique=True, nullable=True)
     school_verified = db.Column(db.Boolean, default=False, nullable=True)
-    verified_school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=True)
+    verified_school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     totp_secret = db.Column(db.String(32), default="")
     totp_enabled = db.Column(db.Boolean, default=False)
@@ -40,8 +40,8 @@ class User(UserMixin, db.Model):
     terms_version = db.Column(db.String(20), default="")
     privacy_accepted_at = db.Column(db.DateTime, nullable=True)
 
-    achievements = db.relationship('Achievement', backref='user', lazy=True)
-    projects = db.relationship('Project', backref='user', lazy=True)
+    achievements = db.relationship('Achievement', backref='user', lazy='dynamic')
+    projects = db.relationship('Project', backref='user', lazy='dynamic')
 
 class PolicyVersion(db.Model):
     __tablename__ = 'policy_versions'
@@ -91,12 +91,14 @@ class Post(db.Model):
     title = db.Column(db.String(300), default="")
     content = db.Column(db.Text, default="")
     badge_text = db.Column(db.String(100), default="")
-    likes = db.Column(db.Integer, default=0)
+    likes = db.Column(db.Integer, default=0, index=True)
     tags = db.Column(db.String(500), default="")
     timestamp = db.Column(db.String(30), default="")
     video_url = db.Column(db.String(500), default="")
     image_url = db.Column(db.Text, default="")
     club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=True, index=True)
+
+    __table_args__ = (db.Index('idx_posts_author_likes', 'author_id', 'likes'), db.Index('idx_posts_timestamp', 'timestamp'))
 
 class Comment(db.Model):
     __tablename__ = 'comments'
@@ -132,7 +134,7 @@ class Opportunity(db.Model):
     prize_pool = db.Column(db.String(200), default="")
     description = db.Column(db.Text, default="")
     eligibility = db.Column(db.Text, default="")
-    deadline = db.Column(db.String(50), default="")
+    deadline = db.Column(db.String(50), default="", index=True)
 
 class TeamRequest(db.Model):
     __tablename__ = 'team_requests'
@@ -241,7 +243,7 @@ class ChatTyping(db.Model):
 class Club(db.Model):
     __tablename__ = 'clubs'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
+    name = db.Column(db.String(200), nullable=False, index=True)
     description = db.Column(db.Text, default="")
     bio = db.Column(db.Text, default="")
     is_private = db.Column(db.Boolean, default=False)
@@ -274,7 +276,7 @@ class ClubJoinRequest(db.Model):
 class School(db.Model):
     __tablename__ = 'schools'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(300), nullable=False)
+    name = db.Column(db.String(300), nullable=False, index=True)
     avatar = db.Column(db.String(10), default="")
     location = db.Column(db.String(200), default="")
     tagline = db.Column(db.String(300), default="")
@@ -329,8 +331,10 @@ class Experience(db.Model):
     skills = db.Column(db.String(500), default="")
     start_date = db.Column(db.String(20), default="")
     end_date = db.Column(db.String(20), default="")
-    is_current = db.Column(db.Boolean, default=False)
+    is_current = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (db.Index('idx_experiences_user_current', 'user_id', 'is_current'),)
 
 class AuditLog(db.Model):
     __tablename__ = 'audit_logs'
@@ -372,7 +376,9 @@ class BlogPost(db.Model):
     excerpt = db.Column(db.Text, default="")
     content = db.Column(db.Text, default="")
     author = db.Column(db.String(100), default="ScholrNet Team")
-    category = db.Column(db.String(50), default="Guide")
-    published = db.Column(db.Boolean, default=False)
+    category = db.Column(db.String(50), default="Guide", index=True)
+    published = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.String(30), default="")
     updated_at = db.Column(db.String(30), default="")
+
+    __table_args__ = (db.Index('idx_blog_published_category', 'published', 'category'),)

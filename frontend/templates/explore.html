@@ -1,12 +1,141 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="grid-3">
-  <main class="main-content-lg">
+  <!-- Left Sidebar — Profile Card -->
+  <aside class="sidebar sidebar-left">
+    <div class="card">
+      <div class="profile-header">
+        <div class="profile-avatar" style="overflow:hidden;">{% if user.avatar_url %}<img src="{{ user.avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;">{% else %}{{ user.name[:2]|upper }}{% endif %}</div>
+        <div>
+          <div class="profile-name">{{ user.name }}</div>
+          <div class="profile-school">{{ user.school }}{% if user.grade %} &middot; Grade {{ user.grade }}{% endif %}</div>
+        </div>
+      </div>
+      {% if user.bio %}
+      <p class="text-sm text-muted mt-2">{{ user.bio }}</p>
+      {% endif %}
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num" id="expStatVerified">0</div><div class="stat-label">Verify</div></div>
+        <div class="stat-box"><div class="stat-num" id="expStatProjects">0</div><div class="stat-label">Projects</div></div>
+        <div class="stat-box"><div class="stat-num" id="expStatClubs">0</div><div class="stat-label">Clubs</div></div>
+        <div class="stat-box"><div class="stat-num" id="expStatFriends">0</div><div class="stat-label">Friends</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Center Feed — Algorithmic posts -->
+  <main class="main-content-lg" style="max-width:680px;">
     <div class="card mb-2">
       <h2 class="text-lg font-black" style="color:var(--text)">Explore</h2>
-      <p class="text-sm text-muted">Discover trending topics, clubs, and opportunities</p>
+      <p class="text-sm text-muted">Viral posts and trending content from the community</p>
     </div>
 
+    <!-- Post Creation Box -->
+    <div class="card mb-3">
+      <div class="flex items-center gap-3">
+        <div class="avatar avatar-sm">{{ user.name[:2]|upper }}</div>
+        <button id="openCreatePost" class="flex-1 text-left text-sm text-muted py-2 px-3 rounded-xl" style="background:var(--bg-hover);border:none;color:var(--text-muted);">
+          What's happening in your academic journey?
+        </button>
+      </div>
+    </div>
+
+    <!-- Create Post Modal -->
+    <div id="createPostModal" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="font-bold">Create Post</span>
+          <button id="closeCreatePost" class="btn btn-ghost btn-sm"><i data-lucide="x" style="width:1.25rem;height:1.25rem;"></i></button>
+        </div>
+        <div class="modal-body">
+          <form id="createPostForm">
+            <div class="mb-3" id="postTitleGroup">
+              <label class="text-xs font-bold text-muted block mb-1">Title</label>
+              <input type="text" id="postTitle" placeholder="e.g. Just achieved something great">
+            </div>
+            <div class="mb-3">
+              <label class="text-xs font-bold text-muted block mb-1">Content</label>
+              <textarea id="postContent" rows="4" placeholder="Share your update..." required></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="text-xs font-bold text-muted block mb-1">Tags (comma separated)</label>
+              <input type="text" id="postTags" placeholder="e.g. science, research, competition">
+            </div>
+            <div class="mb-3">
+              <label class="text-xs font-bold text-muted block mb-1">Add Photo / Video</label>
+              <div class="flex items-center gap-2">
+                <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+                  <i data-lucide="image" style="width:1.25rem;height:1.25rem;"></i> Upload File
+                  <input type="file" id="postMediaInput" accept=".png,.jpg,.jpeg,.gif,.webp,.mp4,.mov" style="display:none;" multiple>
+                </label>
+                <input type="url" id="postVideo" placeholder="Or paste video embed URL..." style="flex:1;font-size:0.8rem;">
+              </div>
+              <div id="mediaPreview" class="flex gap-2 mt-2 flex-wrap hidden"></div>
+            </div>
+            <button type="submit" class="btn btn-primary w-full" style="padding:0.75rem;">Publish</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deletePostModal" class="modal-overlay hidden">
+      <div class="modal" style="max-width:360px;">
+        <div class="modal-header">
+          <span class="font-bold">Delete Post?</span>
+        </div>
+        <div class="modal-body">
+          <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.25rem;">Are you sure you want to delete this post? This action cannot be undone.</p>
+          <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+            <button id="cancelDeletePost" class="btn btn-ghost">Cancel</button>
+            <button id="confirmDeletePost" class="btn" style="background:var(--danger);color:#fff;">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="explorePosts"></div>
+
+    <div id="exploreSkeleton" class="fade-in">
+      <div class="skeleton-card flex items-start gap-3">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+          <div class="skeleton skeleton-sm"></div>
+          <div class="skeleton skeleton-md"></div>
+          <div class="skeleton skeleton-lg" style="height:4rem;"></div>
+        </div>
+      </div>
+      <div class="skeleton-card flex items-start gap-3">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+          <div class="skeleton skeleton-sm"></div>
+          <div class="skeleton skeleton-md"></div>
+          <div class="skeleton skeleton-lg" style="height:4rem;"></div>
+        </div>
+      </div>
+      <div class="skeleton-card flex items-start gap-3">
+        <div class="skeleton skeleton-circle"></div>
+        <div style="flex:1;">
+          <div class="skeleton skeleton-sm"></div>
+          <div class="skeleton skeleton-md"></div>
+          <div class="skeleton skeleton-lg" style="height:4rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="exploreLoader" class="text-center py-4 hidden">
+      <div class="shimmer" style="height:8rem;width:100%;"></div>
+    </div>
+    <div id="exploreEnd" class="text-center hidden" style="padding:3rem 1rem;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 0.75rem;display:block;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p style="font-size:0.9rem;color:#d0d0e0;margin:0 0 0.25rem;">You've caught up</p>
+      <p style="font-size:0.8rem;color:#d0d0e0;margin:0;">Check back later for new posts.</p>
+    </div>
+    </div>
+  </main>
+
+  <!-- Right Sidebar — Trending + Discovery -->
+  <aside class="sidebar sidebar-right">
     <div class="card">
       <h3 class="text-sm font-bold mb-2" style="color:var(--text)">Trending Topics</h3>
       <div id="trendingTopics">
@@ -16,10 +145,7 @@
         <div class="skeleton" style="height:28px;"></div>
       </div>
     </div>
-  </main>
-
-  <aside class="sidebar sidebar-right">
-    <div class="card">
+    <div class="card mt-2">
       <h3 class="text-sm font-bold mb-2" style="color:var(--text)">Suggested Clubs</h3>
       {% for c in suggested_clubs %}
       <a href="/club/{{ c.id }}" class="flex items-center gap-2 py-1.5" style="text-decoration:none;">
@@ -44,18 +170,12 @@
       <p class="text-sm text-muted">No opportunities listed yet.</p>
       {% endfor %}
     </div>
-    <div class="card mt-2">
-      <h3 class="text-sm font-bold mb-2" style="color:var(--text)">Recommended Opportunities</h3>
-      <div id="recommendedOpps">
-        <div class="skeleton" style="height:40px;margin-bottom:0.5rem;"></div>
-        <div class="skeleton" style="height:40px;margin-bottom:0.5rem;"></div>
-        <div class="skeleton" style="height:40px;"></div>
-      </div>
-    </div>
   </aside>
 </div>
 
 <script>
+var CURRENT_USER_ID = {{ user.id }};
+
 function escapeHtml(text) {
   if (!text) return '';
   var d = document.createElement('div');
@@ -63,7 +183,451 @@ function escapeHtml(text) {
   return d.innerHTML;
 }
 
+function formatTime(ts) {
+  if (!ts || ts === 'Just now') return 'Just now';
+  var d = new Date(ts.replace(' ', 'T') + 'Z');
+  var now = new Date();
+  var diff = now - d;
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + ' min ago';
+  var hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + ' hours ago';
+  var days = Math.floor(hours / 24);
+  if (days < 7) return days + ' days ago';
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var m = months[d.getUTCMonth()];
+  var day = d.getUTCDate();
+  var year = d.getUTCFullYear();
+  var h = d.getUTCHours();
+  var min = d.getUTCMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return m + ' ' + day + ', ' + year + ' \u2022 ' + h + ':' + (min < 10 ? '0' + min : min) + ' ' + ampm;
+}
+
+function avatarHtml(author, size) {
+  size = size || '2.5rem';
+  if (!author) return '<div class="avatar" style="width:' + size + ';height:' + size + ';">SN</div>';
+  if (author.avatar_url) return '<div class="avatar" style="width:' + size + ';height:' + size + ';overflow:hidden;"><img src="' + author.avatar_url + '" alt="" style="width:100%;height:100%;object-fit:cover;"></div>';
+  return '<div class="avatar" style="width:' + size + ';height:' + size + ';">' + (author.avatar || author.name.slice(0,2).toUpperCase()) + '</div>';
+}
+
+function roleBadge(role) {
+  var colors = {student:'#3b82f6',teacher:'#8b5cf6',mentor:'#f59e0b',admin:'#10b981',super_admin:'#ef4444'};
+  return '<span class="text-xs" style="color:' + (colors[role] || '#6b7280') + ';font-weight:600;margin-right:0.25rem;">' + (role ? role.replace(/_/g,' ').toUpperCase() : 'STUDENT') + '</span>';
+}
+
+var carouselIdCounter = 0;
+function mediaHtml(post) {
+  var html = '';
+  if (post.image_url) {
+    var images = post.image_url.split('|||').filter(Boolean);
+    if (images.length > 1) {
+      var cid = 'ecr_' + (++carouselIdCounter) + '_' + (post.id || '0');
+      html += '<div class="media-carousel" id="' + cid + '"><div class="media-carousel-track" onscroll="updateCarouselDots(\'' + cid + '\')">';
+      images.forEach(function(url) {
+        if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
+          html += '<div class="media-carousel-slide"><video src="' + url + '" controls style="object-fit:contain;background:#000;"></video></div>';
+        } else {
+          html += '<div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div>';
+        }
+      });
+      html += '</div><div class="media-carousel-dots">';
+      for (var di = 0; di < images.length; di++) {
+        html += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" onclick="goCarouselSlide(\'' + cid + '\',' + di + ')"></button>';
+      }
+      html += '</div></div>';
+    } else {
+      images.forEach(function(url) {
+        if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
+          html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><video src="' + url + '" controls style="object-fit:contain;background:#000;"></video></div></div></div>';
+        } else {
+          html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div></div></div>';
+        }
+      });
+    }
+  }
+  if (post.video_url && post.video_url.indexOf('http') === 0) {
+    html += '<div class="media-carousel-embed"><iframe src="' + escapeHtml(post.video_url) + '" frameborder="0" allowfullscreen></iframe></div>';
+  }
+  return html;
+}
+function updateCarouselDots(cid) {
+  var track = document.querySelector('#' + cid + ' .media-carousel-track');
+  if (!track) return;
+  var slideW = track.querySelector('.media-carousel-slide');
+  if (!slideW) return;
+  var idx = Math.round(track.scrollLeft / slideW.offsetWidth);
+  var dots = document.querySelectorAll('#' + cid + ' .media-carousel-dot');
+  dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+}
+function goCarouselSlide(cid, idx) {
+  var track = document.querySelector('#' + cid + ' .media-carousel-track');
+  if (!track) return;
+  var slideW = track.querySelector('.media-carousel-slide');
+  if (!slideW) return;
+  track.scrollLeft = idx * slideW.offsetWidth;
+}
+
+function createPostElement(post) {
+  var div = document.createElement('div');
+  div.className = 'card mb-3 fade-in';
+  var isLiked = post.is_liked || false;
+  var typeBadge = '';
+  if (post.type === 'mentor-application') {
+    typeBadge = '<span class="badge" style="background:var(--accent);color:#fff;">Mentor Application</span>';
+  } else if (post.type === 'announcement') {
+    typeBadge = '<span class="badge badge-primary">Announcement</span>';
+  }
+  var authorId = post.author && post.author.id ? post.author.id : '#';
+  div.innerHTML =
+    '<div class="post-header">' +
+      '<a href="/profile/' + authorId + '" class="flex items-center gap-3" style="text-decoration:none;color:inherit;">' +
+        avatarHtml(post.author) +
+        '<div style="flex:1;min-width:0;">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="font-bold text-sm">' + escapeHtml(post.author.name) + '</span>' +
+              roleBadge(post.author.role) +
+              (post.author.verified ? '<i data-lucide="badge-check" style="width:0.875rem;height:0.875rem;color:var(--primary);flex-shrink:0;"></i>' : '') +
+              (post.badge ? '<span class="badge badge-primary">' + post.badge + '</span>' : '') +
+              typeBadge +
+            '</div>' +
+          '<div class="text-xs text-muted">' + escapeHtml(post.author.school || '') + '</div>' +
+          (post.author.username ? '<div class="text-xs" style="color:var(--text-light);">@' + escapeHtml(post.author.username) + '</div>' : '') +
+        '</div>' +
+      '</a>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:0.5rem;padding:0 1rem 0.25rem;">' +
+      '<div class="post-timestamp" style="font-size:0.65rem;color:var(--text-light);margin-top:0.125rem;">' + formatTime(post.timestamp) + '</div>' +
+      ((post.author && post.author.id === CURRENT_USER_ID) ?
+        '<button class="post-delete-btn" data-post-id="' + post.id + '" title="Delete" style="background:none;border:none;cursor:pointer;color:var(--danger);padding:2px;display:inline-flex;align-items:center;margin-left:auto;">' +
+          '<i data-lucide="trash-2" style="width:12px;height:12px;"></i>' +
+        '</button>' : '') +
+    '</div>' +
+    (post.title ? '<div class="post-title">' + escapeHtml(post.title) + '</div>' : '') +
+    (post.content ? '<div class="post-content">' + escapeHtml(post.content) + '</div>' : '') +
+    mediaHtml(post) +
+    (post.tags && post.tags.length > 0 ? '<div class="tags">' + post.tags.map(function(t) { return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join('') + '</div>' : '') +
+    '<div class="post-actions">' +
+      '<button class="post-action-btn like-btn ' + (isLiked ? 'liked' : '') + '" data-post-id="' + post.id + '">' +
+        '<i data-lucide="heart" style="width:1rem;height:1rem;"></i> <span class="like-count">' + (post.likes_count || 0) + '</span>' +
+      '</button>' +
+      '<button class="post-action-btn comment-toggle" data-post-id="' + post.id + '">' +
+        '<i data-lucide="message-circle" style="width:1rem;height:1rem;"></i> <span>' + ((post.comments && post.comments.length) || 0) + '</span>' +
+      '</button>' +
+      '<button class="post-action-btn share-btn" data-post-id="' + post.id + '" title="Copy link">' +
+        '<i data-lucide="share-2" style="width:1rem;height:1rem;"></i>' +
+      '</button>' +
+    '</div>' +
+    '<div class="comments-section hidden" data-post-id="' + post.id + '">' +
+      '<div class="comments-list"></div>' +
+      '<form class="comment-form flex gap-2 mt-2">' +
+        '<input type="text" class="comment-input" placeholder="Write a comment..." inputmode="text" autocomplete="off" style="flex:1;">' +
+        '<button type="submit" class="btn btn-primary btn-sm">Post</button>' +
+      '</form>' +
+    '</div>';
+
+  div.querySelector('.like-btn').addEventListener('click', function() {
+    var btn = this;
+    var postId = btn.getAttribute('data-post-id');
+    fetch('/api/post/' + postId + '/like', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          btn.classList.toggle('liked');
+          btn.querySelector('.like-count').textContent = data.likes_count;
+        }
+      })
+      .catch(function() { showToast('Error liking post', 'info'); });
+  });
+
+  div.querySelector('.comment-toggle').addEventListener('click', function() {
+    var postId = this.getAttribute('data-post-id');
+    var section = div.querySelector('.comments-section');
+    section.classList.toggle('hidden');
+    if (!section.classList.contains('hidden') && section.querySelector('.comments-list').children.length === 0) {
+      loadComments(postId, section.querySelector('.comments-list'));
+    }
+  });
+
+  var shareBtn = div.querySelector('.share-btn');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', function() {
+      var postId = this.getAttribute('data-post-id');
+      var url = window.location.origin + '/post/' + postId;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+          showToast('Post link copied!', 'success');
+        }).catch(function() {
+          showToast('Copy: ' + url, 'info');
+        });
+      } else {
+        showToast('Copy: ' + url, 'info');
+      }
+    });
+  }
+
+  var deleteBtn = div.querySelector('.post-delete-btn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function() {
+      window._deleteTargetDiv = div;
+      document.getElementById('deletePostModal').classList.remove('hidden');
+    });
+  }
+
+  div.querySelector('.comment-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var postId = this.closest('.comments-section').getAttribute('data-post-id');
+    var input = this.querySelector('.comment-input');
+    var text = input.value.trim();
+    if (!text) return;
+    fetch('/api/post/' + postId + '/comment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: text})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        input.value = '';
+        loadComments(postId, div.querySelector('.comments-list'));
+        var countEl = div.querySelector('.comment-toggle span');
+        countEl.textContent = parseInt(countEl.textContent) + 1;
+        showToast('Comment posted', 'success');
+      }
+    })
+    .catch(function() { showToast('Error posting comment', 'info'); });
+  });
+
+  return div;
+}
+
+function loadComments(postId, listEl) {
+  fetch('/api/post/' + postId + '/comments')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      listEl.innerHTML = '';
+      if (data.comments && data.comments.length > 0) {
+        data.comments.forEach(function(c) {
+          var cdiv = document.createElement('div');
+          cdiv.className = 'comment';
+          cdiv.innerHTML =
+            avatarHtml(c.author, '1.75rem') +
+            '<div class="comment-body">' +
+              '<div class="comment-author">' + (c.author ? c.author.name : 'Unknown') + '</div>' +
+              '<div class="comment-text">' + escapeHtml(c.text) + '</div>' +
+            '</div>';
+          listEl.appendChild(cdiv);
+        });
+      } else {
+        listEl.innerHTML = '<div class="text-xs text-muted text-center py-2">No comments yet</div>';
+      }
+      lucide.createIcons();
+    })
+    .catch(function() {});
+}
+
+function compressImage(file, maxW, quality) {
+  return new Promise(function(resolve) {
+    if (file.type === 'image/gif' || file.size < 100 * 1024) { resolve(file); return; }
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w <= maxW && file.size < 500 * 1024) { resolve(file); return; }
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      var ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      c.toBlob(function(blob) {
+        if (!blob) { resolve(file); return; }
+        var nf = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {type: 'image/jpeg'});
+        resolve(nf);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = function() { resolve(file); };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  var page = 1;
+  var loading = false;
+  var hasMore = true;
+  var pendingFiles = [];
+
+  function loadPosts(reset) {
+    if (loading) return;
+    loading = true;
+    document.getElementById('exploreLoader').classList.remove('hidden');
+    if (reset) {
+      page = 1;
+      hasMore = true;
+      document.getElementById('explorePosts').innerHTML = '';
+      document.getElementById('exploreEnd').classList.add('hidden');
+    }
+    fetch('/api/posts?mode=explore&page=' + page)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('exploreSkeleton').classList.add('hidden');
+        document.getElementById('exploreLoader').classList.add('hidden');
+        loading = false;
+        if (data.posts && data.posts.length > 0) {
+          var container = document.getElementById('explorePosts');
+          data.posts.forEach(function(post) {
+            container.appendChild(createPostElement(post));
+          });
+          hasMore = data.has_more;
+          page++;
+        } else {
+          hasMore = false;
+          if (reset) document.getElementById('exploreEnd').classList.remove('hidden');
+        }
+        lucide.createIcons();
+      })
+      .catch(function() {
+        document.getElementById('exploreSkeleton').classList.add('hidden');
+        document.getElementById('exploreLoader').classList.add('hidden');
+        loading = false;
+      });
+  }
+
+  window.addEventListener('scroll', function() {
+    if (!hasMore || loading) return;
+    var scrollY = window.scrollY || window.pageYOffset;
+    var height = document.documentElement.scrollHeight - window.innerHeight;
+    if (height - scrollY < 300) {
+      loadPosts(false);
+    }
+  });
+
+  loadPosts(true);
+
+  // Profile stats
+  fetch('/api/user/stats')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('expStatVerified').textContent = data.verified_achievements || 0;
+      document.getElementById('expStatProjects').textContent = data.projects || 0;
+      if (data.clubs !== undefined) document.getElementById('expStatClubs').textContent = data.clubs;
+      if (data.friends !== undefined) document.getElementById('expStatFriends').textContent = data.friends;
+    })
+    .catch(function() {});
+
+  // Create Post Modal
+  document.getElementById('openCreatePost').addEventListener('click', function() {
+    document.getElementById('createPostModal').classList.remove('hidden');
+    pendingFiles = [];
+    document.getElementById('mediaPreview').classList.add('hidden');
+    document.getElementById('mediaPreview').innerHTML = '';
+    lucide.createIcons();
+  });
+  document.getElementById('closeCreatePost').addEventListener('click', function() {
+    document.getElementById('createPostModal').classList.add('hidden');
+  });
+  document.getElementById('createPostModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+  });
+
+  var postMediaInput = document.getElementById('postMediaInput');
+  if (postMediaInput) {
+    postMediaInput.addEventListener('change', function() {
+      var preview = document.getElementById('mediaPreview');
+      preview.innerHTML = '';
+      preview.classList.remove('hidden');
+      pendingFiles = [];
+      Array.from(this.files).forEach(function(file) {
+        compressImage(file, 1200, 0.82).then(function(compressed) {
+          pendingFiles.push(compressed);
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            var wrap = document.createElement('div');
+            wrap.style.cssText = 'position:relative;width:80px;height:80px;border-radius:0.5rem;overflow:hidden;border:1px solid var(--border);flex-shrink:0;';
+            wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
+            preview.appendChild(wrap);
+          };
+          reader.readAsDataURL(compressed);
+        });
+      });
+    });
+  }
+
+  document.getElementById('createPostForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Posting...';
+    var sendData = function(body, isForm) {
+      var opts = isForm ? { method: 'POST', body: body } : { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) };
+      fetch('/api/post/create', opts)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Post';
+          if (data.success) {
+            document.getElementById('createPostModal').classList.add('hidden');
+            document.getElementById('createPostForm').reset();
+            if (document.getElementById('mediaPreview')) {
+              document.getElementById('mediaPreview').classList.add('hidden');
+              document.getElementById('mediaPreview').innerHTML = '';
+            }
+            pendingFiles = [];
+            showToast('Post created!', 'success');
+            loadPosts(true);
+          } else {
+            showToast(data.error || 'Error creating post', 'info');
+          }
+        })
+        .catch(function() { submitBtn.disabled = false; submitBtn.textContent = 'Post'; showToast('Error creating post', 'info'); });
+    };
+    if (pendingFiles.length > 0) {
+      var fd = new FormData();
+      fd.append('content', document.getElementById('postContent').value);
+      fd.append('tags', document.getElementById('postTags').value);
+      fd.append('type', 'achievement');
+      if (document.getElementById('postTitle').value) fd.append('title', document.getElementById('postTitle').value);
+      if (document.getElementById('postVideo').value) fd.append('video_url', document.getElementById('postVideo').value);
+      pendingFiles.forEach(function(f) { fd.append('files', f); });
+      sendData(fd, true);
+    } else {
+      var body = { content: document.getElementById('postContent').value, tags: document.getElementById('postTags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean), type: 'achievement' };
+      if (document.getElementById('postTitle').value) body.title = document.getElementById('postTitle').value;
+      if (document.getElementById('postVideo').value) body.video_url = document.getElementById('postVideo').value;
+      sendData(body, false);
+    }
+  });
+
+  // Delete modal
+  window._deleteTargetDiv = null;
+  document.getElementById('cancelDeletePost').addEventListener('click', function() {
+    document.getElementById('deletePostModal').classList.add('hidden');
+    window._deleteTargetDiv = null;
+  });
+  document.getElementById('confirmDeletePost').addEventListener('click', function() {
+    if (!window._deleteTargetDiv) return;
+    var postId = window._deleteTargetDiv.querySelector('[data-post-id]').getAttribute('data-post-id');
+    fetch('/api/post/' + postId + '/delete', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          window._deleteTargetDiv.remove();
+          showToast('Post deleted', 'success');
+        } else {
+          showToast(data.error || 'Error deleting post', 'info');
+        }
+      })
+      .catch(function() { showToast('Error deleting post', 'info'); })
+      .finally(function() {
+        document.getElementById('deletePostModal').classList.add('hidden');
+        window._deleteTargetDiv = null;
+      });
+  });
+  document.getElementById('deletePostModal').addEventListener('click', function(e) {
+    if (e.target === this) { this.classList.add('hidden'); window._deleteTargetDiv = null; }
+  });
+
+  // Trending topics
   fetch('/api/trending/topics')
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -79,19 +643,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }).join('');
     })
     .catch(function() {});
-
-  fetch('/api/opportunities/recommended').then(function(r) { return r.json(); }).then(function(d) {
-    var el = document.getElementById('recommendedOpps');
-    if (!d.opportunities || !d.opportunities.length) {
-      el.innerHTML = '<p class="text-sm text-muted">No recommendations yet. Add achievements to get personalized suggestions.</p>';
-      return;
-    }
-    el.innerHTML = d.opportunities.map(function(o) {
-      return '<div class="py-1.5" style="border-bottom:1px solid var(--border-light);">' +
-        '<div style="font-size:0.8rem;font-weight:600;color:var(--text)">' + o.name + '</div>' +
-        '<div style="font-size:0.7rem;color:var(--text-muted)">' + o.type + (o.deadline ? ' &middot; ' + o.deadline : '') + '</div></div>';
-    }).join('');
-  }).catch(function() {});
 });
 </script>
 {% endblock %}

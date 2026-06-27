@@ -104,50 +104,96 @@
 
   <!-- Hero -->
   <section class="hero" aria-label="Hero">
+    <div class="hero-bg-glow"></div>
     <div class="hero-inner">
       <div class="hero-content">
-        <h1 class="hero-title">Your achievements should open doors.<br><span class="hero-highlight">We make sure they do.</span></h1>
-        <p class="hero-sub">ScholrNet is the platform where your awards, projects, and experience are verified by your school — so internships, scholarships, and competitions come to you.</p>
+        <div class="hero-badge">Trusted by students &amp; schools across India</div>
+        <h1 class="hero-title">Build one verified academic profile.<br><span class="hero-highlight">Unlock opportunities everywhere.</span></h1>
+        <p class="hero-sub">Your achievements — awards, projects, internships — <strong>verified by your school</strong>. Share them with colleges, scholarship committees, competition organizers, and employers. One profile. Zero doubt.</p>
         <div class="hero-cta">
-          <a href="{{ url_for('register') }}" class="btn-primary btn-lg">Find Your First Opportunity &rarr;</a>
-          <a href="#features" class="btn-outline btn-lg">See How It Works</a>
+          <a href="{{ url_for('register') }}" class="btn-primary btn-lg">Get Started Free &rarr;</a>
+          <a href="#how-it-works" class="btn-outline btn-lg">See How It Works</a>
         </div>
-        <div class="hero-trust">
-          <span class="hero-trust-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            {% if schools_count > 0 %}{{ schools_count }} school{% if schools_count != 1 %}s{% endif %} participating{% else %}Schools joining daily{% endif %}
-          </span>
-          <span class="hero-trust-dot">&middot;</span>
-          <span class="hero-trust-item">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            {% if opportunities_count > 0 %}{{ opportunities_count }} opportunit{% if opportunities_count != 1 %}ies{% else %}y{% endif %}{% else %}Opportunities updated weekly{% endif %}
-          </span>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="hero-stat-value">{% if schools_count > 0 %}{{ schools_count }}{% else %}&infin;{% endif %}</span>
+            <span class="hero-stat-label">{% if schools_count > 0 %}School{% if schools_count != 1 %}s{% endif %} Trust{% else %}Growing Network{% endif %}</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">{% if users_count > 0 %}{{ users_count }}{% else %}&rarr;{% endif %}</span>
+            <span class="hero-stat-label">{% if users_count > 0 %}Student{% if users_count != 1 %}s{% endif %}{% else %}Early Adopters{% endif %}</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-value">{% if opportunities_count > 0 %}{{ opportunities_count }}{% else %}&infin;{% endif %}</span>
+            <span class="hero-stat-label">{% if opportunities_count > 0 %}Opportunities{% else %}Possibilities{% endif %}</span>
+          </div>
         </div>
       </div>
       <div class="hero-visual" aria-hidden="true">
-        <div class="hero-card hero-card-1">
-          <div class="hero-card-header">
-            <div class="hero-card-avatar" style="background:#6C3BF5;">S</div>
-            <div>
-              <div class="hero-card-name">Sumedhaa</div>
-              <div class="hero-card-badge">&#10003; School Verified</div>
+        <!-- Dashboard mockup -->
+        <div class="hero-mockup">
+          <div class="mockup-top">
+            <div class="mockup-dot" style="background:#FF6B6B;"></div>
+            <div class="mockup-dot" style="background:#FFD93D;"></div>
+            <div class="mockup-dot" style="background:#6BCB77;"></div>
+          </div>
+          <div class="mockup-body">
+            <div class="mockup-sidebar">
+              <div class="mockup-avatar"></div>
+              <div class="mockup-line" style="width:70%;height:8px;"></div>
+              <div class="mockup-line" style="width:50%;height:6px;"></div>
+              <div class="mockup-nav-item"></div>
+              <div class="mockup-nav-item"></div>
+              <div class="mockup-nav-item"></div>
+            </div>
+            <div class="mockup-main">
+              <div class="mockup-card">
+                <div class="mockup-card-top">
+                  <div class="mockup-avatar-sm"></div>
+                  <div>
+                    <div class="mockup-line" style="width:120px;height:8px;"></div>
+                    <div class="mockup-line" style="width:80px;height:6px;margin-top:4px;"></div>
+                  </div>
+                  <div class="mockup-badge">&#10003; Verified</div>
+                </div>
+                <div class="mockup-line" style="width:100%;height:10px;margin-top:12px;"></div>
+                <div class="mockup-line" style="width:85%;height:10px;margin-top:6px;"></div>
+                <div class="mockup-stats">
+                  <div class="mockup-stat"><span class="mockup-stat-value">5</span> Achievements</div>
+                  <div class="mockup-stat"><span class="mockup-stat-value">3</span> Projects</div>
+                  <div class="mockup-stat"><span class="mockup-stat-value">12</span> Connections</div>
+                </div>
+              </div>
+              <div class="mockup-card" style="animation-delay:0.15s;">
+                <div class="mockup-tag">New</div>
+                <div class="mockup-line" style="width:60%;height:10px;"></div>
+                <div class="mockup-line" style="width:90%;height:8px;margin-top:6px;"></div>
+                <div class="mockup-card-bottom">
+                  <span class="mockup-deadline">Deadline in 12 days</span>
+                  <span class="mockup-prize">₹50,000</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="hero-card-body">
-            <div class="hero-card-stat"><span class="hero-card-stat-value">5</span> achievements</div>
-            <div class="hero-card-stat"><span class="hero-card-stat-value">3</span> projects</div>
-            <div class="hero-card-stat"><span class="hero-card-stat-value">2</span> internships</div>
+        </div>
+        <!-- Floating cards overlay -->
+        <div class="hero-float-card float-card-1">
+          <div class="float-card-icon" style="background:rgba(108,59,245,0.1);color:#6C3BF5;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="float-card-value">Verified</div>
+            <div class="float-card-label">Achievement</div>
           </div>
         </div>
-        <div class="hero-card hero-card-2">
-          <div class="hero-card-tag">New</div>
-          <div class="hero-card-title">Research Internship</div>
-          <div class="hero-card-meta">IISc · Deadline in 12 days</div>
-        </div>
-        <div class="hero-card hero-card-3">
-          <div class="hero-card-tag" style="background:rgba(0,196,184,0.15);color:#00a89e;">Popular</div>
-          <div class="hero-card-title">National Hackathon</div>
-          <div class="hero-card-meta">2,000+ participants · Prize &pound;50,000</div>
+        <div class="hero-float-card float-card-2">
+          <div class="float-card-icon" style="background:rgba(0,196,184,0.1);color:#00C4B8;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
+          </div>
+          <div>
+            <div class="float-card-value">Scholarship</div>
+            <div class="float-card-label">Matched</div>
+          </div>
         </div>
       </div>
     </div>
@@ -159,17 +205,21 @@
       <span class="trust-bar-label">Trusted by students &amp; schools across India</span>
       <div class="trust-bar-items">
         {% if schools_count > 0 %}
-        <span class="trust-bar-item"><strong>{{ schools_count }}</strong> Schools</span>
+        <span class="trust-bar-item"><strong>{{ schools_count }}</strong> School{% if schools_count != 1 %}s{% endif %} Participating</span>
+        {% else %}
+        <span class="trust-bar-item"><strong>Early Access</strong> — Schools Joining Now</span>
         {% endif %}
         {% if users_count > 0 %}
-        <span class="trust-bar-item"><strong>{{ users_count }}</strong> Students</span>
+        <span class="trust-bar-item"><strong>{{ users_count }}</strong> Student{% if users_count != 1 %}s{% endif %}</span>
+        {% else %}
+        <span class="trust-bar-item"><strong>Growing</strong> Student Community</span>
         {% endif %}
         {% if clubs_count > 0 %}
-        <span class="trust-bar-item"><strong>{{ clubs_count }}</strong> Clubs</span>
+        <span class="trust-bar-item"><strong>{{ clubs_count }}</strong> Club{% if clubs_count != 1 %}s{% endif %}</span>
+        {% else %}
+        <span class="trust-bar-item"><strong>Student Clubs</strong> Coming Soon</span>
         {% endif %}
-        {% if opportunities_count > 0 %}
-        <span class="trust-bar-item"><strong>{{ opportunities_count }}</strong> Opportunities</span>
-        {% endif %}
+        <span class="trust-bar-item"><strong>&#10003;</strong> Free Forever</span>
       </div>
     </div>
   </div>
@@ -268,31 +318,47 @@
   </section>
 
   <!-- How It Works -->
-  <section class="section" id="how-it-works" aria-label="How It Works">
+  <section class="section section-alt" id="how-it-works" aria-label="How It Works">
     <div class="section-inner">
-      <h2 class="section-title">Your future in 3 steps</h2>
-      <p class="section-sub">From zero to a verified academic profile in under 5 minutes.</p>
+      <h2 class="section-title">Your profile in 4 simple steps</h2>
+      <p class="section-sub">From zero to a verified academic profile that opens doors everywhere.</p>
       <div class="steps">
         <div class="step fade-up">
-          <div class="step-number">1</div>
+          <div class="step-number">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
           <h3 class="step-title">Create your profile</h3>
           <p class="step-desc">Sign up with email or Google. Add your school, grade, and interests. Takes 30 seconds.</p>
         </div>
         <div class="step-connector" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
         <div class="step fade-up">
-          <div class="step-number">2</div>
-          <h3 class="step-title">Add your achievements</h3>
-          <p class="step-desc">List your awards, projects, and experience. Your school verifies them with one click. Now they're official.</p>
+          <div class="step-number" style="background:#00C4B8;box-shadow:0 4px 12px rgba(0,196,184,0.25);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h3 class="step-title">Add achievements</h3>
+          <p class="step-desc">List your awards, projects, and experience. Upload certificates, link projects, build your portfolio.</p>
         </div>
         <div class="step-connector" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
         <div class="step fade-up">
-          <div class="step-number">3</div>
-          <h3 class="step-title">Get matched</h3>
-          <p class="step-desc">Scholarships, internships, hackathons, and clubs that match your profile. No more hunting across 10 websites.</p>
+          <div class="step-number" style="background:#FF6B6B;box-shadow:0 4px 12px rgba(255,107,107,0.25);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <h3 class="step-title">School verifies</h3>
+          <p class="step-desc">Your school counselor or teacher confirms your achievements in seconds. Now they're official and tamper-proof.</p>
+        </div>
+        <div class="step-connector" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="step fade-up">
+          <div class="step-number" style="background:#6BCB77;box-shadow:0 4px 12px rgba(107,203,119,0.25);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 13 14 20 7"/><polyline points="14 7 20 7 20 13"/></svg>
+          </div>
+          <h3 class="step-title">Share everywhere</h3>
+          <p class="step-desc">Generate a shareable link for college apps, scholarships, internships, and competitions. One URL. Everything they need.</p>
         </div>
       </div>
     </div>
@@ -351,7 +417,8 @@
     <div class="section-inner">
       <div class="founder fade-up">
         <div class="founder-avatar" aria-hidden="true">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="20" fill="#6C3BF5"/><text x="20" y="24" text-anchor="middle" fill="#fff" font-size="16" font-weight="700" font-family="Inter,sans-serif">A</text></svg>
+          <img src="https://media.licdn.com/dms/image/v2/D5603AQHCzsk5G5Qa5w/profile-displayphoto-crop_800_800/B56Z0kWtWRKAAI-/0/1774431429194?e=1784160000&v=beta&t=gHKBUPeB0sL9odnpmgPnhjlqcrjdeh8XKGYqOJL6458" alt="Abhiraj" width="48" height="48" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div style="display:none;width:48px;height:48px;border-radius:50%;background:var(--primary);color:#fff;font-size:16px;font-weight:700;align-items:center;justify-content:center;font-family:Inter,sans-serif">A</div>
         </div>
         <div class="founder-content">
           <h2 class="founder-heading">Built by a student, for students</h2>
@@ -359,6 +426,7 @@
             "I was tired of repeating my achievements on every college application, scholarship form, and internship portal. And nobody could verify them anyway. So I built ScholrNet — a platform where your school verifies your profile once, and every opportunity sees the real you."
           </blockquote>
           <div class="founder-name">&mdash; Abhiraj, Founder</div>
+          <a href="https://linkedin.com/in/abhirj129" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:0.375rem;margin-top:0.75rem;font-size:0.8rem;font-weight:600;color:var(--primary);text-decoration:none;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> LinkedIn</a>
         </div>
       </div>
     </div>

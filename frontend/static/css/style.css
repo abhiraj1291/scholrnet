@@ -466,7 +466,7 @@ body { padding-top: 6.5rem; }
 /* ═══════════════════════════════════════════════
    App Footer — Sticky Bottom
    ═══════════════════════════════════════════════ */
-.app-footer{border-top:1px solid var(--border);background:#1a2744;color:rgba(255,255,255,0.55);padding:1.25rem 1rem;flex-shrink:0;margin-top:auto}
+.app-footer{border-top:1px solid rgba(255,255,255,0.06);background:#0c0c17;color:rgba(255,255,255,0.55);padding:1.25rem 1rem;flex-shrink:0;margin-top:auto;position:relative}.app-footer::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#6C3BF5,transparent);opacity:0.3}
 .app-footer-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap;flex-direction:column}
 .app-footer-brand{display:flex;align-items:center;gap:0.625rem}
 .app-footer-brand img{filter:brightness(0) invert(1);opacity:0.6}
