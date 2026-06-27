@@ -1199,6 +1199,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
     });
   });
 
+  {% if is_own %}
   load2FAStatus();
 
   // Setup button for 2FA
@@ -1208,6 +1209,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
   setupBtn.onclick = setup2FA;
   var statusEl = document.getElementById('2faStatus');
   if (statusEl) statusEl.after(setupBtn);
+  {% endif %}
 
   loadAchievements();
   loadProjects();
