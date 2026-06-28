@@ -53,6 +53,7 @@ def _ensure_users_columns(conn, cols):
         ('email_otp_expires', 'TIMESTAMP'),
         ('reset_otp', 'VARCHAR(6) DEFAULT \'\''),
         ('reset_otp_expires', 'TIMESTAMP'),
+        ('cover_banner', 'VARCHAR(500) DEFAULT \'\''),
     ]:
         if col not in cols:
             conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
