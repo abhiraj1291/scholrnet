@@ -10,10 +10,10 @@ from datetime import datetime, timezone
 main_bp = Blueprint('main', __name__)
 
 
-@main_bp.route('/')
+@main_bp.route('/', endpoint='index')
 def index():
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     try:
         schools_count = School.query.count()
         users_count = User.query.count()
@@ -30,32 +30,32 @@ def index():
     )
 
 
-@main_bp.route('/about')
+@main_bp.route('/about', endpoint='about_page')
 def about_page():
     return render_template('about.html')
 
 
-@main_bp.route('/contact')
+@main_bp.route('/contact', endpoint='contact_page')
 def contact_page():
     return render_template('contact.html')
 
 
-@main_bp.route('/schools')
+@main_bp.route('/schools', endpoint='schools_page')
 def schools_page():
     return render_template('schools.html')
 
 
-@main_bp.route('/terms')
+@main_bp.route('/terms', endpoint='terms_page')
 def terms_page():
     return render_template('terms.html')
 
 
-@main_bp.route('/privacy')
+@main_bp.route('/privacy', endpoint='privacy_page')
 def privacy_page():
     return render_template('privacy.html')
 
 
-@main_bp.route('/public')
+@main_bp.route('/public', endpoint='public_timeline')
 def public_timeline():
     posts = Post.query.order_by(Post.id.desc()).limit(50).all()
     author_ids = {p.author_id for p in posts if p.author_id}
@@ -73,7 +73,7 @@ def public_timeline():
     return render_template('public.html', posts=enriched)
 
 
-@main_bp.route('/explore')
+@main_bp.route('/explore', endpoint='explore_page')
 @login_required
 def explore_page():
     try:
@@ -88,25 +88,25 @@ def explore_page():
         return render_template('error.html', code=500, title='Something Went Wrong', message='Could not load explore page.', emoji='🔍'), 500
 
 
-@main_bp.route('/dashboard')
+@main_bp.route('/dashboard', endpoint='dashboard')
 @login_required
 def dashboard():
-    return redirect(url_for('main.explore_page'))
+    return redirect(url_for('explore_page'))
 
 
-@main_bp.route('/opportunities')
+@main_bp.route('/opportunities', endpoint='opportunities_page')
 @login_required
 def opportunities_page():
     return render_template('opportunities.html', user=current_user)
 
 
-@main_bp.route('/teams')
+@main_bp.route('/teams', endpoint='teams_page')
 @login_required
 def teams_page():
     return render_template('teams.html', user=current_user)
 
 
-@main_bp.route('/mentors')
+@main_bp.route('/mentors', endpoint='mentors_page')
 @login_required
 def mentors_page():
     from models import MentorshipRequest
@@ -114,72 +114,72 @@ def mentors_page():
     return render_template('mentors.html', user=current_user, mentorship_requests=mentorship_p.items)
 
 
-@main_bp.route('/analytics')
+@main_bp.route('/analytics', endpoint='analytics_page')
 @login_required
 def analytics_page():
     achs_p = Achievement.query.filter_by(user_id=current_user.id).order_by(Achievement.id.desc()).paginate(page=1, per_page=100, error_out=False)
     return render_template('analytics.html', user=current_user, achievements=achs_p.items)
 
 
-@main_bp.route('/advisor')
+@main_bp.route('/advisor', endpoint='advisor_page')
 @login_required
 def advisor_page():
     return render_template('advisor.html', user=current_user)
 
 
-@main_bp.route('/clubs')
+@main_bp.route('/clubs', endpoint='clubs_page')
 @login_required
 def clubs_page():
     return render_template('clubs.html', user=current_user)
 
 
-@main_bp.route('/search')
+@main_bp.route('/search', endpoint='search_page')
 @login_required
 def search_page():
     return render_template('search.html', user=current_user)
 
 
-@main_bp.route('/chat')
+@main_bp.route('/chat', endpoint='chat_page')
 @login_required
 def chat_page():
     return render_template('chat.html', user=current_user, firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
 
 
-@main_bp.route('/school-desk')
+@main_bp.route('/school-desk', endpoint='school_desk')
 @login_required
 def school_desk():
     if current_user.role not in ('admin', 'super_admin'):
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     from models import VerificationRequest
     return render_template('school.html', user=current_user,
         verification_requests=VerificationRequest.query.order_by(VerificationRequest.id.desc()).limit(200).all())
 
 
-@main_bp.route('/admin-panel')
+@main_bp.route('/admin-panel', endpoint='admin_panel')
 @login_required
 def admin_panel():
     if current_user.role != 'super_admin':
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     return render_template('admin_panel.html', user=current_user)
 
 
-@main_bp.route('/choose-role')
+@main_bp.route('/choose-role', endpoint='choose_role')
 @login_required
 def choose_role():
     if current_user.role != 'pending':
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     return render_template('choose_role.html', user=current_user)
 
 
-@main_bp.route('/choose-username')
+@main_bp.route('/choose-username', endpoint='choose_username')
 @login_required
 def choose_username():
     if current_user.username:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     return render_template('choose_username.html', user=current_user)
 
 
-@main_bp.route('/robots.txt')
+@main_bp.route('/robots.txt', endpoint='robots_txt')
 def robots_txt():
     lines = [
         'User-agent: *', 'Allow: /',
@@ -189,7 +189,7 @@ def robots_txt():
     return Response('\n'.join(lines), mimetype='text/plain')
 
 
-@main_bp.route('/sitemap.xml')
+@main_bp.route('/sitemap.xml', endpoint='sitemap_xml')
 def sitemap_xml():
     from xml.sax.saxutils import escape as xml_escape
     today = str(datetime.now(timezone.utc).date())
@@ -230,7 +230,7 @@ def sitemap_xml():
     return Response(xml, mimetype='application/xml')
 
 
-@main_bp.route('/opportunity/<int:opp_id>/<path:slug>')
+@main_bp.route('/opportunity/<int:opp_id>/<path:slug>', endpoint='opportunity_page')
 def opportunity_page(opp_id, slug):
     opp = Opportunity.query.get(opp_id)
     if not opp:
@@ -240,7 +240,7 @@ def opportunity_page(opp_id, slug):
         meta_desc=(opp.description or '')[:200])
 
 
-@main_bp.route('/school/<int:school_id>/<path:slug>')
+@main_bp.route('/school/<int:school_id>/<path:slug>', endpoint='school_page')
 def school_page(school_id, slug):
     school = School.query.get(school_id)
     if not school:
@@ -252,13 +252,13 @@ def school_page(school_id, slug):
         meta_desc=(school.tagline or school.name or '')[:200])
 
 
-@main_bp.route('/blog')
+@main_bp.route('/blog', endpoint='blog_index')
 def blog_index():
     posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.id.desc()).limit(50).all()
     return render_template('blog_index.html', posts=posts)
 
 
-@main_bp.route('/blog/<path:slug>')
+@main_bp.route('/blog/<path:slug>', endpoint='blog_post')
 def blog_post(slug):
     post = BlogPost.query.filter_by(slug=slug, published=True).first()
     if not post:
@@ -266,14 +266,14 @@ def blog_post(slug):
     return render_template('blog_post.html', post=post)
 
 
-@main_bp.route('/post/<int:post_id>')
+@main_bp.route('/post/<int:post_id>', endpoint='single_post')
 def single_post(post_id):
     post = Post.query.get_or_404(post_id)
     author = User.query.with_entities(User.id, User.name, User.avatar, User.avatar_url, User.username, User.role, User.school).filter(User.id == post.author_id).first() if post.author_id else None
     return render_template('post.html', post=post, author=author, is_verified=is_verified(author) if author else False)
 
 
-@main_bp.route('/share/<username>')
+@main_bp.route('/share/<username>', endpoint='share_profile')
 def share_profile(username):
     puser = User.query.filter_by(username=username).first()
     if not puser:
@@ -287,13 +287,13 @@ def share_profile(username):
     return render_template('share.html', puser=puser, achievements=achs_p.items, projects=projs_p.items, experiences=exps_p.items, is_verified=is_verified(puser))
 
 
-@main_bp.route('/profile')
+@main_bp.route('/profile', endpoint='profile_page')
 @login_required
 def profile_page():
     return redirect(f'/profile/{current_user.id}')
 
 
-@main_bp.route('/profile/<int:user_id>')
+@main_bp.route('/profile/<int:user_id>', endpoint='profile_by_id')
 @login_required
 def profile_by_id(user_id):
     from models import Connection
@@ -319,16 +319,16 @@ def profile_by_id(user_id):
         friend_status=friend_status, is_verified=is_verified(puser), posts=posts_p.items)
 
 
-@main_bp.route('/u/<username>')
+@main_bp.route('/u/<username>', endpoint='profile_by_username')
 @login_required
 def profile_by_username(username):
     puser = User.query.filter_by(username=username).first()
     if not puser:
         abort(404)
-    return redirect(url_for('main.profile_by_id', user_id=puser.id))
+    return redirect(url_for('profile_by_id', user_id=puser.id))
 
 
-@main_bp.route('/api/contact', methods=['POST'])
+@main_bp.route('/api/contact', methods=['POST'], endpoint='api_contact')
 def api_contact():
     try:
         data = request.json or {}
@@ -347,7 +347,7 @@ def api_contact():
         return jsonify({'success': False, 'error': 'Server error'}), 500
 
 
-@main_bp.route('/api/leads', methods=['POST'])
+@main_bp.route('/api/leads', methods=['POST'], endpoint='api_lead_capture')
 def api_lead_capture():
     try:
         data = request.json or {}
@@ -366,12 +366,12 @@ def api_lead_capture():
         return jsonify({'success': False, 'error': 'Server error'}), 500
 
 
-@main_bp.route('/api/health')
+@main_bp.route('/api/health', endpoint='api_health')
 def api_health():
     return jsonify({"status": "healthy"})
 
 
-@main_bp.route('/api/seed')
+@main_bp.route('/api/seed', endpoint='api_seed')
 @login_required
 def api_seed():
     if current_user.role != 'super_admin':
@@ -385,7 +385,7 @@ def api_seed():
     return jsonify({"message": "Database seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
 
 
-@main_bp.route('/api/reset-db')
+@main_bp.route('/api/reset-db', endpoint='api_reset_db')
 @login_required
 def api_reset_db():
     if current_user.role != 'super_admin':
@@ -397,7 +397,7 @@ def api_reset_db():
     return jsonify({"message": "Database reset and re-seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
 
 
-@main_bp.route('/api/clean-data')
+@main_bp.route('/api/clean-data', endpoint='api_clean_data')
 @login_required
 def api_clean_data():
     if current_user.role != 'super_admin':
@@ -414,7 +414,7 @@ def api_clean_data():
     return jsonify({"message": "All seed data removed. Test users preserved."})
 
 
-@main_bp.route('/api/migrate')
+@main_bp.route('/api/migrate', endpoint='api_migrate')
 @login_required
 def api_migrate():
     if current_user.role != 'super_admin':

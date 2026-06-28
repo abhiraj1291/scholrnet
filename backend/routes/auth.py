@@ -10,11 +10,11 @@ from services.upload import save_to_supabase
 
 auth_bp = Blueprint('auth', __name__, url_prefix='')
 
-@auth_bp.route('/login', methods=['GET', 'POST'])
+@auth_bp.route('/login', methods=['GET', 'POST'], endpoint='login')
 @limiter.limit("30 per 15 minutes", methods=['POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -28,8 +28,8 @@ def login():
                     session.permanent = True
                     if user.totp_enabled:
                         session['2fa_required'] = True
-                        return redirect(url_for('auth.verify_2fa'))
-                    return redirect(url_for('main.dashboard'))
+                        return redirect(url_for('verify_2fa'))
+                    return redirect(url_for('dashboard'))
             except Exception:
                 print("LOGIN ERROR: bcrypt check failed for user", email)
         return render_template('auth/login.html', error="Invalid email or password")
@@ -37,12 +37,12 @@ def login():
         firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
 
 
-@auth_bp.route('/register', methods=['GET', 'POST'])
+@auth_bp.route('/register', methods=['GET', 'POST'], endpoint='register')
 @limiter.limit("5 per 15 minutes")
 def register():
     try:
         if current_user.is_authenticated:
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('dashboard'))
         turnstile_key = current_app.config.get('TURNSTILE_SECRET_KEY', '')
         if request.method == 'POST':
             if turnstile_key:
@@ -94,7 +94,7 @@ def register():
                 login_user(existing)
                 session.permanent = True
                 session['verify_email'] = True
-                return redirect(url_for('auth.verify_email_otp'))
+                return redirect(url_for('verify_email_otp'))
             if username:
                 if not re.match(r'^[a-z0-9_]{3,30}$', username):
                     return render_template('auth/register.html', error="Username: 3-30 chars, letters, numbers, underscores only", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
@@ -120,7 +120,7 @@ def register():
             login_user(user)
             session.permanent = True
             session['verify_email'] = True
-            return redirect(url_for('auth.verify_email_otp'))
+            return redirect(url_for('verify_email_otp'))
         return render_template('auth/register.html', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
     except Exception as e:
         import traceback
@@ -128,7 +128,7 @@ def register():
         return render_template('auth/register.html', error='Registration error. Please try again.', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
 
 
-@auth_bp.route('/api/auth/firebase', methods=['POST'])
+@auth_bp.route('/api/auth/firebase', methods=['POST'], endpoint='api_firebase_auth')
 @limiter.limit("20 per 15 minutes")
 def api_firebase_auth():
     data = request.json
@@ -179,11 +179,11 @@ def api_firebase_auth():
     return jsonify({'success': True, 'redirect': '/dashboard'})
 
 
-@auth_bp.route('/verify-email-otp', methods=['GET', 'POST'])
+@auth_bp.route('/verify-email-otp', methods=['GET', 'POST'], endpoint='verify_email_otp')
 @login_required
 def verify_email_otp():
     if current_user.email_verified:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         try:
             otp = request.form.get('otp', '').strip()
@@ -201,15 +201,15 @@ def verify_email_otp():
             db.session.commit()
             session.pop('verify_email', None)
             if not current_user.username:
-                return redirect(url_for('main.choose_username'))
-            return redirect(url_for('main.dashboard'))
+                return redirect(url_for('choose_username'))
+            return redirect(url_for('dashboard'))
         except Exception as e:
             import traceback; traceback.print_exc()
             return render_template('auth/verify_otp.html', error='Verification error')
     return render_template('auth/verify_otp.html', email=current_user.email)
 
 
-@auth_bp.route('/api/verify-email/resend-otp', methods=['POST'])
+@auth_bp.route('/api/verify-email/resend-otp', methods=['POST'], endpoint='api_resend_verify_otp')
 @login_required
 @limiter.limit("3 per 5 minutes")
 def api_resend_verify_otp():
@@ -230,7 +230,7 @@ def api_resend_verify_otp():
     return jsonify({'success': True})
 
 
-@auth_bp.route('/verify-email/<token>')
+@auth_bp.route('/verify-email/<token>', endpoint='verify_email')
 def verify_email(token):
     from sqlalchemy import or_
     user = User.query.filter(User.email_verify_token != '', User.email_verified == False).first()
@@ -250,11 +250,11 @@ def verify_email(token):
     return render_template('error.html', code=400, title='Invalid Link', message='This verification link is invalid or expired.', emoji='🔗')
 
 
-@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'], endpoint='forgot_password')
 @limiter.limit("5 per 15 minutes")
 def forgot_password():
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         user = User.query.filter_by(email=email).first()
@@ -268,17 +268,17 @@ def forgot_password():
             send_email(email, 'Reset your ScholrNet password',
                 email_otp_body(user.name, otp, 'Reset Your Password'))
             session['reset_email'] = email
-            return redirect(url_for('auth.reset_password_otp'))
+            return redirect(url_for('reset_password_otp'))
         return render_template('auth/forgot_sent.html')
     return render_template('auth/forgot.html')
 
 
-@auth_bp.route('/reset-password-otp', methods=['GET', 'POST'])
+@auth_bp.route('/reset-password-otp', methods=['GET', 'POST'], endpoint='reset_password_otp')
 @limiter.limit("10 per 15 minutes")
 def reset_password_otp():
     email = session.get('reset_email', '')
     if not email:
-        return redirect(url_for('auth.forgot_password'))
+        return redirect(url_for('forgot_password'))
     if request.method == 'POST':
         try:
             otp = request.form.get('otp', '').strip()
@@ -289,7 +289,7 @@ def reset_password_otp():
                 return render_template('auth/reset_otp.html', error='Password must be 8-128 characters', email=email)
             user = User.query.filter_by(email=email).first()
             if not user:
-                return redirect(url_for('auth.forgot_password'))
+                return redirect(url_for('forgot_password'))
             from datetime import datetime
             expires = user.reset_otp_expires
             if isinstance(expires, str):
@@ -308,11 +308,11 @@ def reset_password_otp():
     return render_template('auth/reset_otp.html', email=email)
 
 
-@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'], endpoint='reset_password')
 @limiter.limit("5 per 15 minutes")
 def reset_password(token):
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         password = request.form.get('password', '')
         if len(password) < 8 or len(password) > 128:
@@ -334,7 +334,7 @@ def reset_password(token):
     return render_template('auth/reset.html', token=token)
 
 
-@auth_bp.route('/api/profile/role', methods=['POST'])
+@auth_bp.route('/api/profile/role', methods=['POST'], endpoint='api_set_role')
 @login_required
 def api_set_role():
     data = request.json
@@ -346,22 +346,22 @@ def api_set_role():
     return jsonify({'success': True, 'redirect': '/dashboard'})
 
 
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', endpoint='logout')
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('auth.login'))
+    return redirect(url_for('login'))
 
 
-@auth_bp.route('/verify-2fa')
+@auth_bp.route('/verify-2fa', endpoint='verify_2fa')
 @login_required
 def verify_2fa():
     if not session.get('2fa_required'):
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('dashboard'))
     return render_template('2fa_login.html', user=current_user)
 
 
-@auth_bp.route('/api/2fa/setup', methods=['GET'])
+@auth_bp.route('/api/2fa/setup', methods=['GET'], endpoint='api_2fa_setup')
 @login_required
 def api_2fa_setup():
     import pyotp, qrcode, io, base64
@@ -385,7 +385,7 @@ def api_2fa_setup():
         'backup_codes': backup_codes})
 
 
-@auth_bp.route('/api/2fa/enable', methods=['POST'])
+@auth_bp.route('/api/2fa/enable', methods=['POST'], endpoint='api_2fa_enable')
 @login_required
 def api_2fa_enable():
     import pyotp
@@ -403,7 +403,7 @@ def api_2fa_enable():
     return jsonify({'success': True})
 
 
-@auth_bp.route('/api/2fa/disable', methods=['POST'])
+@auth_bp.route('/api/2fa/disable', methods=['POST'], endpoint='api_2fa_disable')
 @login_required
 @limiter.limit("5 per hour")
 def api_2fa_disable():
@@ -423,7 +423,7 @@ def api_2fa_disable():
     return jsonify({'success': True})
 
 
-@auth_bp.route('/api/2fa/verify-login', methods=['POST'])
+@auth_bp.route('/api/2fa/verify-login', methods=['POST'], endpoint='api_2fa_verify_login')
 @limiter.limit("10 per minute")
 def api_2fa_verify_login():
     if not current_user.is_authenticated or not session.get('2fa_required'):
@@ -436,7 +436,7 @@ def api_2fa_verify_login():
     totp = pyotp.TOTP(current_user.totp_secret)
     if totp.verify(code, valid_window=1):
         session.pop('2fa_required', None)
-        return jsonify({'success': True, 'redirect': url_for('main.dashboard')})
+        return jsonify({'success': True, 'redirect': url_for('dashboard')})
     if current_user.totp_backup_codes:
         import json as _json, hashlib as _hashlib
         backup_list = _json.loads(current_user.totp_backup_codes)
@@ -453,11 +453,11 @@ def api_2fa_verify_login():
                 current_user.totp_backup_codes = _json.dumps(backup_list)
                 db.session.commit()
                 session.pop('2fa_required', None)
-                return jsonify({'success': True, 'redirect': url_for('main.dashboard'), 'used_backup': True})
+                return jsonify({'success': True, 'redirect': url_for('dashboard'), 'used_backup': True})
     return jsonify({'error': 'Invalid code'}), 400
 
 
-@auth_bp.route('/api/username/check', methods=['GET'])
+@auth_bp.route('/api/username/check', methods=['GET'], endpoint='api_username_check')
 @limiter.limit("30 per minute")
 def api_username_check():
     u = request.args.get('u', '').strip().lower()
@@ -469,7 +469,7 @@ def api_username_check():
     return jsonify({'available': not taken})
 
 
-@auth_bp.route('/api/username/set', methods=['POST'])
+@auth_bp.route('/api/username/set', methods=['POST'], endpoint='api_username_set')
 @login_required
 def api_username_set():
     data = request.json or {}
@@ -486,7 +486,7 @@ def api_username_set():
     return jsonify({'success': True, 'username': u})
 
 
-@auth_bp.route('/api/profile/update', methods=['POST'])
+@auth_bp.route('/api/profile/update', methods=['POST'], endpoint='api_profile_update')
 @login_required
 @limiter.limit("10 per minute")
 def api_profile_update():
@@ -507,7 +507,7 @@ def api_profile_update():
     return jsonify({'success': True})
 
 
-@auth_bp.route('/api/profile/change-password', methods=['POST'])
+@auth_bp.route('/api/profile/change-password', methods=['POST'], endpoint='api_change_password')
 @login_required
 @limiter.limit("5 per hour")
 def api_change_password():
@@ -528,7 +528,7 @@ def api_change_password():
     return jsonify({'success': True})
 
 
-@auth_bp.route('/api/profile/logout-all', methods=['POST'])
+@auth_bp.route('/api/profile/logout-all', methods=['POST'], endpoint='api_logout_all')
 @login_required
 @limiter.limit("5 per hour")
 def api_logout_all():
@@ -536,7 +536,7 @@ def api_logout_all():
     return jsonify({'success': True, 'message': 'Session regenerated. Please log in again on other devices.'})
 
 
-@auth_bp.route('/api/profile/delete-account', methods=['POST'])
+@auth_bp.route('/api/profile/delete-account', methods=['POST'], endpoint='api_delete_account')
 @login_required
 @limiter.limit("3 per hour")
 def api_delete_account():
@@ -559,7 +559,7 @@ def api_delete_account():
     return jsonify({'success': True, 'redirect': '/'})
 
 
-@auth_bp.route('/api/profile/avatar', methods=['POST'])
+@auth_bp.route('/api/profile/avatar', methods=['POST'], endpoint='api_upload_avatar')
 @login_required
 @limiter.limit("5 per minute")
 def api_upload_avatar():
@@ -582,7 +582,7 @@ def api_upload_avatar():
     return jsonify({"success": True, "url": url})
 
 
-@auth_bp.route('/api/profile/groq-key', methods=['GET', 'POST'])
+@auth_bp.route('/api/profile/groq-key', methods=['GET', 'POST'], endpoint='api_groq_key')
 @login_required
 def api_groq_key():
     if request.method == 'POST':
