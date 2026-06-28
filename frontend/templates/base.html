@@ -76,7 +76,7 @@
   <header class="header">
     <div class="header-inner">
       <div class="flex items-center gap-3">
-        <a href="{{ url_for('dashboard') }}" class="logo">
+        <a href="{{ url_for('main.dashboard') }}" class="logo">
           <img src="{{ url_for('static', filename='logo.svg') }}" alt="ScholrNet" height="28">
         </a>
       </div>
@@ -87,7 +87,7 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <a href="{{ url_for('search_page') }}" class="btn btn-ghost btn-sm sm:hidden" title="Search">
+        <a href="{{ url_for('main.search_page') }}" class="btn btn-ghost btn-sm sm:hidden" title="Search">
           <i data-lucide="search" style="width:1.25rem;height:1.25rem;"></i>
         </a>
         <div class="relative">
@@ -115,9 +115,9 @@
               <div class="text-xs text-muted">{{ user.email }}</div>
               <div style="margin-top:2px;">{% set rc = {'student':'#3b82f6','teacher':'#8b5cf6','mentor':'#f59e0b','admin':'#10b981','super_admin':'#ef4444'} %}<span class="text-xs" style="color:{{ rc.get(user.role, '#6b7280') }};font-weight:600;">{{ user.role.replace('_',' ').upper() if user.role else 'STUDENT' }}</span></div>
             </div>
-            <a href="{{ url_for('profile_page') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover"><i data-lucide="user" style="width:16px;height:16px;"></i> My Profile</a>
+            <a href="{{ url_for('main.profile_page') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover"><i data-lucide="user" style="width:16px;height:16px;"></i> My Profile</a>
             <button id="settings-btn" class="flex items-center gap-2 px-3 py-2 text-sm w-full text-left hover:bg-hover" style="background:none;border:none;color:var(--text);"><i data-lucide="settings" style="width:16px;height:16px;"></i> Settings</button>
-            <a href="{{ url_for('logout') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover" style="color:var(--danger);"><i data-lucide="log-out" style="width:16px;height:16px;"></i> Sign Out</a>
+            <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover" style="color:var(--danger);"><i data-lucide="log-out" style="width:16px;height:16px;"></i> Sign Out</a>
           </div>
         </div>
       </div>
@@ -126,18 +126,18 @@
     <!-- Tab Navigation -->
     <nav class="tab-nav" id="mainTabs">
       {% set primary_tabs = [
-        ('explore_page', 'compass', 'Explore'),
-        ('profile_page', 'book-open', 'Portfolio'),
-        ('search_page', 'search', 'Search'),
-        ('chat_page', 'message-circle', 'Chat'),
+        ('main.explore_page', 'compass', 'Explore'),
+        ('main.profile_page', 'book-open', 'Portfolio'),
+        ('main.search_page', 'search', 'Search'),
+        ('main.chat_page', 'message-circle', 'Chat'),
       ] %}
       {% set more_tabs = [
-        ('clubs_page', 'users', 'Clubs'),
-        ('opportunities_page', 'sparkles', 'Opportunities'),
-        ('teams_page', 'users', 'Teams'),
-        ('mentors_page', 'graduation-cap', 'Mentors'),
-        ('advisor_page', 'bot', 'Advisor'),
-        ('analytics_page', 'bar-chart-3', 'Analytics'),
+        ('main.clubs_page', 'users', 'Clubs'),
+        ('main.opportunities_page', 'sparkles', 'Opportunities'),
+        ('main.teams_page', 'users', 'Teams'),
+        ('main.mentors_page', 'graduation-cap', 'Mentors'),
+        ('main.advisor_page', 'bot', 'Advisor'),
+        ('main.analytics_page', 'bar-chart-3', 'Analytics'),
       ] %}
       {% for endpoint, icon, label in primary_tabs %}
       <a href="{{ url_for(endpoint) }}" class="tab-btn {{ 'active' if request.endpoint == endpoint else '' }}" style="position:relative;">
@@ -146,12 +146,12 @@
       </a>
       {% endfor %}
       {% if user.role in ('admin','super_admin') %}
-      <a href="{{ url_for('school_desk') }}" class="tab-btn {{ 'active' if request.endpoint == 'school_desk' else '' }}">
+      <a href="{{ url_for('main.school_desk') }}" class="tab-btn {{ 'active' if request.endpoint == 'main.school_desk' else '' }}">
         <i data-lucide="building-2" style="width:16px;height:16px;"></i>School
       </a>
       {% endif %}
       {% if user.role == 'super_admin' %}
-      <a href="{{ url_for('admin_panel') }}" class="tab-btn {{ 'active' if request.endpoint == 'admin_panel' else '' }}">
+      <a href="{{ url_for('main.admin_panel') }}" class="tab-btn {{ 'active' if request.endpoint == 'main.admin_panel' else '' }}">
         <i data-lucide="shield" style="width:16px;height:16px;"></i>Admin
       </a>
       {% endif %}
@@ -264,7 +264,7 @@
   <!-- Footer -->
   <div id="cookieBanner" class="cookie-banner">
     <div class="cookie-banner-inner">
-      <p><strong>We use cookies</strong> for login and analytics. <a href="{{ url_for('privacy_page') }}">Privacy Policy</a></p>
+      <p><strong>We use cookies</strong> for login and analytics. <a href="{{ url_for('main.privacy_page') }}">Privacy Policy</a></p>
       <div class="cookie-banner-btns">
         <button class="cookie-btn cookie-btn-primary" onclick="localStorage.setItem('cookie-preference','all');document.getElementById('cookieBanner').classList.remove('show')">Accept</button>
         <button class="cookie-btn cookie-btn-secondary" onclick="localStorage.setItem('cookie-preference','essential');document.getElementById('cookieBanner').classList.remove('show')">Essential Only</button>
@@ -286,11 +286,11 @@
         </div>
       </div>
       <div class="app-footer-links">
-        <a href="{{ url_for('about_page') }}">About</a>
-        <a href="{{ url_for('schools_page') }}">For Schools</a>
-        <a href="{{ url_for('contact_page') }}">Contact</a>
-        <a href="{{ url_for('terms_page') }}">Terms</a>
-        <a href="{{ url_for('privacy_page') }}">Privacy</a>
+        <a href="{{ url_for('main.about_page') }}">About</a>
+        <a href="{{ url_for('main.schools_page') }}">For Schools</a>
+        <a href="{{ url_for('main.contact_page') }}">Contact</a>
+        <a href="{{ url_for('main.terms_page') }}">Terms</a>
+        <a href="{{ url_for('main.privacy_page') }}">Privacy</a>
         <a href="mailto:scolrnetsupport@gmail.com">Support</a>
         <span class="app-footer-copy">&copy; 2026 ScholrNet</span>
       </div>

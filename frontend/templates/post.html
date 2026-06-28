@@ -71,9 +71,9 @@
         <img src="{{ post.image_url }}" alt="" onerror="this.parentElement.style.display='none'">
       </div>
       {% endif %}
-      <a href="{{ url_for('register') }}" class="btn"><i data-lucide="graduation-cap" style="width:14px;height:14px;"></i> Join ScholrNet</a>
+      <a href="{{ url_for('auth.register') }}" class="btn"><i data-lucide="graduation-cap" style="width:14px;height:14px;"></i> Join ScholrNet</a>
     </div>
-    <div class="footer">&copy; 2026 ScholrNet &middot; <a href="{{ url_for('public_timeline') }}">Public Timeline</a></div>
+    <div class="footer">&copy; 2026 ScholrNet &middot; <a href="{{ url_for('main.public_timeline') }}">Public Timeline</a></div>
   </div>
   <script>if(typeof lucide!=='undefined') lucide.createIcons()</script>
 </body>

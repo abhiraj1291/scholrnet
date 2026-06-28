@@ -73,15 +73,15 @@
       <div class="nav-links">
         <a href="#features" class="nav-link">Features</a>
         <a href="#how-it-works" class="nav-link">How It Works</a>
-        <a href="{{ url_for('blog_index') }}" class="nav-link">Resources</a>
-        <a href="{{ url_for('schools_page') }}" class="nav-link">For Schools</a>
-        <a href="{{ url_for('about_page') }}" class="nav-link">About</a>
-        <a href="{{ url_for('contact_page') }}" class="nav-link">Contact</a>
+        <a href="{{ url_for('main.blog_index') }}" class="nav-link">Resources</a>
+        <a href="{{ url_for('main.schools_page') }}" class="nav-link">For Schools</a>
+        <a href="{{ url_for('main.about_page') }}" class="nav-link">About</a>
+        <a href="{{ url_for('main.contact_page') }}" class="nav-link">Contact</a>
         <a href="#faq" class="nav-link">FAQ</a>
       </div>
       <div class="nav-actions">
-        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
-        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary">Join Free</a>
       </div>
       <button class="nav-mobile-toggle" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileNav()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -90,14 +90,14 @@
     <div class="nav-mobile" id="mobileNav">
       <a href="#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
       <a href="#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
-      <a href="{{ url_for('blog_index') }}" class="nav-link" onclick="toggleMobileNav()">Resources</a>
-      <a href="{{ url_for('schools_page') }}" class="nav-link" onclick="toggleMobileNav()">For Schools</a>
-      <a href="{{ url_for('about_page') }}" class="nav-link" onclick="toggleMobileNav()">About</a>
-      <a href="{{ url_for('contact_page') }}" class="nav-link" onclick="toggleMobileNav()">Contact</a>
+      <a href="{{ url_for('main.blog_index') }}" class="nav-link" onclick="toggleMobileNav()">Resources</a>
+      <a href="{{ url_for('main.schools_page') }}" class="nav-link" onclick="toggleMobileNav()">For Schools</a>
+      <a href="{{ url_for('main.about_page') }}" class="nav-link" onclick="toggleMobileNav()">About</a>
+      <a href="{{ url_for('main.contact_page') }}" class="nav-link" onclick="toggleMobileNav()">Contact</a>
       <a href="#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
       <div class="nav-mobile-actions">
-        <a href="{{ url_for('login') }}" class="btn-ghost" onclick="toggleMobileNav()">Sign In</a>
-        <a href="{{ url_for('register') }}" class="btn-primary" onclick="toggleMobileNav()">Join Free</a>
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost" onclick="toggleMobileNav()">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary" onclick="toggleMobileNav()">Join Free</a>
       </div>
     </div>
   </nav>
@@ -111,7 +111,7 @@
         <h1 class="hero-title">Build one verified academic profile.<br><span class="hero-highlight">Unlock opportunities everywhere.</span></h1>
         <p class="hero-sub">Your achievements — awards, projects, internships — <strong>verified by your school</strong>. Share them with colleges, scholarship committees, competition organizers, and employers. One profile. Zero doubt.</p>
         <div class="hero-cta">
-          <a href="{{ url_for('register') }}" class="btn-primary btn-lg">Get Started Free &rarr;</a>
+          <a href="{{ url_for('auth.register') }}" class="btn-primary btn-lg">Get Started Free &rarr;</a>
           <a href="#how-it-works" class="btn-outline btn-lg">See How It Works</a>
         </div>
         <div class="hero-stats">
@@ -318,7 +318,7 @@
             <li class="comparison-item comparison-yes">Academic network + mentors</li>
             <li class="comparison-item comparison-yes">Growth analytics</li>
           </ul>
-          <a href="{{ url_for('register') }}" class="btn-primary" style="margin-top:1.25rem;justify-content:center;">Get Started Free</a>
+          <a href="{{ url_for('auth.register') }}" class="btn-primary" style="margin-top:1.25rem;justify-content:center;">Get Started Free</a>
         </div>
       </div>
     </div>
@@ -389,7 +389,7 @@
         {% endfor %}
       </div>
       <div class="section-cta">
-        <a href="{{ url_for('register') }}" class="btn-outline">View All Opportunities &rarr;</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-outline">View All Opportunities &rarr;</a>
       </div>
     </div>
   </section>
@@ -413,7 +413,7 @@
         {% endfor %}
       </div>
       <div class="section-cta">
-        <a href="{{ url_for('register') }}" class="btn-outline">Explore Clubs &rarr;</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-outline">Explore Clubs &rarr;</a>
       </div>
     </div>
   </section>
@@ -490,7 +490,7 @@
       <h2 class="cta-title">Your next opportunity is one profile away</h2>
       <p class="cta-sub">{% if users_count > 0 %}Join {{ users_count }} student{% if users_count != 1 %}s{% endif %} who've built their verified academic profile.{% else %}Build your verified academic profile and unlock opportunities.{% endif %}</p>
       <div class="cta-actions">
-        <a href="{{ url_for('register') }}" class="btn-primary btn-lg">Join Free &mdash; Takes 30 Seconds &rarr;</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary btn-lg">Join Free &mdash; Takes 30 Seconds &rarr;</a>
       </div>
       <div class="cta-badges">
         <span class="cta-badge">&#10003; Free forever</span>
@@ -516,27 +516,27 @@
           <h4 class="footer-heading">Product</h4>
           <a href="#features" class="footer-link">Features</a>
           <a href="#how-it-works" class="footer-link">How It Works</a>
-          <a href="{{ url_for('blog_index') }}" class="footer-link">Resources</a>
+          <a href="{{ url_for('main.blog_index') }}" class="footer-link">Resources</a>
           <a href="#faq" class="footer-link">FAQ</a>
         </div>
         <div class="footer-col">
           <h4 class="footer-heading">Company</h4>
-          <a href="{{ url_for('about_page') }}" class="footer-link">About Us</a>
-          <a href="{{ url_for('schools_page') }}" class="footer-link">For Schools</a>
-          <a href="{{ url_for('blog_index') }}" class="footer-link">Resources</a>
-          <a href="{{ url_for('terms_page') }}" class="footer-link">Terms of Service</a>
-          <a href="{{ url_for('privacy_page') }}" class="footer-link">Privacy Policy</a>
+          <a href="{{ url_for('main.about_page') }}" class="footer-link">About Us</a>
+          <a href="{{ url_for('main.schools_page') }}" class="footer-link">For Schools</a>
+          <a href="{{ url_for('main.blog_index') }}" class="footer-link">Resources</a>
+          <a href="{{ url_for('main.terms_page') }}" class="footer-link">Terms of Service</a>
+          <a href="{{ url_for('main.privacy_page') }}" class="footer-link">Privacy Policy</a>
         </div>
         <div class="footer-col">
           <h4 class="footer-heading">Community</h4>
-          <a href="{{ url_for('public_timeline') }}" class="footer-link">Public Timeline</a>
-          <a href="{{ url_for('register') }}" class="footer-link">Join Now</a>
+          <a href="{{ url_for('main.public_timeline') }}" class="footer-link">Public Timeline</a>
+          <a href="{{ url_for('auth.register') }}" class="footer-link">Join Now</a>
           <a href="https://linkedin.com/company/scholrnet" target="_blank" rel="noopener" class="footer-link">LinkedIn</a>
           <a href="https://instagram.com/scholrnet.in" target="_blank" rel="noopener" class="footer-link">Instagram</a>
         </div>
         <div class="footer-col">
           <h4 class="footer-heading">Support</h4>
-          <a href="{{ url_for('contact_page') }}" class="footer-link">Contact Us</a>
+          <a href="{{ url_for('main.contact_page') }}" class="footer-link">Contact Us</a>
           <a href="mailto:scolrnetsupport@gmail.com" class="footer-link">Email</a>
         </div>
       </div>

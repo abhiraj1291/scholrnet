@@ -56,8 +56,8 @@
         <a href="/#faq" class="nav-link">FAQ</a>
       </div>
       <div class="nav-actions">
-        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
-        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary">Join Free</a>
       </div>
       <button class="nav-mobile-toggle" aria-label="Toggle menu" onclick="toggleMobileNav()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -70,8 +70,8 @@
       <a href="/about" class="nav-link" onclick="toggleMobileNav()">About</a>
       <a href="/#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
       <div class="nav-mobile-actions">
-        <a href="{{ url_for('login') }}" class="btn-ghost">Sign In</a>
-        <a href="{{ url_for('register') }}" class="btn-primary">Join Free</a>
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary">Join Free</a>
       </div>
     </div>
   </nav>
@@ -286,8 +286,8 @@
         </div>
         <div class="footer-col">
           <h4 class="footer-heading">Community</h4>
-          <a href="{{ url_for('public_timeline') }}" class="footer-link">Public Timeline</a>
-          <a href="{{ url_for('register') }}" class="footer-link">Join Now</a>
+          <a href="{{ url_for('main.public_timeline') }}" class="footer-link">Public Timeline</a>
+          <a href="{{ url_for('auth.register') }}" class="footer-link">Join Now</a>
         </div>
         <div class="footer-col">
           <h4 class="footer-heading">Support</h4>

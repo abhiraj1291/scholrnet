@@ -143,7 +143,7 @@
           <div class="field">
             <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;line-height:1.5;">
               <input type="checkbox" name="terms_accepted" value="1" required style="margin-top:0.15rem;width:auto;">
-              <span>I agree to the <a href="{{ url_for('terms_page') }}" target="_blank" style="color:var(--primary);text-decoration:underline;">Terms of Service</a> and <a href="{{ url_for('privacy_page') }}" target="_blank" style="color:var(--primary);text-decoration:underline;">Privacy Policy</a></span>
+              <span>I agree to the <a href="{{ url_for('main.terms_page') }}" target="_blank" style="color:var(--primary);text-decoration:underline;">Terms of Service</a> and <a href="{{ url_for('main.privacy_page') }}" target="_blank" style="color:var(--primary);text-decoration:underline;">Privacy Policy</a></span>
             </label>
           </div>
           <button type="submit" class="btn-submit" id="regSubmit"><span class="spinner"></span><span class="btn-text">Create Account</span></button>
@@ -156,7 +156,7 @@
         </div>
 
         <div class="switch-page">
-          Already registered? <a href="{{ url_for('login') }}">Sign in</a>
+          Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a>
         </div>
       </div>
       <div class="auth-footer">

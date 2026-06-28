@@ -127,11 +127,11 @@
           </form>
           <script>document.getElementById('emailForm').addEventListener('submit',function(){document.getElementById('loginSubmit').classList.add('loading');});</script>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;">
-          <a href="{{ url_for('forgot_password') }}" class="forgot">Forgot password?</a>
+          <a href="{{ url_for('auth.forgot_password') }}" class="forgot">Forgot password?</a>
         </div>
 
         <div class="switch-page">
-          New to ScholrNet? <a href="{{ url_for('register') }}">Create your profile</a>
+          New to ScholrNet? <a href="{{ url_for('auth.register') }}">Create your profile</a>
         </div>
       </div>
       <div class="auth-footer">

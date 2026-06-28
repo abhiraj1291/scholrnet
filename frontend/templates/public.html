@@ -59,15 +59,15 @@
     <div class="header">
       <div class="brand"><i data-lucide="graduation-cap"></i> ScholrNet</div>
       <div class="header-cta">
-        <a href="{{ url_for('login') }}" class="btn-sm btn-outline">Sign In</a>
-        <a href="{{ url_for('register') }}" class="btn-sm btn-primary">Join</a>
+        <a href="{{ url_for('auth.login') }}" class="btn-sm btn-outline">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-sm btn-primary">Join</a>
       </div>
     </div>
 
     <div class="hero-cta">
       <h1>Academic Community Timeline</h1>
       <p>Recent achievements, projects, and updates from students and educators.</p>
-      <a href="{{ url_for('register') }}" class="btn btn-large"><i data-lucide="graduation-cap" style="width:16px;height:16px;"></i> Join ScholrNet</a>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-large"><i data-lucide="graduation-cap" style="width:16px;height:16px;"></i> Join ScholrNet</a>
     </div>
 
     {% if posts %}
@@ -101,7 +101,7 @@
     {% endif %}
 
     <div class="footer">
-      &copy; 2026 ScholrNet &middot; <a href="{{ url_for('index') }}">Home</a>
+      &copy; 2026 ScholrNet &middot; <a href="{{ url_for('main.index') }}">Home</a>
     </div>
   </div>
   <script>if(typeof lucide!=='undefined') lucide.createIcons()</script>

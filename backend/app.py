@@ -83,22 +83,22 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
             if not any(endpoint == a or endpoint.endswith('.' + a) for a in allowed):
                 if request.is_json or request.path.startswith('/api/'):
                     return jsonify({'error': '2FA verification required'}), 401
-                return redirect(url_for('verify_2fa'))
+                return redirect(url_for('auth.verify_2fa'))
 
     @app.before_request
     def check_pending_role():
         if current_user.is_authenticated and current_user.role == 'pending':
             allowed = ['choose_role', 'api_set_role', 'logout', 'static', 'verify_email_otp', 'api_resend_verify_otp']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
-                return redirect(url_for('choose_role'))
+                return redirect(url_for('main.choose_role'))
         if current_user.is_authenticated and current_user.email_verified is False:
             allowed = ['verify_email_otp', 'api_resend_verify_otp', 'logout', 'static', 'api_delete_account']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
-                return redirect(url_for('verify_email_otp'))
+                return redirect(url_for('auth.verify_email_otp'))
         if current_user.is_authenticated and not current_user.username and current_user.role != 'pending' and current_user.email_verified:
             allowed = ['choose_username', 'api_username_check', 'api_username_set', 'verify_email_otp', 'api_resend_verify_otp', 'logout', 'static']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
-                return redirect(url_for('choose_username'))
+                return redirect(url_for('main.choose_username'))
 
     @app.after_request
     def add_security_headers(response):
