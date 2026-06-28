@@ -158,8 +158,6 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
             return None
 
 
-# Backward-compatible global for direct import
-app = create_app()
-
 if __name__ == '__main__':
+    app = create_app()
     app.run(debug=True)
