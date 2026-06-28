@@ -57,19 +57,22 @@ def privacy_page():
 
 @main_bp.route('/public')
 def public_timeline():
-    posts = Post.query.order_by(Post.id.desc()).limit(50).all()
-    author_ids = {p.author_id for p in posts if p.author_id}
-    authors = {u.id: u for u in User.query.filter(User.id.in_(author_ids)).all()} if author_ids else {}
-    enriched = []
-    for p in posts:
-        author = authors.get(p.author_id) if p.author_id else None
-        enriched.append({
-            'id': p.id, 'title': p.title, 'content': p.content, 'image_url': p.image_url,
-            'timestamp': p.timestamp, 'author_name': p.author_name, 'author_school': p.author_school,
-            'author_username': author.username if author else None,
-            'author_avatar_url': author.avatar_url if author else '',
-            'author_verified': is_verified(author) if author else False
-        })
+    try:
+        posts = Post.query.order_by(Post.id.desc()).limit(50).all()
+        author_ids = {p.author_id for p in posts if p.author_id}
+        authors = {u.id: u for u in User.query.filter(User.id.in_(author_ids)).all()} if author_ids else {}
+        enriched = []
+        for p in posts:
+            author = authors.get(p.author_id) if p.author_id else None
+            enriched.append({
+                'id': p.id, 'title': p.title, 'content': p.content, 'image_url': p.image_url,
+                'timestamp': p.timestamp, 'author_name': p.author_name, 'author_school': p.author_school,
+                'author_username': author.username if author else None,
+                'author_avatar_url': author.avatar_url if author else '',
+                'author_verified': is_verified(author) if author else False
+            })
+    except Exception:
+        enriched = []
     return render_template('public.html', posts=enriched)
 
 
@@ -254,7 +257,10 @@ def school_page(school_id, slug):
 
 @main_bp.route('/blog')
 def blog_index():
-    posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.id.desc()).limit(50).all()
+    try:
+        posts = BlogPost.query.filter_by(published=True).order_by(BlogPost.id.desc()).limit(50).all()
+    except Exception:
+        posts = []
     return render_template('blog_index.html', posts=posts)
 
 
