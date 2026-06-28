@@ -131,16 +131,22 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
 
     @app.errorhandler(404)
     def not_found(e):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Not found'}), 404
         return render_template('error.html', code=404, title='Page Not Found', message='The page you are looking for does not exist.', emoji='🔍'), 404
 
     @app.errorhandler(403)
     def forbidden(e):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Forbidden'}), 403
         return render_template('error.html', code=403, title='Access Denied', message='You do not have permission to access this page.', emoji='🚫'), 403
 
     @app.errorhandler(500)
     def server_error(e):
         err = traceback.format_exc()
         print("SERVER ERROR:", err)
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Server error'}), 500
         return render_template('error.html', code=500, title='Something Went Wrong', message=f'{err[:500]}', emoji='⚠️'), 500
 
     from models import User

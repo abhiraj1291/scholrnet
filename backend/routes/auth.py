@@ -10,6 +10,10 @@ from services.upload import save_to_supabase
 
 auth_bp = Blueprint('auth', __name__, url_prefix='')
 
+@auth_bp.errorhandler(500)
+def auth_500(e):
+    return jsonify({'error': 'Server error'}), 500
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("30 per 15 minutes", methods=['POST'])
 def login():
@@ -131,52 +135,56 @@ def register():
 @auth_bp.route('/api/auth/firebase', methods=['POST'])
 @limiter.limit("20 per 15 minutes")
 def api_firebase_auth():
-    data = request.json
-    if not data or not data.get('email'):
-        return jsonify({'success': False, 'error': 'Missing email'}), 400
-    email = data['email'].strip().lower()
-    if len(email) > 254:
-        return jsonify({'success': False, 'error': 'Invalid email'}), 400
-    name = sanitize_text(data.get('name', email.split('@')[0]), 100)
-    photo = sanitize_text(data.get('photo', ''), 500)
-    uid = sanitize_text(data.get('uid', ''), 128)
-    provider = sanitize_text(data.get('provider', 'firebase'), 50)
-    id_token = sanitize_text(data.get('idToken', ''), 2000)
-    if id_token and 'FIREBASE_SERVICE_ACCOUNT' in os.environ:
-        try:
-            import firebase_admin
-            if not firebase_admin._apps:
-                cred_path = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
-                if cred_path and os.path.exists(cred_path):
-                    cred = firebase_admin.credentials.Certificate(cred_path)
-                    firebase_admin.initialize_app(cred)
-            if firebase_admin._apps:
-                decoded = firebase_admin.auth.verify_id_token(id_token)
-                if decoded.get('email', '').lower() != email:
-                    return jsonify({'success': False, 'error': 'Token email mismatch'}), 403
-        except Exception:
-            pass
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        avatar = "".join(p[0] for p in name.strip().split() if p)[:2].upper() or "FB"
-        user = User(
-            name=name, email=email, password_hash='*firebase*',
-            school='', role='pending', avatar=avatar,
-            grade='', bio='Joined via ' + provider,
-            avatar_url=photo, email_verified=True
-        )
-        db.session.add(user)
-        db.session.commit()
+    try:
+        data = request.json
+        if not data or not data.get('email'):
+            return jsonify({'success': False, 'error': 'Missing email'}), 400
+        email = data['email'].strip().lower()
+        if len(email) > 254:
+            return jsonify({'success': False, 'error': 'Invalid email'}), 400
+        name = sanitize_text(data.get('name', email.split('@')[0]), 100)
+        photo = sanitize_text(data.get('photo', ''), 500)
+        uid = sanitize_text(data.get('uid', ''), 128)
+        provider = sanitize_text(data.get('provider', 'firebase'), 50)
+        id_token = sanitize_text(data.get('idToken', ''), 2000)
+        if id_token and 'FIREBASE_SERVICE_ACCOUNT' in os.environ:
+            try:
+                import firebase_admin
+                if not firebase_admin._apps:
+                    cred_path = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
+                    if cred_path and os.path.exists(cred_path):
+                        cred = firebase_admin.credentials.Certificate(cred_path)
+                        firebase_admin.initialize_app(cred)
+                if firebase_admin._apps:
+                    decoded = firebase_admin.auth.verify_id_token(id_token)
+                    if decoded.get('email', '').lower() != email:
+                        return jsonify({'success': False, 'error': 'Token email mismatch'}), 403
+            except Exception:
+                pass
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            avatar = "".join(p[0] for p in name.strip().split() if p)[:2].upper() or "FB"
+            user = User(
+                name=name, email=email, password_hash='*firebase*',
+                school='', role='pending', avatar=avatar,
+                grade='', bio='Joined via ' + provider,
+                avatar_url=photo, email_verified=True
+            )
+            db.session.add(user)
+            db.session.commit()
+            login_user(user)
+            session.permanent = True
+            return jsonify({'success': True, 'redirect': '/choose-role', 'new_user': True})
+        else:
+            if photo and not user.avatar_url:
+                user.avatar_url = photo
+                db.session.commit()
         login_user(user)
         session.permanent = True
-        return jsonify({'success': True, 'redirect': '/choose-role', 'new_user': True})
-    else:
-        if photo and not user.avatar_url:
-            user.avatar_url = photo
-            db.session.commit()
-    login_user(user)
-    session.permanent = True
-    return jsonify({'success': True, 'redirect': '/dashboard'})
+        return jsonify({'success': True, 'redirect': '/dashboard'})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Server error'}), 500
 
 
 @auth_bp.route('/verify-email-otp', methods=['GET', 'POST'])
