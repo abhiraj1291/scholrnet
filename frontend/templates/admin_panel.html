@@ -274,45 +274,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
           });
 
-          // Handle edit form submit + cancel via delegation
-          document.addEventListener('submit', function(e) {
-            if (e.target.classList.contains('edit-school-form')) {
-              e.preventDefault();
-              var form = e.target;
-              var id = form.getAttribute('data-id');
-              fetch('/api/admin/school/' + id + '/edit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                  name: form.querySelector('.edit-school-name').value,
-                  location: form.querySelector('.edit-school-location').value,
-                  tagline: form.querySelector('.edit-school-tagline').value,
-                  about: form.querySelector('.edit-school-about').value,
-                  established: form.querySelector('.edit-school-established').value
-                })
-              })
-              .then(function(r) { return r.json(); })
-              .then(function(d) {
-                if (d.success) {
-                  showToast('School updated', 'success');
-                  loadSchools();
-                } else {
-                  showToast(d.error || 'Error', 'info');
-                }
-              })
-              .catch(function() { showToast('Error updating school', 'info'); });
-            }
-          });
-
-          document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('cancel-edit-school')) {
-              var form = e.target.closest('form');
-              if (form) {
-                var id = form.getAttribute('data-id');
-                document.getElementById('edit-school-' + id).classList.add('hidden');
-              }
-            }
-          });
 
           // Reset school admin password
           document.querySelectorAll('.reset-school-pwd').forEach(function(btn) {
@@ -352,6 +313,46 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .catch(function() {});
   }
+
+          // Handle edit form submit + cancel via delegation
+          document.addEventListener('submit', function(e) {
+            if (e.target.classList.contains('edit-school-form')) {
+              e.preventDefault();
+              var form = e.target;
+              var id = form.getAttribute('data-id');
+              fetch('/api/admin/school/' + id + '/edit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                  name: form.querySelector('.edit-school-name').value,
+                  location: form.querySelector('.edit-school-location').value,
+                  tagline: form.querySelector('.edit-school-tagline').value,
+                  about: form.querySelector('.edit-school-about').value,
+                  established: form.querySelector('.edit-school-established').value
+                })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(d) {
+                if (d.success) {
+                  showToast('School updated', 'success');
+                  loadSchools();
+                } else {
+                  showToast(d.error || 'Error', 'info');
+                }
+              })
+              .catch(function() { showToast('Error updating school', 'info'); });
+            }
+          });
+
+          document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('cancel-edit-school')) {
+              var form = e.target.closest('form');
+              if (form) {
+                var id = form.getAttribute('data-id');
+                document.getElementById('edit-school-' + id).classList.add('hidden');
+              }
+            }
+          });
 
   // Ads Management
   document.getElementById('toggleAdFormBtn').addEventListener('click', function() {

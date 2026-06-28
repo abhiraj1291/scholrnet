@@ -51,7 +51,8 @@ function switchTab(tabId) {
 }
 
 function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!'));
+  if (!navigator.clipboard) { showToast('Copy not supported'); return; }
+  navigator.clipboard.writeText(text).then(function() { showToast('Copied to clipboard!'); }).catch(function() { showToast('Could not copy'); });
 }
 
 // Initialize on page load

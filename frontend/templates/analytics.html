@@ -60,7 +60,7 @@ var ACHIEVEMENTS_DATA = [
   {% for a in achievements %}
   {
     category: {{ a.category|tojson|safe }},
-    verification_status: {{ a.verification_status|tojson|safe }}
+    verified: {{ a.verified|tojson|safe }}
   }{% if not loop.last %},{% endif %}
   {% endfor %}
 ];
@@ -71,8 +71,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Compute analytics from data
   var total = achievements.length;
-  var verified = achievements.filter(function(a) { return a.verification_status === 'Verified'; }).length;
-  var pending = achievements.filter(function(a) { return a.verification_status === 'Pending'; }).length;
+  var verified = achievements.filter(function(a) { return a.verified === 'Verified'; }).length;
+  var pending = achievements.filter(function(a) { return a.verified === 'Pending'; }).length;
   var notVerified = total - verified - pending;
 
   var catMap = {};
@@ -181,3 +181,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+

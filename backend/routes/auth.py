@@ -17,16 +17,16 @@ def auth_500(e):
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("30 per 15 minutes", methods=['POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
-        if len(email) > 254 or len(password) > 128:
-            return render_template('auth/login.html', error="Invalid credentials")
-        user = User.query.filter_by(email=email).first()
-        if user and user.password_hash != '*firebase*':
-            try:
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('main.dashboard'))
+        if request.method == 'POST':
+            email = request.form.get('email', '').strip().lower()
+            password = request.form.get('password', '')
+            if len(email) > 254 or len(password) > 128:
+                return render_template('auth/login.html', error="Invalid credentials")
+            user = User.query.filter_by(email=email).first()
+            if user and user.password_hash != '*firebase*':
                 if bcrypt.check_password_hash(user.password_hash, password):
                     login_user(user)
                     session.permanent = True
@@ -34,11 +34,12 @@ def login():
                         session['2fa_required'] = True
                         return redirect(url_for('auth.verify_2fa'))
                     return redirect(url_for('main.dashboard'))
-            except Exception:
-                print("LOGIN ERROR: bcrypt check failed for user", email)
-        return render_template('auth/login.html', error="Invalid email or password")
-    return render_template('auth/login.html',
-        firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
+            return render_template('auth/login.html', error="Invalid email or password")
+        return render_template('auth/login.html',
+            firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
+    except Exception:
+        import traceback; traceback.print_exc()
+        return render_template('auth/login.html', error="Login error. Please try again.")
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -87,18 +88,7 @@ def register():
             if existing:
                 if existing.email_verified:
                     return render_template('auth/register.html', error="Email already registered", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
-                import secrets, random
-                from datetime import datetime, timedelta
-                otp = str(random.randint(100000, 999999))
-                existing.email_otp = otp
-                existing.email_otp_expires = datetime.utcnow() + timedelta(minutes=10)
-                db.session.commit()
-                send_email(email, 'Verify your ScholrNet email',
-                    email_otp_body(existing.name, otp, 'Verify Your Email'))
-                login_user(existing)
-                session.permanent = True
-                session['verify_email'] = True
-                return redirect(url_for('auth.verify_email_otp'))
+                return render_template('auth/register.html', error="An account with this email already exists but is not verified. Please log in or check your email for the verification code.", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
             if username:
                 if not re.match(r'^[a-z0-9_]{3,30}$', username):
                     return render_template('auth/register.html', error="Username: 3-30 chars, letters, numbers, underscores only", turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
@@ -240,45 +230,41 @@ def api_resend_verify_otp():
 
 @auth_bp.route('/verify-email/<token>')
 def verify_email(token):
-    from sqlalchemy import or_
-    user = User.query.filter(User.email_verify_token != '', User.email_verified == False).first()
+    user = User.query.filter_by(email_verify_token=token, email_verified=False).first()
     if not user:
         return render_template('error.html', code=400, title='Invalid Link', message='This verification link is invalid or expired.', emoji='🔗')
-    import bcrypt as bc
-    for u in User.query.filter(User.email_verify_token != '', User.email_verified == False).all():
-        try:
-            if bc.check_password_hash(u.email_verify_token, token):
-                u.email_verified = True
-                u.email_verify_token = ''
-                db.session.commit()
-                login_user(u)
-                return render_template('auth/verify_success.html')
-        except Exception:
-            continue
-    return render_template('error.html', code=400, title='Invalid Link', message='This verification link is invalid or expired.', emoji='🔗')
+    user.email_verified = True
+    user.email_verify_token = ''
+    db.session.commit()
+    login_user(user)
+    return render_template('auth/verify_success.html')
 
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 @limiter.limit("5 per 15 minutes")
 def forgot_password():
-    if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        user = User.query.filter_by(email=email).first()
-        if user:
-            import random
-            from datetime import datetime, timedelta
-            otp = str(random.randint(100000, 999999))
-            user.reset_otp = otp
-            user.reset_otp_expires = datetime.utcnow() + timedelta(minutes=10)
-            db.session.commit()
-            send_email(email, 'Reset your ScholrNet password',
-                email_otp_body(user.name, otp, 'Reset Your Password'))
-            session['reset_email'] = email
-            return redirect(url_for('auth.reset_password_otp'))
-        return render_template('auth/forgot_sent.html')
-    return render_template('auth/forgot.html')
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('main.dashboard'))
+        if request.method == 'POST':
+            email = request.form.get('email', '').strip().lower()
+            user = User.query.filter_by(email=email).first()
+            if user:
+                import random
+                from datetime import datetime, timedelta
+                otp = str(random.randint(100000, 999999))
+                user.reset_otp = otp
+                user.reset_otp_expires = datetime.utcnow() + timedelta(minutes=10)
+                db.session.commit()
+                send_email(email, 'Reset your ScholrNet password',
+                    email_otp_body(user.name, otp, 'Reset Your Password'))
+                session['reset_email'] = email
+                return redirect(url_for('auth.reset_password_otp'))
+            return render_template('auth/forgot_sent.html')
+        return render_template('auth/forgot.html')
+    except Exception:
+        import traceback; traceback.print_exc()
+        return render_template('auth/forgot.html', error='Something went wrong. Please try again.')
 
 
 @auth_bp.route('/reset-password-otp', methods=['GET', 'POST'])
@@ -327,17 +313,13 @@ def reset_password(token):
             return render_template('auth/reset.html', error='Password must be 8-128 characters', token=token)
         from datetime import datetime, timezone
         now = datetime.now(timezone.utc).isoformat()
-        for u in User.query.filter(User.reset_password_token != '').all():
-            try:
-                if bcrypt.check_password_hash(u.reset_password_token, token):
-                    if u.reset_password_token_expires and u.reset_password_token_expires > now:
-                        u.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-                        u.reset_password_token = ''
-                        u.reset_password_token_expires = ''
-                        db.session.commit()
-                        return render_template('auth/reset_success.html')
-            except Exception:
-                continue
+        u = User.query.filter_by(reset_password_token=token).first()
+        if u and u.reset_password_token_expires and u.reset_password_token_expires > now:
+            u.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+            u.reset_password_token = ''
+            u.reset_password_token_expires = ''
+            db.session.commit()
+            return render_template('auth/reset_success.html')
         return render_template('auth/reset.html', error='Invalid or expired reset link', token=token)
     return render_template('auth/reset.html', token=token)
 
@@ -588,6 +570,33 @@ def api_upload_avatar():
     current_user.avatar_url = url
     db.session.commit()
     return jsonify({"success": True, "url": url})
+
+
+@auth_bp.route('/api/profile/cover', methods=['POST'])
+@login_required
+@limiter.limit("5 per minute")
+def api_upload_cover():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"success": False, "error": "No file provided"}), 400
+        f = request.files['file']
+        if not f.filename:
+            return jsonify({"success": False, "error": "No file selected"}), 400
+        allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        valid, err = validate_file_type(f, allowed_ext, ['image/'])
+        if not valid:
+            return jsonify({"success": False, "error": err}), 400
+        ext = f.filename.rsplit('.', 1)[-1].lower()
+        safe_name = f"cover_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+        url = save_to_supabase(f.read(), 'uploads', f"covers/{safe_name}", supabase_url=current_app.config.get("SUPABASE_URL","").rstrip("/"), supabase_key=current_app.config.get("SUPABASE_STORAGE_KEY",""))
+        if not url:
+            return jsonify({"success": False, "error": "Failed to upload file"}), 500
+        current_user.cover_banner = url
+        db.session.commit()
+        return jsonify({"success": True, "url": url})
+    except Exception:
+        import traceback; traceback.print_exc()
+        return jsonify({"success": False, "error": "Upload failed"}), 500
 
 
 @auth_bp.route('/api/profile/groq-key', methods=['GET', 'POST'])

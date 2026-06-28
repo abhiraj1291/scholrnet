@@ -464,6 +464,10 @@ def api_migrate():
             with db.engine.connect() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)")); conn.commit()
             mig.append("added users.verified_school_id")
+        if 'cover_banner' not in users_cols:
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN cover_banner VARCHAR(500) DEFAULT ''")); conn.commit()
+            mig.append("added users.cover_banner")
     except Exception:
         import traceback; traceback.print_exc()
         return jsonify({"error": "Migration failed", "ran": mig}), 500

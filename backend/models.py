@@ -17,6 +17,7 @@ class User(UserMixin, db.Model):
     theme_color = db.Column(db.String(30), default="navy")
     groq_api_key = db.Column(db.String(200), default="")
     username = db.Column(db.String(30), unique=True, nullable=True)
+    cover_banner = db.Column(db.String(500), default="")
     school_verified = db.Column(db.Boolean, default=False, nullable=True)
     verified_school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -126,7 +127,7 @@ class Ad(db.Model):
 class Opportunity(db.Model):
     __tablename__ = 'opportunities'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(300), nullable=False)
+    name = db.Column(db.String(300), nullable=False, index=True)
     type = db.Column(db.String(50), default="Scholarship")
     provider = db.Column(db.String(200), default="")
     prize_pool = db.Column(db.String(200), default="")
@@ -267,7 +268,7 @@ class ClubJoinRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
-    status = db.Column(db.String(20), default='pending')
+    status = db.Column(db.String(20), default='pending', index=True)
     requested_at = db.Column(db.String(30), default="")
     responded_at = db.Column(db.String(30), default="")
 

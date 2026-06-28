@@ -19,7 +19,7 @@ var MENTORS_DATA = [
     name: {{ m.name|tojson|safe }},
     role: {{ m.role|tojson|safe }},
     institution: {{ m.institution|tojson|safe }},
-    subjects: {% if m.subjects %}{{ m.subjects|safe }}{% else %}[]{% endif %},
+    subjects: {% if m.subjects %}{{ m.subjects|tojson|safe }}{% else %}[]{% endif %},
     bio: {{ m.bio|tojson|safe }},
     rating: {{ m.rating }}
   }{% if not loop.last %},{% endif %}
@@ -202,3 +202,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+

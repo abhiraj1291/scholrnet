@@ -11,37 +11,41 @@ bp = Blueprint('friends', __name__, url_prefix='')
 @login_required
 @limiter.limit("30 per minute")
 def api_friend_request():
-    data = request.json or {}
-    target_id = data.get('user_id')
-    if not target_id or not isinstance(target_id, int) or target_id == current_user.id:
-        return jsonify({'error': 'Invalid user'}), 400
-    if not User.query.get(target_id):
-        return jsonify({'error': 'User not found'}), 404
-    existing = Connection.query.filter(
-        ((Connection.user_id == current_user.id) & (Connection.connected_user_id == target_id)) |
-        ((Connection.user_id == target_id) & (Connection.connected_user_id == current_user.id))
-    ).first()
-    if existing:
-        if existing.status == 'accepted':
+    try:
+        data = request.json or {}
+        target_id = data.get('user_id')
+        if not target_id or not isinstance(target_id, int) or target_id == current_user.id:
+            return jsonify({'error': 'Invalid user'}), 400
+        if not User.query.get(target_id):
+            return jsonify({'error': 'User not found'}), 404
+        existing = Connection.query.filter(
+            ((Connection.user_id == current_user.id) & (Connection.connected_user_id == target_id)) |
+            ((Connection.user_id == target_id) & (Connection.connected_user_id == current_user.id))
+        ).first()
+        if existing:
+            if existing.status == 'accepted':
+                return jsonify({'error': 'Already friends'}), 400
+            if existing.user_id == target_id and existing.connected_user_id == current_user.id:
+                existing.status = 'accepted'
+                rev = Connection.query.filter_by(user_id=current_user.id, connected_user_id=target_id, status='pending').first()
+                if rev:
+                    rev.status = 'accepted'
+                n = Notification(user_id=target_id, title=f"{sanitize_text(current_user.name, 100)} accepted your friend request", type="friend_accept", from_user=current_user.name)
+                db.session.add(n)
+                db.session.commit()
+                return jsonify({'success': True, 'accepted': True})
+            if existing.user_id == current_user.id and existing.connected_user_id == target_id and existing.status == 'pending':
+                return jsonify({'error': 'Request already exists'}), 400
             return jsonify({'error': 'Already friends'}), 400
-        if existing.user_id == target_id and existing.connected_user_id == current_user.id:
-            existing.status = 'accepted'
-            rev = Connection.query.filter_by(user_id=current_user.id, connected_user_id=target_id, status='pending').first()
-            if rev:
-                rev.status = 'accepted'
-            n = Notification(user_id=target_id, title=f"{sanitize_text(current_user.name, 100)} accepted your friend request", type="friend_accept", from_user=current_user.name)
-            db.session.add(n)
-            db.session.commit()
-            return jsonify({'success': True, 'accepted': True})
-        if existing.user_id == current_user.id and existing.connected_user_id == target_id and existing.status == 'pending':
-            return jsonify({'error': 'Request already exists'}), 400
-        return jsonify({'error': 'Already friends'}), 400
-    conn = Connection(user_id=current_user.id, connected_user_id=target_id, status='pending')
-    db.session.add(conn)
-    n = Notification(user_id=target_id, title=f"{sanitize_text(current_user.name, 100)} sent you a friend request", type="friend_request", from_user=current_user.name)
-    db.session.add(n)
-    db.session.commit()
-    return jsonify({'success': True})
+        conn = Connection(user_id=current_user.id, connected_user_id=target_id, status='pending')
+        db.session.add(conn)
+        n = Notification(user_id=target_id, title=f"{sanitize_text(current_user.name, 100)} sent you a friend request", type="friend_request", from_user=current_user.name)
+        db.session.add(n)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception:
+        import traceback; traceback.print_exc()
+        return jsonify({'error': 'Server error'}), 500
 
 @bp.route('/api/friend/respond', methods=['POST'])
 @login_required
@@ -88,8 +92,8 @@ def api_friend_list():
             Connection.status == 'accepted'
         ).all()
         ids = set(c.connected_user_id if c.user_id == current_user.id else c.user_id for c in friend_conns)
-        user_rows = db.session.query(User.id, User.name, User.avatar, User.avatar_url, User.school).filter(User.id.in_(ids)).all() if ids else []
-        return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school} for u in user_rows]})
+        user_rows = db.session.query(User.id, User.name, User.avatar, User.avatar_url, User.school, User.username).filter(User.id.in_(ids)).all() if ids else []
+        return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school, 'username': u.username} for u in user_rows]})
     except Exception:
         import traceback; traceback.print_exc()
         return jsonify({'friends': []})
@@ -159,15 +163,19 @@ def api_user_connections(user_id):
 @login_required
 @limiter.limit("30 per minute")
 def api_toggle_connection():
-    data = request.json or {}
-    other_id = data.get('user_id')
-    if not other_id or other_id == current_user.id:
-        return jsonify({'error': 'Invalid user'}), 400
-    existing = Connection.query.filter(
-        ((Connection.user_id == current_user.id) & (Connection.connected_user_id == other_id)) |
-        ((Connection.user_id == other_id) & (Connection.connected_user_id == current_user.id))
-    ).all()
-    for c in existing:
-        db.session.delete(c)
-    db.session.commit()
-    return jsonify({'success': True, 'connected': False})
+    try:
+        data = request.json or {}
+        other_id = data.get('user_id')
+        if not other_id or other_id == current_user.id:
+            return jsonify({'error': 'Invalid user'}), 400
+        existing = Connection.query.filter(
+            ((Connection.user_id == current_user.id) & (Connection.connected_user_id == other_id)) |
+            ((Connection.user_id == other_id) & (Connection.connected_user_id == current_user.id))
+        ).all()
+        for c in existing:
+            db.session.delete(c)
+        db.session.commit()
+        return jsonify({'success': True, 'connected': False})
+    except Exception:
+        import traceback; traceback.print_exc()
+        return jsonify({'error': 'Server error'}), 500

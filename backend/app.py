@@ -59,20 +59,22 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
     def csrf_protect():
         if request.is_json and request.content_length and request.content_length > 1024 * 1024:
             return jsonify({'error': 'Request too large'}), 413
-        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and not request.path.startswith('/static/'):
             origin = request.headers.get('Origin', '')
             referer = request.headers.get('Referer', '')
             allowed_hosts = ['scholrnet.in', 'www.scholrnet.in', 'localhost', '127.0.0.1']
             valid = False
             if origin:
                 parsed = urlparse(origin)
-                if parsed.hostname in allowed_hosts or (parsed.hostname and parsed.hostname.endswith('.vercel.app')):
+                hn = parsed.hostname or ''
+                if hn in allowed_hosts or hn.endswith('.vercel.app'):
                     valid = True
             if referer:
                 parsed = urlparse(referer)
-                if parsed.hostname in allowed_hosts or (parsed.hostname and parsed.hostname.endswith('.vercel.app')):
+                hn = parsed.hostname or ''
+                if hn in allowed_hosts or hn.endswith('.vercel.app'):
                     valid = True
-            if not valid and (origin or referer):
+            if not valid:
                 return jsonify({'error': 'Forbidden'}), 403
 
     @app.before_request
@@ -92,7 +94,7 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
                 return redirect(url_for('main.choose_role'))
         if current_user.is_authenticated and current_user.email_verified is False:
-            allowed = ['verify_email_otp', 'api_resend_verify_otp', 'logout', 'static', 'api_delete_account']
+            allowed = ['verify_email_otp', 'api_resend_verify_otp', 'logout', 'static']
             if request.endpoint not in allowed and not request.path.startswith('/static/'):
                 return redirect(url_for('auth.verify_email_otp'))
         if current_user.is_authenticated and not current_user.username and current_user.role != 'pending' and current_user.email_verified:

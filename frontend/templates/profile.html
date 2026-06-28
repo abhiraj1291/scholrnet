@@ -2,9 +2,16 @@
 {% block content %}
 <div style="max-width:48rem;margin:0 auto;">
   <!-- Profile Header -->
-  <div class="card mb-3" style="padding:1.25rem;">
-    <div class="profile-header" style="gap:1.125rem;">
-      <div class="profile-avatar" id="profileAvatarWrap" style="{% if is_own %}cursor:pointer;{% endif %}position:relative;width:4rem;height:4rem;font-size:1.25rem;border-radius:1rem;flex-shrink:0;">
+  <div class="card mb-3" style="padding:0;overflow:hidden;">
+    <!-- Cover Banner -->
+    <div id="coverBannerWrap" style="position:relative;width:100%;height:8rem;background:linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);{% if puser.cover_banner %}background-image:url('{{ puser.cover_banner }}');background-size:cover;background-position:center;{% endif %}flex-shrink:0;{% if is_own %}cursor:pointer;{% endif %}" {% if is_own %}onclick="document.getElementById('coverUploadInput').click();"{% endif %}>
+      {% if is_own %}
+      <div style="position:absolute;bottom:0.5rem;right:0.5rem;width:28px;height:28px;background:rgba(0,0,0,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;"><i data-lucide="camera" style="width:14px;height:14px;color:#fff;"></i></div>
+      <input type="file" id="coverUploadInput" accept="image/*" style="display:none;">
+      {% endif %}
+    </div>
+    <div class="profile-header" style="padding:1.25rem;padding-top:0;gap:1.125rem;">
+      <div class="profile-avatar" id="profileAvatarWrap" style="margin-top:-2rem;{% if is_own %}cursor:pointer;{% endif %}position:relative;width:4rem;height:4rem;font-size:1.25rem;border-radius:1rem;flex-shrink:0;border:3px solid var(--bg-card);">
         {% if puser.avatar_url %}
         <img src="{{ puser.avatar_url }}" alt="{{ puser.name }}" style="width:100%;height:100%;border-radius:1rem;object-fit:cover;">
         {% else %}
@@ -1158,7 +1165,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
       var file = this.files[0];
       if (!file) return;
       var fd = new FormData();
-      fd.append('avatar', file);
+      fd.append('file', file);
       fetch('/api/profile/avatar', { method: 'POST', body: fd })
         .then(function(r) { return r.json(); })
         .then(function(d) {
@@ -1166,6 +1173,24 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
           else { showToast(d.error || 'Upload failed', 'info'); }
         })
         .catch(function() { showToast('Error uploading avatar', 'info'); });
+    });
+  }
+
+  // Cover banner upload
+  var coverInput = document.getElementById('coverUploadInput');
+  if (coverInput) {
+    coverInput.addEventListener('change', function() {
+      var file = this.files[0];
+      if (!file) return;
+      var fd = new FormData();
+      fd.append('file', file);
+      fetch('/api/profile/cover', { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) { showToast('Cover updated!', 'success'); location.reload(); }
+          else { showToast(d.error || 'Upload failed', 'info'); }
+        })
+        .catch(function() { showToast('Error uploading cover', 'info'); });
     });
   }
 
@@ -1227,7 +1252,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
   if (shareBtn) {
     shareBtn.addEventListener('click', function(e) {
       e.stopPropagation();
-      var url = window.location.origin + '/share/' + '{{ puser.username }}';
+      var url = window.location.origin + '/share/' + '{{ puser.username|tojson|safe }}';
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(function() {
           showToast('Profile link copied!', 'success');

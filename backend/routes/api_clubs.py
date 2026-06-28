@@ -301,52 +301,60 @@ def api_reject_join_request(club_id, req_id):
 @login_required
 @limiter.limit("5 per minute")
 def api_club_upload_avatar(club_id):
-    supabase_url = current_app.config.get("SUPABASE_URL", "").rstrip("/")
-    supabase_key = current_app.config.get("SUPABASE_STORAGE_KEY", "")
-    club = Club.query.get_or_404(club_id)
-    if club.owner_id != current_user.id and current_user.role != 'super_admin':
-        return jsonify({'error': 'Only the owner can change the avatar'}), 403
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    f = request.files['file']
-    if not f.filename:
-        return jsonify({'error': 'No file selected'}), 400
-    allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-    valid, err = validate_file_type(f, allowed_ext, ['image/'])
-    if not valid:
-        return jsonify({'error': err or 'Invalid file type'}), 400
-    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'png'
-    path = f"club_avatars/{club.id}/{uuid.uuid4().hex}.{ext}"
-    url = save_to_supabase(f.read(), 'uploads', path, supabase_url=supabase_url, supabase_key=supabase_key)
-    if not url:
+    try:
+        supabase_url = current_app.config.get("SUPABASE_URL", "").rstrip("/")
+        supabase_key = current_app.config.get("SUPABASE_STORAGE_KEY", "")
+        club = Club.query.get_or_404(club_id)
+        if club.owner_id != current_user.id and current_user.role != 'super_admin':
+            return jsonify({'error': 'Only the owner can change the avatar'}), 403
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        f = request.files['file']
+        if not f.filename:
+            return jsonify({'error': 'No file selected'}), 400
+        allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        valid, err = validate_file_type(f, allowed_ext, ['image/'])
+        if not valid:
+            return jsonify({'error': err or 'Invalid file type'}), 400
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'png'
+        path = f"club_avatars/{club.id}/{uuid.uuid4().hex}.{ext}"
+        url = save_to_supabase(f.read(), 'uploads', path, supabase_url=supabase_url, supabase_key=supabase_key)
+        if not url:
+            return jsonify({'error': 'Upload failed'}), 500
+        club.avatar = url
+        db.session.commit()
+        return jsonify({'success': True, 'url': url})
+    except Exception:
+        import traceback; traceback.print_exc()
         return jsonify({'error': 'Upload failed'}), 500
-    club.avatar = url
-    db.session.commit()
-    return jsonify({'success': True, 'url': url})
 
 @bp.route('/api/club/<int:club_id>/cover', methods=['POST'])
 @login_required
 @limiter.limit("5 per minute")
 def api_club_upload_cover(club_id):
-    supabase_url = current_app.config.get("SUPABASE_URL", "").rstrip("/")
-    supabase_key = current_app.config.get("SUPABASE_STORAGE_KEY", "")
-    club = Club.query.get_or_404(club_id)
-    if club.owner_id != current_user.id and current_user.role != 'super_admin':
-        return jsonify({'error': 'Only the owner can change the cover'}), 403
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    f = request.files['file']
-    if not f.filename:
-        return jsonify({'error': 'No file selected'}), 400
-    allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-    valid, err = validate_file_type(f, allowed_ext, ['image/'])
-    if not valid:
-        return jsonify({'error': err or 'Invalid file type'}), 400
-    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'jpg'
-    path = f"club_covers/{club.id}/{uuid.uuid4().hex}.{ext}"
-    url = save_to_supabase(f.read(), 'uploads', path, supabase_url=supabase_url, supabase_key=supabase_key)
-    if not url:
+    try:
+        supabase_url = current_app.config.get("SUPABASE_URL", "").rstrip("/")
+        supabase_key = current_app.config.get("SUPABASE_STORAGE_KEY", "")
+        club = Club.query.get_or_404(club_id)
+        if club.owner_id != current_user.id and current_user.role != 'super_admin':
+            return jsonify({'error': 'Only the owner can change the cover'}), 403
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        f = request.files['file']
+        if not f.filename:
+            return jsonify({'error': 'No file selected'}), 400
+        allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        valid, err = validate_file_type(f, allowed_ext, ['image/'])
+        if not valid:
+            return jsonify({'error': err or 'Invalid file type'}), 400
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'jpg'
+        path = f"club_covers/{club.id}/{uuid.uuid4().hex}.{ext}"
+        url = save_to_supabase(f.read(), 'uploads', path, supabase_url=supabase_url, supabase_key=supabase_key)
+        if not url:
+            return jsonify({'error': 'Upload failed'}), 500
+        club.cover_url = url
+        db.session.commit()
+        return jsonify({'success': True, 'url': url})
+    except Exception:
+        import traceback; traceback.print_exc()
         return jsonify({'error': 'Upload failed'}), 500
-    club.cover_url = url
-    db.session.commit()
-    return jsonify({'success': True, 'url': url})

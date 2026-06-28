@@ -15,7 +15,7 @@
     <div class="flex items-center gap-4 mt-3 text-sm">
       <span><span class="font-bold" id="schoolStudents">0</span> <span class="text-muted">Students</span></span>
       <span><span class="font-bold" id="schoolAchievements">0</span> <span class="text-muted">Achievements</span></span>
-      <span><span class="font-bold" id="schoolPending">{{ verification_requests|selectattr('status', 'equalto', 'pending')|list|length }}</span> <span class="text-muted">Pending Verifications</span></span>
+      <span><span class="font-bold" id="schoolPending">{{ verification_requests|selectattr('status', 'eq', 'pending')|list|length }}</span> <span class="text-muted">Pending Verifications</span></span>
     </div>
   </div>
 
@@ -57,7 +57,7 @@
       <span class="font-bold text-sm">Verification Desk</span>
     </div>
     <div id="verificationList">
-      {% set pending = verification_requests|selectattr('status', 'equalto', 'pending')|list %}
+      {% set pending = verification_requests|selectattr('status', 'eq', 'pending')|list %}
       {% if pending %}
         {% for v in pending %}
         <div class="p-3 rounded-xl mb-2" style="background:var(--bg-hover);" id="vreq-{{ v.id }}">

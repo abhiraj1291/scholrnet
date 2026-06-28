@@ -93,10 +93,10 @@ def api_user_stats():
         f_count = friend_count(current_user.id)
         c_count = ClubMember.query.filter_by(user_id=current_user.id).count()
         a_count = Achievement.query.filter_by(user_id=current_user.id).count()
-        return jsonify({'verified_achievements': v_count, 'projects': p_count, 'clubs': c_count, 'friends': f_count, 'achievements': a_count, 'collaborations': 0})
+        return jsonify({'verified_achievements': v_count, 'projects': p_count, 'clubs': c_count, 'friends': f_count, 'achievements': a_count, 'collaborations': 0, 'cover_banner': current_user.cover_banner or ''})
     except Exception:
         import traceback; traceback.print_exc()
-        return jsonify({'verified_achievements': 0, 'projects': 0, 'clubs': 0, 'friends': 0, 'achievements': 0, 'collaborations': 0})
+        return jsonify({'verified_achievements': 0, 'projects': 0, 'clubs': 0, 'friends': 0, 'achievements': 0, 'collaborations': 0, 'cover_banner': ''})
 
 
 @bp.route('/api/user/<int:user_id>/profile')
@@ -137,6 +137,7 @@ def api_user_profile(user_id):
             'id': puser.id, 'name': puser.name, 'school': puser.school,
             'bio': puser.bio or '', 'avatar': puser.avatar or '',
             'avatar_url': puser.avatar_url or '',
+            'cover_banner': puser.cover_banner or '',
             'role': puser.role or 'student', 'grade': puser.grade or '',
             'verified_achievements': v_count, 'projects': p_count,
             'clubs': c_count, 'friends': f_count,
@@ -147,7 +148,7 @@ def api_user_profile(user_id):
         import traceback; traceback.print_exc()
         return jsonify({
             'id': user_id, 'name': '', 'school': '', 'bio': '', 'avatar': '', 'avatar_url': '',
-            'role': 'student', 'grade': '', 'verified_achievements': 0, 'projects': 0,
+            'cover_banner': '', 'role': 'student', 'grade': '', 'verified_achievements': 0, 'projects': 0,
             'clubs': 0, 'friends': 0, 'achievements': 0, 'collaborations': 0,
             'skills': [], 'friend_status': 'none'
         })

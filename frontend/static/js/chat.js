@@ -101,7 +101,7 @@ function refreshMessages(contactId) {
         var div = document.createElement('div');
         div.className = 'chat-msg ' + (m.sender_id === activeChatId ? 'received' : 'sent');
         if (activeChatType === 'club' && m.sender_id !== CURRENT_USER_ID) {
-          div.innerHTML = '<div class="text-xs font-bold" style="color:var(--primary);">' + (m.sender_name || '') + '</div><div>' + escapeHtml(m.text) + '</div>';
+          div.innerHTML = '<div class="text-xs font-bold" style="color:var(--primary);">' + escapeHtml(m.sender_name || '') + '</div><div>' + escapeHtml(m.text) + '</div>';
         } else {
           div.textContent = m.text;
         }
@@ -117,7 +117,7 @@ function refreshMessages(contactId) {
         var div = document.createElement('div');
         div.className = 'chat-msg ' + (m.sender_id === activeChatId ? 'received' : 'sent');
         if (activeChatType === 'club' && m.sender_id !== CURRENT_USER_ID) {
-          div.innerHTML = '<div class="text-xs font-bold" style="color:var(--primary);">' + (m.sender_name || '') + '</div><div>' + escapeHtml(m.text) + '</div>';
+          div.innerHTML = '<div class="text-xs font-bold" style="color:var(--primary);">' + escapeHtml(m.sender_name || '') + '</div><div>' + escapeHtml(m.text) + '</div>';
         } else {
           div.textContent = m.text;
         }
@@ -132,8 +132,10 @@ function refreshMessages(contactId) {
 
 function switchChatTab(tab) {
   chatTabFilter = tab;
-  document.getElementById('chatTabFriends').classList.toggle('active', tab === 'friends');
-  document.getElementById('chatTabGroups').classList.toggle('active', tab === 'groups');
+  var tf = document.getElementById('chatTabFriends');
+  var tg = document.getElementById('chatTabGroups');
+  if (tf) tf.classList.toggle('active', tab === 'friends');
+  if (tg) tg.classList.toggle('active', tab === 'groups');
   renderChatContacts();
   var pageTabFriends = document.getElementById('pageChatTabFriends');
   var pageTabGroups = document.getElementById('pageChatTabGroups');
@@ -165,9 +167,9 @@ function renderChatContacts() {
     const div = document.createElement('div');
     div.className = 'chat-contact';
     if (c.type === 'club') {
-      div.innerHTML = '<div class="avatar avatar-sm" style="background:var(--primary-light);color:var(--primary);font-weight:700;">' + (c.avatar || c.name[0]) + '</div><div><div class="font-bold text-xs">' + c.name + ' <span class="text-xs text-muted">(' + (c.member_count || 0) + ' members)</span></div><div class="text-xs text-muted">Club Group</div></div>';
+      div.innerHTML = '<div class="avatar avatar-sm" style="background:var(--primary-light);color:var(--primary);font-weight:700;">' + escapeHtml(c.avatar || (c.name ? c.name[0] : '?')) + '</div><div><div class="font-bold text-xs">' + escapeHtml(c.name) + ' <span class="text-xs text-muted">(' + (c.member_count || 0) + ' members)</span></div><div class="text-xs text-muted">Club Group</div></div>';
     } else {
-      div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + c.name + ' ' + roleBadge(c.role) + (c.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + (c.school || '') + '</div></div>';
+      div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + escapeHtml(c.name) + ' ' + roleBadge(c.role) + (c.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + escapeHtml(c.school || '') + '</div></div>';
     }
     div.addEventListener('click', function() { openChat(c.id, c.name, c.avatar, c.avatar_url, c.role, c.type); });
     list.appendChild(div);
@@ -235,28 +237,36 @@ function sendChatMessage(input) {
 
 // New Chat — search for users
 function showNewChat() {
-  document.getElementById('chat-contact-list').classList.add('hidden');
-  document.getElementById('chat-messages-view').classList.add('hidden');
-  document.getElementById('new-chat-view').classList.remove('hidden');
-  document.getElementById('newChatSearch').value = '';
-  document.getElementById('newChatResults').innerHTML = '';
-  document.getElementById('newChatSearch').focus();
+  var cl = document.getElementById('chat-contact-list');
+  var mv = document.getElementById('chat-messages-view');
+  var nv = document.getElementById('new-chat-view');
+  var ns = document.getElementById('newChatSearch');
+  var nr = document.getElementById('newChatResults');
+  if (cl) cl.classList.add('hidden');
+  if (mv) mv.classList.add('hidden');
+  if (nv) nv.classList.remove('hidden');
+  if (ns) { ns.value = ''; ns.focus(); }
+  if (nr) nr.innerHTML = '';
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function hideNewChat() {
-  document.getElementById('new-chat-view').classList.add('hidden');
-  document.getElementById('chat-contact-list').classList.remove('hidden');
+  var nv = document.getElementById('new-chat-view');
+  var cl = document.getElementById('chat-contact-list');
+  if (nv) nv.classList.add('hidden');
+  if (cl) cl.classList.remove('hidden');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function searchNewChatUsers(q) {
   const results = document.getElementById('newChatResults');
+  if (!results) return;
   if (!q.trim()) { results.innerHTML = ''; return; }
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/api/search?q=' + encodeURIComponent(q), true);
   xhr.onload = function() {
-    var data = JSON.parse(xhr.responseText);
+    var data;
+    try { data = JSON.parse(xhr.responseText); } catch(e) { results.innerHTML = '<div class="text-center text-muted text-xs py-4">Search error</div>'; return; }
     results.innerHTML = '';
     if (!data.users || data.users.length === 0) {
       results.innerHTML = '<div class="text-center text-muted text-xs py-4">No users found</div>';
@@ -279,7 +289,8 @@ function backToContacts() {
   activeChatId = null;
   stopChatPolling();
   hideNewChat();
-  document.getElementById('chat-messages-view').classList.add('hidden');
+  var mv = document.getElementById('chat-messages-view');
+  if (mv) mv.classList.add('hidden');
   var list = document.getElementById('chat-contact-list');
   if (list) {
     list.classList.remove('hidden');
@@ -306,7 +317,7 @@ function loadPageChatContacts() {
       var div = document.createElement('div');
       div.className = 'chat-contact';
       if (c.type === 'club') {
-        div.innerHTML = '<div class="avatar avatar-sm" style="background:var(--primary-light);color:var(--primary);font-weight:700;">' + (c.avatar || c.name[0]) + '</div><div><div class="font-bold text-xs">' + c.name + ' <span class="text-xs text-muted">(' + (c.member_count || 0) + ' members)</span></div><div class="text-xs text-muted">Club Group</div></div>';
+        div.innerHTML = '<div class="avatar avatar-sm" style="background:var(--primary-light);color:var(--primary);font-weight:700;">' + escapeHtml(c.avatar || (c.name ? c.name[0] : '?')) + '</div><div><div class="font-bold text-xs">' + escapeHtml(c.name) + ' <span class="text-xs text-muted">(' + (c.member_count || 0) + ' members)</span></div><div class="text-xs text-muted">Club Group</div></div>';
       } else {
         div.innerHTML = avatarHtml(c) + '<div><div class="font-bold text-xs">' + escapeHtml(c.name || '') + ' ' + roleBadge(c.role) + (c.verified ? ' <i data-lucide="badge-check" style="width:0.75rem;height:0.75rem;color:var(--primary);display:inline;"></i>' : '') + '</div><div class="text-xs text-muted">' + escapeHtml(c.school || '') + '</div></div>';
       }

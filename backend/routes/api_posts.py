@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required, current_user
 from models import db, User, Post, Comment, UserLike, Achievement, Project, Experience, Connection, Notification, ClubMember, Opportunity, TeamRequest, TeamApplicant, VerificationRequest, MentorshipRequest, MentorInteraction, AuditLog
 from utils.sanitizers import sanitize_text, validate_file_type, MAX_CONTENT_LEN
-from services.helpers import is_verified, short_ts, audit_log, friend_count, get_gemini_client
+from services.helpers import is_verified, short_ts, audit_log, get_gemini_client
 from services.upload import save_to_supabase
 from extensions import limiter
 

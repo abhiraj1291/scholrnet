@@ -139,8 +139,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Search
   document.getElementById('oppSearch').addEventListener('input', function() {
     var q = this.value.toLowerCase().trim();
+    var grid = document.getElementById('oppGrid');
     if (q.length > 1) {
-      var grid = document.getElementById('oppGrid');
       grid.querySelectorAll('.card').forEach(function(card) {
         var text = card.textContent.toLowerCase();
         card.style.display = text.includes(q) ? 'flex' : 'none';
@@ -161,3 +161,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
