@@ -182,9 +182,9 @@ def api_firebase_auth():
         login_user(user)
         session.permanent = True
         return jsonify({'success': True, 'redirect': '/dashboard'})
-    except Exception as e:
-        import traceback; err_str = traceback.format_exc(); print("FIREBASE AUTH ERROR:", err_str)
-        return jsonify({'success': False, 'error': 'Server error', 'detail': str(e)[:200]}), 500
+    except Exception:
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Server error'}), 500
 
 
 @auth_bp.route('/verify-email-otp', methods=['GET', 'POST'])
