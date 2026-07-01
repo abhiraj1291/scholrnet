@@ -91,15 +91,18 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
     def check_pending_role():
         if current_user.is_authenticated and current_user.role == 'pending':
             allowed = ['choose_role', 'api_set_role', 'logout', 'static', 'verify_email_otp', 'api_resend_verify_otp']
-            if request.endpoint not in allowed and not request.path.startswith('/static/'):
+            ep = request.endpoint or ''
+            if not any(ep == a or ep.endswith('.' + a) for a in allowed) and not request.path.startswith('/static/'):
                 return redirect(url_for('main.choose_role'))
         if current_user.is_authenticated and current_user.email_verified is False:
             allowed = ['verify_email_otp', 'api_resend_verify_otp', 'logout', 'static']
-            if request.endpoint not in allowed and not request.path.startswith('/static/'):
+            ep = request.endpoint or ''
+            if not any(ep == a or ep.endswith('.' + a) for a in allowed) and not request.path.startswith('/static/'):
                 return redirect(url_for('auth.verify_email_otp'))
         if current_user.is_authenticated and not current_user.username and current_user.role != 'pending' and current_user.email_verified:
             allowed = ['choose_username', 'api_username_check', 'api_username_set', 'verify_email_otp', 'api_resend_verify_otp', 'logout', 'static']
-            if request.endpoint not in allowed and not request.path.startswith('/static/'):
+            ep = request.endpoint or ''
+            if not any(ep == a or ep.endswith('.' + a) for a in allowed) and not request.path.startswith('/static/'):
                 return redirect(url_for('main.choose_username'))
 
     @app.after_request
