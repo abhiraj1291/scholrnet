@@ -115,8 +115,13 @@ def register():
                         privacy_accepted_at=now_utc)
             db.session.add(user)
             db.session.commit()
-            send_email(email, 'Verify your ScholrNet email',
+            sent = send_email(email, 'Verify your ScholrNet email',
                 email_otp_body(name, otp, 'Verify Your Email'))
+            if not sent:
+                user.email_otp = ''
+                user.email_otp_expires = None
+                db.session.commit()
+                return render_template('auth/register.html', error='Account created but email service unavailable. Please try logging in to request a new verification code.', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
             login_user(user)
             session.permanent = True
             session['verify_email'] = True
@@ -192,13 +197,13 @@ def verify_email_otp():
         try:
             otp = request.form.get('otp', '').strip()
             if not otp or not otp.isdigit() or len(otp) != 6:
-                return render_template('auth/verify_otp.html', error='Enter a valid 6-digit code')
+                return render_template('auth/verify_otp.html', error='Enter a valid 6-digit code', email=current_user.email)
             from datetime import datetime
             expires = current_user.email_otp_expires
             if isinstance(expires, str):
                 expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
             if current_user.email_otp != otp or not expires or datetime.utcnow() > expires:
-                return render_template('auth/verify_otp.html', error='Invalid or expired code')
+                return render_template('auth/verify_otp.html', error='Invalid or expired code', email=current_user.email)
             current_user.email_verified = True
             current_user.email_otp = ''
             current_user.email_otp_expires = None
@@ -209,7 +214,7 @@ def verify_email_otp():
             return redirect(url_for('main.dashboard'))
         except Exception as e:
             import traceback; traceback.print_exc()
-            return render_template('auth/verify_otp.html', error='Verification error')
+            return render_template('auth/verify_otp.html', error='Verification error', email=current_user.email)
     return render_template('auth/verify_otp.html', email=current_user.email)
 
 
@@ -229,8 +234,13 @@ def api_resend_verify_otp():
     current_user.email_otp_expires = datetime.utcnow() + timedelta(minutes=10)
     db.session.commit()
     session['resend_otp_at'] = datetime.utcnow().timestamp()
-    send_email(current_user.email, 'Verify your ScholrNet email',
+    sent = send_email(current_user.email, 'Verify your ScholrNet email',
         email_otp_body(current_user.name, otp, 'Verify Your Email'))
+    if not sent:
+        current_user.email_otp = ''
+        current_user.email_otp_expires = None
+        db.session.commit()
+        return jsonify({'success': False, 'error': 'Email service unavailable. Please try again later.'}), 502
     return jsonify({'success': True})
 
 
