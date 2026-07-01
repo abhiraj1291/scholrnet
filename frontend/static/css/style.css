@@ -411,6 +411,7 @@ body { padding-top: 6.5rem; }
 }
 .toast.success { background: var(--success); }
 .toast.info { background: var(--primary); }
+.toast.error { background: var(--danger); }
 
 @keyframes slideUp {
   from { transform: translateY(1rem); opacity: 0; }

@@ -109,7 +109,7 @@
           </div>
           <div class="field">
             <label for="regPassword">Password</label>
-            <input type="password" id="regPassword" name="password" placeholder="Min. 6 characters" required minlength="6" autocomplete="new-password">
+            <input type="password" id="regPassword" name="password" placeholder="Min. 8 characters" required minlength="8" autocomplete="new-password">
             <div class="pw-strength" id="pwStrength">
               <div class="pw-bar" data-index="0"></div>
               <div class="pw-bar" data-index="1"></div>
@@ -133,7 +133,7 @@
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
               <option value="mentor">Mentor</option>
-              <option value="admin">School Counselor</option>
+              <option value="counselor">School Counselor</option>
             </select>
           </div>
           {% if turnstile_site_key %}

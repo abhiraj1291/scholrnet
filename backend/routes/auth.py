@@ -10,6 +10,12 @@ from services.upload import save_to_supabase
 
 auth_bp = Blueprint('auth', __name__, url_prefix='')
 
+@auth_bp.errorhandler(429)
+def auth_429(e):
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Too many requests. Please try again later.'}), 429
+    return render_template('auth/register.html', error='Too many attempts. Please try again in a few minutes.', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
+
 @auth_bp.errorhandler(500)
 def auth_500(e):
     return jsonify({'error': 'Server error'}), 500
@@ -43,7 +49,7 @@ def login():
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
-@limiter.limit("5 per 15 minutes")
+@limiter.limit("5 per 15 minutes", methods=['POST'])
 def register():
     try:
         if current_user.is_authenticated:
@@ -241,7 +247,7 @@ def verify_email(token):
 
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
-@limiter.limit("5 per 15 minutes")
+@limiter.limit("5 per 15 minutes", methods=['POST'])
 def forgot_password():
     try:
         if current_user.is_authenticated:
@@ -268,7 +274,7 @@ def forgot_password():
 
 
 @auth_bp.route('/reset-password-otp', methods=['GET', 'POST'])
-@limiter.limit("10 per 15 minutes")
+@limiter.limit("10 per 15 minutes", methods=['POST'])
 def reset_password_otp():
     email = session.get('reset_email', '')
     if not email:
@@ -303,7 +309,7 @@ def reset_password_otp():
 
 
 @auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
-@limiter.limit("5 per 15 minutes")
+@limiter.limit("5 per 15 minutes", methods=['POST'])
 def reset_password(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
@@ -327,9 +333,9 @@ def reset_password(token):
 @auth_bp.route('/api/profile/role', methods=['POST'])
 @login_required
 def api_set_role():
-    data = request.json
+    data = request.json or {}
     role = data.get('role', '')
-    if role not in ('student', 'teacher', 'mentor'):
+    if role not in ('student', 'teacher', 'mentor', 'counselor'):
         return jsonify({'success': False, 'error': 'Invalid role'}), 400
     current_user.role = role
     db.session.commit()

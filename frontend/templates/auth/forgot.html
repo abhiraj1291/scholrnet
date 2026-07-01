@@ -18,7 +18,7 @@
     <h1 class="text-lg font-black mb-1">Reset Password</h1>
     <p class="text-sm text-muted mb-4">Enter your email and we'll send you a reset code.</p>
     {% if error %}
-      <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
+      <div class="toast error" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
     {% endif %}
     <form method="POST">
       <div style="margin-bottom: 1rem;">

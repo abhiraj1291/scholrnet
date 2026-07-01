@@ -21,7 +21,7 @@
     <p class="text-sm text-muted mb-4">Enter the code sent to <strong>{{ email }}</strong> and set a new password.</p>
 
     {% if error %}
-      <div class="toast success" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
+      <div class="toast error" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
     {% endif %}
 
     <form method="POST">
