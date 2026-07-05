@@ -21,7 +21,7 @@
     <h1 class="text-lg font-black mb-1">Verify your email</h1>
     <p class="text-sm text-muted mb-4">
       We sent a 6-digit code to <strong id="emailDisplay">{{ email }}</strong>
-      <button id="changeEmailBtn" class="btn-ghost btn-sm" style="color:var(--primary);cursor:pointer;border:none;background:none;font-size:0.75rem;text-decoration:underline;padding:0;margin-left:0.25rem;">Change</button>
+      <button type="button" id="changeEmailBtn" class="btn-ghost btn-sm" style="color:var(--primary);cursor:pointer;border:none;background:none;font-size:0.75rem;text-decoration:underline;padding:0;margin-left:0.25rem;">Change</button>
     </p>
 
     <div id="changeEmailForm" class="hidden" style="margin-bottom:1rem;">
@@ -48,7 +48,7 @@
     </form>
 
     <div class="text-center mt-4">
-      <button id="resendBtn" class="btn-ghost btn-sm" style="color:var(--primary);cursor:pointer;border:none;background:none;font-family:inherit;font-size:0.8rem;text-decoration:underline;">Resend Code</button>
+      <button type="button" id="resendBtn" class="btn-ghost btn-sm" style="color:var(--primary);cursor:pointer;border:none;background:none;font-family:inherit;font-size:0.8rem;text-decoration:underline;">Resend Code</button>
       <p id="resendStatus" class="text-xs text-muted mt-1 hidden"></p>
     </div>
 
