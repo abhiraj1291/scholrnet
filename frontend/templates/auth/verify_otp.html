@@ -19,13 +19,25 @@
       </div>
     </div>
     <h1 class="text-lg font-black mb-1">Verify your email</h1>
-    <p class="text-sm text-muted mb-4">We sent a 6-digit code to <strong>{{ email }}</strong></p>
+    <p class="text-sm text-muted mb-4">
+      We sent a 6-digit code to <strong id="emailDisplay">{{ email }}</strong>
+      <button id="changeEmailBtn" class="btn-ghost btn-sm" style="color:var(--primary);cursor:pointer;border:none;background:none;font-size:0.75rem;text-decoration:underline;padding:0;margin-left:0.25rem;">Change</button>
+    </p>
+
+    <div id="changeEmailForm" class="hidden" style="margin-bottom:1rem;">
+      <form id="changeEmailInner">
+        <div style="margin-bottom:0.5rem;">
+          <label class="text-xs font-bold text-muted" style="display:block;margin-bottom:0.25rem;">New email</label>
+          <input type="email" id="newEmailInput" name="new_email" placeholder="your@email.com" required style="width:100%;padding:0.625rem 0.75rem;border:1px solid var(--border);border-radius:0.5rem;background:var(--card-bg);color:var(--text);box-sizing:border-box;font-family:inherit;font-size:0.875rem;">
+        </div>
+        <button type="submit" class="btn btn-primary w-full" style="padding:0.5rem;font-size:0.8rem;" id="changeEmailSubmit">Update &amp; Send Code</button>
+      </form>
+      <p id="changeEmailStatus" class="text-xs text-muted mt-1 hidden"></p>
+    </div>
 
     {% if error %}
       <div class="toast error" style="position: static; margin-bottom: 1rem;">{{ error }}</div>
     {% endif %}
-
-
 
     <form method="POST" id="otpForm">
       <div style="margin-bottom: 1rem;">
@@ -36,13 +48,52 @@
     </form>
 
     <div class="text-center mt-4">
-      <button id="resendBtn" class="btn btn-ghost btn-sm" style="color:var(--primary);">Resend Code</button>
-    <p id="resendStatus" class="text-xs text-muted mt-1 hidden"></p>
-  </div>
+      <button id="resendBtn" class="btn-ghost btn-sm" style="color:var(--primary);cursor:pointer;border:none;background:none;font-family:inherit;font-size:0.8rem;text-decoration:underline;">Resend Code</button>
+      <p id="resendStatus" class="text-xs text-muted mt-1 hidden"></p>
+    </div>
 
   <script>
     document.getElementById('otpInput').addEventListener('input', function() {
       this.value = this.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    // Change email toggle
+    document.getElementById('changeEmailBtn').addEventListener('click', function() {
+      var form = document.getElementById('changeEmailForm');
+      form.classList.toggle('hidden');
+    });
+
+    // Change email submit
+    document.getElementById('changeEmailInner').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var btn = document.getElementById('changeEmailSubmit');
+      var status = document.getElementById('changeEmailStatus');
+      var input = document.getElementById('newEmailInput');
+      btn.disabled = true;
+      status.classList.remove('hidden');
+      status.textContent = 'Updating...';
+      var formData = new FormData();
+      formData.append('email', input.value);
+      fetch('/api/verify-email/change-email', { method: 'POST', body: formData })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.success) {
+            document.getElementById('emailDisplay').textContent = d.email;
+            document.getElementById('changeEmailForm').classList.add('hidden');
+            status.textContent = 'Code sent to new email!';
+            status.style.color = 'var(--success)';
+            setTimeout(function() { status.classList.add('hidden'); }, 4000);
+          } else {
+            status.textContent = d.error || 'Error';
+            status.style.color = 'var(--danger)';
+            btn.disabled = false;
+          }
+        })
+        .catch(function() {
+          status.textContent = 'Network error';
+          status.style.color = 'var(--danger)';
+          btn.disabled = false;
+        });
     });
 
     document.getElementById('resendBtn').addEventListener('click', function() {

@@ -244,6 +244,33 @@ def api_resend_verify_otp():
     return jsonify({'success': True})
 
 
+@auth_bp.route('/api/verify-email/change-email', methods=['POST'])
+@login_required
+@limiter.limit("3 per 15 minutes")
+def api_change_verify_email():
+    if current_user.email_verified:
+        return jsonify({'success': False, 'error': 'Already verified'}), 400
+    new_email = request.form.get('email', '').strip().lower()
+    if not new_email or len(new_email) > 254 or '@' not in new_email:
+        return jsonify({'success': False, 'error': 'Enter a valid email address'}), 400
+    existing = User.query.filter_by(email=new_email).first()
+    if existing and existing.id != current_user.id:
+        return jsonify({'success': False, 'error': 'Email already in use'}), 409
+    current_user.email = new_email
+    import random
+    from datetime import datetime, timedelta
+    otp = str(random.randint(100000, 999999))
+    current_user.email_otp = otp
+    current_user.email_otp_expires = datetime.utcnow() + timedelta(minutes=10)
+    db.session.commit()
+    session.pop('resend_otp_at', None)
+    sent = send_email(new_email, 'Verify your ScholrNet email',
+        email_otp_body(current_user.name, otp, 'Verify Your Email'))
+    if not sent:
+        return jsonify({'success': False, 'error': 'Email service unavailable. Please try again later.'}), 502
+    return jsonify({'success': True, 'email': new_email})
+
+
 @auth_bp.route('/verify-email/<token>')
 def verify_email(token):
     user = User.query.filter_by(email_verify_token=token, email_verified=False).first()
