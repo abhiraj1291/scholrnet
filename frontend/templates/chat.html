@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="grid-3" id="chatPageGrid" style="max-width:56rem;margin:0 auto;">
+  <div class="card" id="chatContactColumn" style="padding:0;overflow:hidden;">
+    <div class="p-3 border-b flex items-center justify-between" style="border-color:var(--border);">
+      <h2 class="font-bold">Messages</h2>
+      <button class="btn btn-primary btn-sm" onclick="showPageNewChat()"><i data-lucide="plus" style="width:14px;height:14px;"></i></button>
+    </div>
+    <div class="flex border-b" style="border-color:var(--border);">
+      <button id="pageChatTabFriends" class="chat-tab active" onclick="switchChatTab('friends')">Friends</button>
+      <button id="pageChatTabGroups" class="chat-tab" onclick="switchChatTab('groups')">Groups</button>
+    </div>
+    <div id="chatContactList" style="max-height:60vh;overflow-y:auto;"></div>
+    <div id="chatSearchView" class="hidden">
+      <div class="p-3 border-b" style="border-color:var(--border);">
+        <div class="flex items-center gap-2">
+          <i data-lucide="arrow-left" style="width:16px;height:16px;cursor:pointer;" onclick="hidePageNewChat()"></i>
+          <input type="text" id="pageChatSearch" placeholder="Search users..." inputmode="search" autocomplete="off" style="flex:1;border:none;outline:none;background:transparent;color:var(--text);">
+        </div>
+      </div>
+      <div id="pageChatResults" style="max-height:50vh;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <div class="main-content-lg chat-main-col" id="chatMessageColumn" style="grid-column:span 2;">
+    <div id="chatView" class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;height:70vh;">
+      <div id="chatPlaceholder" class="flex items-center justify-center" style="flex:1;">
+        <div class="text-center p-4">
+          <i data-lucide="message-circle" style="width:3rem;height:3rem;color:var(--text-muted);margin:0 auto 1rem;display:block;"></i>
+          <p class="text-muted">Select a conversation to start chatting</p>
+        </div>
+      </div>
+      <div id="chatActiveView" class="hidden" style="flex:1;display:flex;flex-direction:column;">
+        <div class="p-3 border-b flex items-center gap-2" style="border-color:var(--border);">
+          <button id="chatBackBtn" class="btn btn-ghost btn-sm sm:hidden" style="padding:0;border:none;background:none;color:var(--text-muted);cursor:pointer;" onclick="closePageChatMobile()" title="Back to contacts"><i data-lucide="arrow-left" style="width:18px;height:18px;"></i></button>
+          <div id="chatActiveAvatar" class="avatar avatar-sm"></div>
+          <div style="flex:1;">
+            <span id="chatActiveName" class="font-bold text-sm"></span>
+            <span id="chatActiveRole" class="text-xs text-muted ml-1"></span>
+          </div>
+        </div>
+        <div id="chatMessagesArea" class="chat-messages" style="flex:1;overflow-y:auto;padding:1rem;"></div>
+        <div class="chat-input p-3 border-t" style="border-color:var(--border);">
+          <div class="flex gap-2">
+            <input type="text" id="chatMsgInput" placeholder="Type a message..." inputmode="text" autocomplete="off" class="flex-1">
+            <button class="btn btn-primary btn-sm" onclick="sendMessage()"><i data-lucide="send" style="width:16px;height:16px;"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<style>
+@media (max-width: 639px) {
+  #chatPageGrid.chat-active #chatContactColumn { display: none; }
+  #chatPageGrid:not(.chat-active) #chatMessageColumn { display: none; }
+}
+</style>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script nonce="{{ csp_nonce }}">
+function closePageChatMobile() {
+  var grid = document.getElementById('chatPageGrid');
+  if (grid) grid.classList.remove('chat-active');
+  activeChatId = null;
+  stopChatPolling();
+  document.getElementById('chatPlaceholder').classList.remove('hidden');
+  document.getElementById('chatActiveView').classList.add('hidden');
+}
+function showPageNewChat() {
+  document.getElementById('chatContactList').classList.add('hidden');
+  document.getElementById('chatSearchView').classList.remove('hidden');
+  document.getElementById('pageChatSearch').value = '';
+  document.getElementById('pageChatResults').innerHTML = '';
+  document.getElementById('pageChatSearch').focus();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function hidePageNewChat() {
+  document.getElementById('chatSearchView').classList.add('hidden');
+  document.getElementById('chatContactList').classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var searchInput = document.getElementById('pageChatSearch');
+  if (searchInput) {
+    var timer;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(timer);
+      timer = setTimeout(function() {
+        var q = searchInput.value.trim();
+        if (!q) { document.getElementById('pageChatResults').innerHTML = ''; return; }
+        fetch('/api/search?q=' + encodeURIComponent(q))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            var results = document.getElementById('pageChatResults');
+            results.innerHTML = '';
+            if (!data.users || data.users.length === 0) {
+              results.innerHTML = '<div class="text-center text-muted text-xs py-4">No users found</div>';
+              return;
+            }
+            data.users.forEach(function(u) {
+              var div = document.createElement('div');
+              div.className = 'chat-contact';
+              div.innerHTML = avatarHtml(u) + '<div><div class="font-bold text-xs">' + u.name + '</div><div class="text-xs text-muted">' + (u.school || '') + '</div></div>';
+              div.addEventListener('click', function() {
+                openPageChat(u.id, u.name, u.avatar, u.avatar_url, u.role);
+                hidePageNewChat();
+              });
+              results.appendChild(div);
+            });
+          });
+      }, 300);
+    });
+  }
+});
+</script>
+{% endblock %}

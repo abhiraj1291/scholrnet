@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:56rem;margin:0 auto;">
+  <h1 class="text-xl font-black mb-4">Admin Panel</h1>
+
+  <!-- Manage Schools -->
+  <div class="card mb-3">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="building-2" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        <span class="font-bold text-sm">Manage Schools</span>
+      </div>
+      <button id="toggleSchoolFormBtn" class="btn btn-primary btn-sm"><i data-lucide="plus" style="width:1rem;height:1rem;"></i> Add School</button>
+    </div>
+    <div id="schoolFormContainer" class="hidden mb-3 p-3 rounded-xl" style="background:var(--bg-hover);">
+      <form id="schoolForm">
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">School Name</label>
+          <input type="text" id="schoolName" class="w-full" required placeholder="e.g. Delhi Public School">
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Location</label>
+          <input type="text" id="schoolLocation" class="w-full" placeholder="e.g. New Delhi">
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Tagline</label>
+          <input type="text" id="schoolTagline" class="w-full" placeholder="e.g. Service Before Self">
+        </div>
+        <div class="mb-3">
+          <label class="text-xs font-bold text-muted block mb-1">About</label>
+          <textarea id="schoolAbout" rows="2" class="w-full" placeholder="Brief description..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Create School</button>
+      </form>
+    </div>
+    <input type="text" id="schoolSearch" class="w-full mb-3" placeholder="Search schools by name..." inputmode="search" autocomplete="off" style="font-size:0.8rem;padding:0.5rem 0.75rem;display:none;">
+    <div id="schoolsList"></div>
+  </div>
+
+  <!-- Manage Ads -->
+  <div class="card mb-3">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="image" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        <span class="font-bold text-sm">Manage Ads</span>
+      </div>
+      <button id="toggleAdFormBtn" class="btn btn-primary btn-sm"><i data-lucide="plus" style="width:1rem;height:1rem;"></i> Create Ad</button>
+    </div>
+    <div id="adFormContainer" class="hidden mb-3 p-3 rounded-xl" style="background:var(--bg-hover);">
+      <form id="adForm">
+        <div class="grid gap-2 ad-form-grid">
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Title</label>
+            <input type="text" id="adTitle" placeholder="Ad title" required>
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Company</label>
+            <input type="text" id="adCompany" placeholder="Company name" required>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Content</label>
+          <textarea id="adContent" rows="2" placeholder="Ad description" required></textarea>
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Image URL (optional)</label>
+          <input type="url" id="adImage" placeholder="https://...supabase.co/...">
+        </div>
+        <div class="grid gap-2 ad-form-grid-3">
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">CTA Text</label>
+            <input type="text" id="adCtaText" placeholder="Learn More">
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">CTA URL</label>
+            <input type="url" id="adCtaUrl" placeholder="https://...">
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Placement</label>
+            <select id="adPlacement">
+              <option value="sidebar">Sidebar</option>
+              <option value="in-feed">In-feed</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid gap-2 ad-form-grid-2">
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Target Role</label>
+            <select id="adTargetRole">
+              <option value="">All Roles</option>
+              <option value="student">Students</option>
+              <option value="teacher">Teachers</option>
+              <option value="mentor">Mentors</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Active</label>
+            <select id="adActive">
+              <option value="true">Active</option>
+              <option value="false">Paused</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Create Ad</button>
+      </form>
+    </div>
+    <div id="adsList"></div>
+  </div>
+
+  <!-- Manage Posts -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="file-text" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">All Posts</span>
+    </div>
+    <div id="adminPostsList"></div>
+    <div id="postsLoader" class="text-center py-4 hidden">
+      <div class="shimmer" style="height:6rem;width:100%;"></div>
+    </div>
+  </div>
+
+  <!-- Policy Management -->
+  <div class="card mb-3">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="scale" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        <span class="font-bold text-sm">Policy Management</span>
+      </div>
+    </div>
+    <div id="policyStats" class="text-sm text-muted mb-3">Loading...</div>
+    <div class="admin-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div>
+        <label class="text-xs font-bold text-muted block mb-1">Policy Type</label>
+        <select id="policyTypeSelect" class="w-full">
+          <option value="terms">Terms of Service</option>
+          <option value="privacy">Privacy Policy</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-muted block mb-1">Version</label>
+        <input type="text" id="policyVersionInput" class="w-full" placeholder="e.g. 2.0">
+      </div>
+    </div>
+    <div class="mb-2 mt-2">
+      <label class="text-xs font-bold text-muted block mb-1">Content (optional, for archival)</label>
+      <textarea id="policyContentInput" rows="3" class="w-full" placeholder="Optional notes about changes..."></textarea>
+    </div>
+    <button onclick="publishPolicy()" class="btn btn-primary btn-sm">Publish Version</button>
+    <div id="policyResult" class="text-xs mt-2"></div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+  function escapeHtml(text) {
+    if (!text) return '';
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  // School Management
+  document.getElementById('toggleSchoolFormBtn').addEventListener('click', function() {
+    var c = document.getElementById('schoolFormContainer');
+    c.classList.toggle('hidden');
+    lucide.createIcons();
+  });
+
+  document.getElementById('schoolForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch('/api/admin/school/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name: document.getElementById('schoolName').value,
+        location: document.getElementById('schoolLocation').value,
+        tagline: document.getElementById('schoolTagline').value,
+        about: document.getElementById('schoolAbout').value
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showToast('School created! Login: ' + data.email + ' / ' + data.password, 'success');
+        document.getElementById('schoolForm').reset();
+        document.getElementById('schoolFormContainer').classList.add('hidden');
+        loadSchools();
+      } else {
+        showToast(data.error || 'Error', 'info');
+      }
+    })
+    .catch(function() { showToast('Error creating school', 'info'); });
+  });
+
+  function loadSchools() {
+    fetch('/api/admin/schools')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('schoolsList');
+        list.innerHTML = '';
+        if (data.schools && data.schools.length > 0) {
+          data.schools.forEach(function(s) {
+            var el = document.createElement('div');
+            el.className = 'p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.id = 'school-' + s.id;
+            el.setAttribute('data-student-count', s.student_count || 0);
+            el.setAttribute('data-verified-count', s.verified_count || 0);
+            el.setAttribute('data-club-count', s.club_count || 0);
+            el.innerHTML =
+              '<div class="flex items-start gap-3">' +
+                '<i data-lucide="building-2" style="width:1.5rem;height:1.5rem;color:var(--primary);flex-shrink:0;margin-top:0.15rem;"></i>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div class="text-sm font-bold">' + escapeHtml(s.name) + '</div>' +
+                  '<div class="text-xs text-muted">ID: ' + s.id + (s.location ? ' &middot; ' + escapeHtml(s.location) : '') + (s.tagline ? ' &middot; ' + escapeHtml(s.tagline) : '') + '</div>' +
+                  (s.admin_email ? '<div class="text-xs mt-1" style="color:var(--text-muted);">Login: <code style="background:var(--bg);padding:0.1rem 0.35rem;border-radius:0.25rem;font-size:0.65rem;">' + escapeHtml(s.admin_email) + '</code></div>' : '') +
+                  (s.verification_code ? '<div class="text-xs mt-1" style="color:var(--text-muted);">Code: <code style="background:var(--bg);padding:0.1rem 0.35rem;border-radius:0.25rem;font-size:0.65rem;">' + escapeHtml(s.verification_code) + '</code></div>' : '') +
+                  '<div class="flex gap-3 mt-1 text-xs text-muted">' +
+                    '<span><strong>' + (s.student_count || 0) + '</strong> students</span>' +
+                    '<span><strong>' + (s.verified_count || 0) + '</strong> verified</span>' +
+                    '<span><strong>' + (s.club_count || 0) + '</strong> clubs</span>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="flex items-center gap-1 flex-shrink-0">' +
+                  '<button class="btn btn-sm edit-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '" data-location="' + escapeHtml(s.location) + '" data-tagline="' + escapeHtml(s.tagline) + '" data-about="' + escapeHtml(s.about) + '" data-established="' + escapeHtml(s.established) + '" title="Edit"><i data-lucide="pencil" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                  '<button class="btn btn-sm reset-school-pwd" data-id="' + s.id + '" title="Reset Password"><i data-lucide="key-round" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                  '<button class="btn btn-danger btn-sm delete-school" data-id="' + s.id + '" data-name="' + escapeHtml(s.name) + '" title="Delete"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                '</div>' +
+              '</div>' +
+              '<div id="edit-school-' + s.id + '" class="hidden mt-3 p-3 rounded-xl" style="background:var(--card);border:1px solid var(--border);"></div>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+          document.getElementById('schoolSearch').style.display = 'block';
+
+          // Edit school
+          document.querySelectorAll('.edit-school').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var editContainer = document.getElementById('edit-school-' + this.getAttribute('data-id'));
+              var isHidden = editContainer.classList.contains('hidden');
+              // Hide all other edit forms
+              document.querySelectorAll('[id^="edit-school-"]').forEach(function(c) { c.classList.add('hidden'); });
+              if (isHidden) {
+                editContainer.classList.remove('hidden');
+                editContainer.innerHTML =
+                  '<form class="edit-school-form" data-id="' + this.getAttribute('data-id') + '">' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">School Name</label>' +
+                      '<input type="text" class="edit-school-name w-full" value="' + this.getAttribute('data-name') + '" required>' +
+                    '</div>' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">Location</label>' +
+                      '<input type="text" class="edit-school-location w-full" value="' + this.getAttribute('data-location') + '">' +
+                    '</div>' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">Tagline</label>' +
+                      '<input type="text" class="edit-school-tagline w-full" value="' + this.getAttribute('data-tagline') + '">' +
+                    '</div>' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">About</label>' +
+                      '<textarea class="edit-school-about w-full" rows="2">' + this.getAttribute('data-about') + '</textarea>' +
+                    '</div>' +
+                    '<div class="mb-2">' +
+                      '<label class="text-xs font-bold text-muted block mb-1">Established</label>' +
+                      '<input type="text" class="edit-school-established w-full" value="' + this.getAttribute('data-established') + '" placeholder="e.g. 1995">' +
+                    '</div>' +
+                    '<div class="flex gap-2">' +
+                      '<button type="submit" class="btn btn-primary btn-sm" style="flex:1;">Save</button>' +
+                      '<button type="button" class="btn btn-sm cancel-edit-school" style="flex:1;">Cancel</button>' +
+                    '</div>' +
+                  '</form>';
+                lucide.createIcons();
+              }
+            });
+          });
+
+          // Handle edit form submit + cancel via delegation
+          document.addEventListener('submit', function(e) {
+            if (e.target.classList.contains('edit-school-form')) {
+              e.preventDefault();
+              var form = e.target;
+              var id = form.getAttribute('data-id');
+              fetch('/api/admin/school/' + id + '/edit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                  name: form.querySelector('.edit-school-name').value,
+                  location: form.querySelector('.edit-school-location').value,
+                  tagline: form.querySelector('.edit-school-tagline').value,
+                  about: form.querySelector('.edit-school-about').value,
+                  established: form.querySelector('.edit-school-established').value
+                })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(d) {
+                if (d.success) {
+                  showToast('School updated', 'success');
+                  loadSchools();
+                } else {
+                  showToast(d.error || 'Error', 'info');
+                }
+              })
+              .catch(function() { showToast('Error updating school', 'info'); });
+            }
+          });
+
+          document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('cancel-edit-school')) {
+              var form = e.target.closest('form');
+              if (form) {
+                var id = form.getAttribute('data-id');
+                document.getElementById('edit-school-' + id).classList.add('hidden');
+              }
+            }
+          });
+
+          // Reset school admin password
+          document.querySelectorAll('.reset-school-pwd').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              if (!confirm('Reset password for this school admin?')) return;
+              fetch('/api/admin/school/' + id + '/reset-password', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) {
+                    showToast('Password reset! Email: ' + d.email + ' / New password: ' + d.password, 'success');
+                  } else {
+                    showToast(d.error || 'Error', 'info');
+                  }
+                })
+                .catch(function() {});
+            });
+          });
+          document.querySelectorAll('.delete-school').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var id = this.getAttribute('data-id');
+              var name = this.getAttribute('data-name');
+              if (!confirm('Delete school "' + name + '" (ID: ' + id + ')? This will unlink all verified students.')) return;
+              fetch('/api/admin/school/' + id + '/delete', { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) { showToast('School deleted', 'success'); loadSchools(); }
+                  else { showToast(d.error || 'Error', 'info'); }
+                })
+                .catch(function() {});
+            });
+          });
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No schools registered</div>';
+          document.getElementById('schoolSearch').style.display = 'none';
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Ads Management
+  document.getElementById('toggleAdFormBtn').addEventListener('click', function() {
+    var c = document.getElementById('adFormContainer');
+    c.classList.toggle('hidden');
+    lucide.createIcons();
+  });
+
+  function loadAds() {
+    fetch('/api/admin/ads')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var list = document.getElementById('adsList');
+        list.innerHTML = '';
+        if (data.ads && data.ads.length > 0) {
+          data.ads.forEach(function(ad) {
+            var el = document.createElement('div');
+            el.className = 'p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            var statusLabel = ad.active ? 'Active' : 'Paused';
+            var imgHtml = ad.image ? '<img src="' + ad.image + '" alt="" style="width:60px;height:40px;object-fit:cover;border-radius:0.375rem;flex-shrink:0;" onerror="this.style.display=\'none\'">' : '';
+            el.innerHTML =
+              '<div class="flex items-start gap-3">' +
+                imgHtml +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div class="flex items-center gap-2">' +
+                    '<span class="text-sm font-bold">' + escapeHtml(ad.title) + '</span>' +
+                    '<span class="text-xs px-1.5 py-0.5 rounded" style="background:' + (ad.active ? 'rgba(16,185,129,0.15)' : 'rgba(156,163,175,0.15)') + ';color:' + (ad.active ? '#10b981' : '#9ca3af') + ';">' + statusLabel + '</span>' +
+                  '</div>' +
+                  '<div class="text-xs text-muted">' + escapeHtml(ad.company) + ' &middot; ' + escapeHtml(ad.placement || 'sidebar') + (ad.target_role ? ' &middot; Target: ' + ad.target_role : '') + '</div>' +
+                  (ad.content ? '<div class="text-xs text-muted mt-1 truncate">' + escapeHtml(ad.content) + '</div>' : '') +
+                  '<div class="text-xs mt-1" style="color:var(--text-muted);">Clicks: ' + (ad.clicks || 0) + ' &middot; Impressions: ' + (ad.impressions || 0) + '</div>' +
+                '</div>' +
+                '<div class="flex items-center gap-1 flex-shrink-0">' +
+                  '<button class="btn btn-sm toggle-ad' + (ad.active ? '' : ' btn-primary') + '" data-id="' + ad.id + '" style="' + (ad.active ? 'background:rgba(234,179,8,0.15);color:#eab308;' : '') + '">' + (ad.active ? 'Pause' : 'Activate') + '</button>' +
+                  '<button class="btn btn-danger btn-sm delete-ad" data-id="' + ad.id + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>' +
+                '</div>' +
+              '</div>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+          document.querySelectorAll('.delete-ad').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              if (!confirm('Delete this ad?')) return;
+              fetch('/api/admin/ad/' + this.getAttribute('data-id') + '/delete', { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) { showToast('Ad deleted', 'success'); loadAds(); }
+                  else { showToast(d.error || 'Error', 'info'); }
+                })
+                .catch(function() {});
+            });
+          });
+          document.querySelectorAll('.toggle-ad').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              fetch('/api/admin/ad/' + this.getAttribute('data-id') + '/toggle', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) { showToast('Ad ' + (d.active ? 'activated' : 'paused'), 'success'); loadAds(); }
+                  else { showToast(d.error || 'Error', 'info'); }
+                })
+                .catch(function() {});
+            });
+          });
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No ads created yet</div>';
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Posts Management
+  function loadPosts() {
+    document.getElementById('postsLoader').classList.remove('hidden');
+    fetch('/api/admin/posts')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('postsLoader').classList.add('hidden');
+        var list = document.getElementById('adminPostsList');
+        list.innerHTML = '';
+        if (data.posts && data.posts.length > 0) {
+          data.posts.forEach(function(post) {
+            var el = document.createElement('div');
+            el.className = 'flex items-center justify-between p-3 rounded-xl mb-2';
+            el.style.background = 'var(--bg-hover)';
+            el.innerHTML =
+              '<div style="flex:1;min-width:0;">' +
+                '<div class="flex items-center gap-2">' +
+                  '<span class="text-sm font-bold">' + escapeHtml(post.author ? post.author.name : 'Unknown') + '</span>' +
+                  (post.title ? '<span class="text-xs text-muted">- ' + escapeHtml(post.title) + '</span>' : '') +
+                '</div>' +
+                (post.content ? '<div class="text-xs text-muted truncate">' + escapeHtml(post.content) + '</div>' : '') +
+                '<div class="text-xs text-muted mt-1">' + (post.created_at || '') + ' &middot; <span class="font-bold">' + (post.likes_count || 0) + ' likes</span></div>' +
+              '</div>' +
+              '<button class="btn btn-danger btn-sm delete-post" data-id="' + post.id + '"><i data-lucide="trash-2" style="width:0.875rem;height:0.875rem;"></i></button>';
+            list.appendChild(el);
+          });
+          lucide.createIcons();
+          document.querySelectorAll('.delete-post').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              if (!confirm('Delete this post?')) return;
+              fetch('/api/admin/post/' + this.getAttribute('data-id') + '/delete', { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (d.success) { showToast('Post deleted', 'success'); loadPosts(); }
+                  else { showToast(d.error || 'Error', 'info'); }
+                })
+                .catch(function() {});
+            });
+          });
+        } else {
+          list.innerHTML = '<div class="text-center text-muted text-sm py-4">No posts yet</div>';
+        }
+      })
+      .catch(function() { document.getElementById('postsLoader').classList.add('hidden'); });
+  }
+
+  // Ad form
+  document.getElementById('adForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    fetch('/api/admin/ad/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        title: document.getElementById('adTitle').value,
+        company: document.getElementById('adCompany').value,
+        content: document.getElementById('adContent').value,
+        image: document.getElementById('adImage').value,
+        cta_text: document.getElementById('adCtaText').value,
+        cta_url: document.getElementById('adCtaUrl').value,
+        placement: document.getElementById('adPlacement').value,
+        target_role: document.getElementById('adTargetRole').value,
+        active: document.getElementById('adActive').value === 'true'
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        document.getElementById('adForm').reset();
+        document.getElementById('adFormContainer').classList.add('hidden');
+        showToast('Ad created!', 'success');
+        loadAds();
+      } else {
+        showToast(data.error || 'Error', 'info');
+      }
+    })
+    .catch(function() { showToast('Error creating ad', 'info'); });
+  });
+
+  loadSchools();
+  loadAds();
+  loadPosts();
+  loadPolicyStats();
+
+  // School search filtering
+  document.getElementById('schoolSearch').addEventListener('input', function() {
+    var q = this.value.toLowerCase();
+    var cards = document.getElementById('schoolsList').children;
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      if (card.id && card.id.indexOf('school-') === 0) {
+        var nameEl = card.querySelector('.text-sm.font-bold');
+        card.style.display = (nameEl && nameEl.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+      }
+    }
+  });
+});
+
+function loadPolicyStats() {
+  fetch('/api/admin/policy/stats')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('policyStats');
+      if (!el) return;
+      var html = 'Current version: <strong>' + d.current_version + '</strong> &middot; ';
+      html += 'Users accepted: <strong>' + d.accepted_count + '/' + d.total_users + '</strong> (' + d.acceptance_rate + '%)';
+      if (d.versions && d.versions.length) {
+        html += '<br><span class="text-xs">Published versions: ' + d.versions.map(function(v) { return v.type + ' v' + v.version + ' (' + v.created_at + ')'; }).join(', ') + '</span>';
+      }
+      el.innerHTML = html;
+    })
+    .catch(function() {});
+}
+
+function publishPolicy() {
+  var type = document.getElementById('policyTypeSelect').value;
+  var version = document.getElementById('policyVersionInput').value.trim();
+  var content = document.getElementById('policyContentInput').value.trim();
+  if (!version) { showToast('Version is required', 'info'); return; }
+  fetch('/api/admin/policy/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ policy_type: type, version: version, content: content })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      showToast('Version ' + version + ' published!', 'success');
+      document.getElementById('policyVersionInput').value = '';
+      document.getElementById('policyContentInput').value = '';
+      loadPolicyStats();
+    } else {
+      showToast(d.error || 'Error', 'info');
+    }
+  })
+  .catch(function() { showToast('Error publishing version', 'info'); });
+}
+</script>
+{% endblock %}

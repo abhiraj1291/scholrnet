@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:42rem;margin:0 auto;">
+  <div class="card mb-3">
+    <div class="relative">
+      <i data-lucide="search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:1.25rem;height:1.25rem;color:var(--text-muted);"></i>
+      <input type="text" id="searchInput" placeholder="Search people, schools, achievements..." class="w-full" style="padding-left:2.5rem;" autofocus>
+    </div>
+  </div>
+
+  <div id="searchResults"></div>
+
+  <div id="searchEmpty" class="card text-center py-8">
+    <i data-lucide="search" style="width:3rem;height:3rem;color:var(--text-muted);margin:0 auto 1rem;display:block;"></i>
+    <p class="text-muted">Type above to search across ScholrNet</p>
+  </div>
+
+  <div id="peopleYouMayKnow">
+    <div class="card">
+      <h3 class="text-sm font-bold mb-3" style="color:var(--text)">People You May Know</h3>
+      <div id="suggestionsList">
+        <div class="skeleton" style="height:48px;margin-bottom:0.5rem;"></div>
+        <div class="skeleton" style="height:48px;margin-bottom:0.5rem;"></div>
+        <div class="skeleton" style="height:48px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/api/friend/suggestions').then(function(r) { return r.json(); }).then(function(d) {
+    var el = document.getElementById('suggestionsList');
+    if (!d.suggestions || !d.suggestions.length) {
+      el.innerHTML = '<p class="text-sm text-muted">No suggestions yet.</p>';
+      return;
+    }
+    el.innerHTML = d.suggestions.map(function(u) {
+      return '<a href="/profile/' + u.id + '" class="flex items-center gap-2 py-1.5" style="text-decoration:none;">' +
+        '<div class="profile-avatar" style="width:32px;height:32px;font-size:0.65rem;flex-shrink:0;">' + (u.avatar || u.name.slice(0,2).toUpperCase()) + '</div>' +
+        '<div><div style="font-size:0.8rem;font-weight:600;color:var(--text)">' + u.name + '</div>' +
+        '<div style="font-size:0.7rem;color:var(--text-muted)">' + u.reason + '</div></div></a>';
+    }).join('');
+  }).catch(function() {});
+
+  var searchInput = document.getElementById('searchInput');
+  var suggestionsEl = document.getElementById('peopleYouMayKnow');
+  var resultsEl = document.getElementById('searchResults');
+  var emptyEl = document.getElementById('searchEmpty');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      var q = this.value.trim();
+      if (q.length >= 2) {
+        if (suggestionsEl) suggestionsEl.style.display = 'none';
+      } else {
+        if (suggestionsEl) suggestionsEl.style.display = 'block';
+      }
+    });
+  }
+});
+</script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+{% endblock %}

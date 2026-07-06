@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:48rem;margin:0 auto;">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-xl font-black">Team Finder</h1>
+      <p class="text-sm text-muted">Find teammates for competitions and projects</p>
+    </div>
+    <button id="openTeamFormBtn" class="btn btn-primary"><i data-lucide="plus" style="width:1rem;height:1rem;"></i> Create Request</button>
+  </div>
+
+  <!-- Create Team Request Modal -->
+  <div id="teamFormModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="font-bold">Create Team Request</span>
+        <button id="closeTeamForm" class="btn btn-ghost btn-sm"><i data-lucide="x" style="width:1.25rem;height:1.25rem;"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="teamForm">
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Title</label>
+            <input type="text" id="teamTitle" placeholder="e.g. Looking for team for NASA Space Apps" required>
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Opportunity Name</label>
+            <input type="text" id="teamOpportunity" placeholder="e.g. NASA Space Apps Challenge 2026">
+          </div>
+          <div class="mb-2">
+            <label class="text-xs font-bold text-muted block mb-1">Looking For (tags, comma separated)</label>
+            <input type="text" id="teamTags" placeholder="e.g. UI/UX, Python, Business Lead">
+          </div>
+          <div class="mb-3">
+            <label class="text-xs font-bold text-muted block mb-1">Description</label>
+            <textarea id="teamDesc" rows="3" placeholder="Describe what you're looking for in teammates..." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary w-full" style="padding:0.625rem;">Create Request</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Requests List -->
+  <div id="teamRequestsList"></div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+var TEAM_REQUESTS_DATA = [
+  {% for req in team_requests %}
+  {
+    id: {{ req.id }},
+    title: {{ req.title|tojson|safe }},
+    creator_id: {{ req.creator_id|tojson|safe }},
+    creator_name: {{ req.creator_name|tojson|safe }},
+    opportunity_name: {{ req.opportunity_name|tojson|safe }},
+    looking_for: {% if req.looking_for %}{{ req.looking_for|safe }}{% else %}[]{% endif %},
+    description: {{ req.description|tojson|safe }}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+</script>
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+  var currentUserId = {{ user.id|tojson }};
+
+  // Modal controls
+  var teamFormModal = document.getElementById('teamFormModal');
+  document.getElementById('openTeamFormBtn').addEventListener('click', function() {
+    teamFormModal.classList.remove('hidden');
+    lucide.createIcons();
+  });
+  document.getElementById('closeTeamForm').addEventListener('click', function() {
+    teamFormModal.classList.add('hidden');
+  });
+  teamFormModal.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+  });
+
+  // Render team requests from server data
+  function renderTeams() {
+    var list = document.getElementById('teamRequestsList');
+    list.innerHTML = '';
+    if (TEAM_REQUESTS_DATA.length > 0) {
+      TEAM_REQUESTS_DATA.forEach(function(req) {
+        var el = document.createElement('div');
+        el.className = 'card mb-3';
+        var isOwner = req.creator_id === currentUserId;
+        var tags = Array.isArray(req.looking_for) ? req.looking_for : [];
+        el.innerHTML =
+          '<div class="flex items-start justify-between">' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div class="flex items-center gap-2">' +
+                '<span class="font-bold text-sm">' + escapeHtml(req.title) + '</span>' +
+                (isOwner ? '<span class="badge badge-warning">Your Request</span>' : '') +
+              '</div>' +
+              (req.opportunity_name ? '<div class="text-xs text-muted">For: ' + escapeHtml(req.opportunity_name) + '</div>' : '') +
+              '<div class="flex items-center gap-2 mt-1">' +
+                '<div class="avatar avatar-sm">' + (req.creator_name ? req.creator_name.slice(0,2).toUpperCase() : '??') + '</div>' +
+                '<span class="text-xs font-bold">' + escapeHtml(req.creator_name || 'Unknown') + '</span>' +
+              '</div>' +
+              (req.description ? '<p class="text-xs text-muted mt-2">' + escapeHtml(req.description) + '</p>' : '') +
+              (tags.length > 0 ? '<div class="tags mt-2">' + tags.map(function(t) { return '<span class="tag">' + t + '</span>'; }).join('') + '</div>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="mt-3 pt-3" style="border-top:1px solid var(--border);">' +
+            (isOwner ?
+              '<div class="applicants-section" data-id="' + req.id + '">' +
+                '<button class="btn btn-outline btn-sm w-full show-applicants">View Applicants</button>' +
+                '<div class="applicants-list hidden mt-2"></div>' +
+              '</div>' :
+              '<button class="btn btn-primary btn-sm w-full apply-team-btn" data-id="' + req.id + '">Apply to Join</button>'
+            ) +
+          '</div>';
+        list.appendChild(el);
+      });
+      lucide.createIcons();
+    } else {
+      list.innerHTML = '<div class="text-center text-muted text-sm py-8"><i data-lucide="users" style="width:2rem;height:2rem;margin:0 auto 0.5rem;display:block;"></i> No team requests yet. Be the first!</div>';
+      lucide.createIcons();
+    }
+
+    // Apply buttons
+    document.querySelectorAll('.apply-team-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = this.getAttribute('data-id');
+        var original = this.textContent;
+        this.textContent = 'Applying...';
+        this.disabled = true;
+        fetch('/api/team/' + id + '/apply', { method: 'POST' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.success) {
+              showToast('Applied!', 'success');
+              btn.textContent = 'Applied';
+              btn.classList.remove('btn-primary');
+              btn.classList.add('btn-success');
+            } else {
+              showToast(data.error || 'Error', 'info');
+              btn.textContent = original;
+              btn.disabled = false;
+            }
+          })
+          .catch(function() {
+            showToast('Error applying', 'info');
+            btn.textContent = original;
+            btn.disabled = false;
+          });
+      });
+    });
+
+    // Show applicants
+    document.querySelectorAll('.show-applicants').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var section = this.closest('.applicants-section');
+        var list = section.querySelector('.applicants-list');
+        var reqId = section.getAttribute('data-id');
+        list.classList.toggle('hidden');
+        if (!list.classList.contains('hidden') && list.children.length === 0) {
+          fetch('/api/team/' + reqId + '/applicants')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              list.innerHTML = '';
+              if (data.applicants && data.applicants.length > 0) {
+                data.applicants.forEach(function(app) {
+                  var ael = document.createElement('div');
+                  ael.className = 'flex items-center justify-between p-2 rounded-lg mb-1';
+                  ael.style.background = 'var(--bg-hover)';
+                  ael.innerHTML =
+                    '<div class="flex items-center gap-2">' +
+                      '<div class="avatar avatar-sm">' + (app.name ? app.name.slice(0,2).toUpperCase() : '??') + '</div>' +
+                      '<span class="text-sm font-bold">' + escapeHtml(app.name || 'Unknown') + '</span>' +
+                    '</div>' +
+                    '<div class="flex gap-1">' +
+                      '<button class="btn btn-sm btn-success applicant-action" data-req="' + reqId + '" data-user="' + app.id + '" data-action="accept">Accept</button>' +
+                      '<button class="btn btn-sm btn-danger applicant-action" data-req="' + reqId + '" data-user="' + app.id + '" data-action="reject">Reject</button>' +
+                    '</div>';
+                  list.appendChild(ael);
+                });
+                lucide.createIcons();
+              } else {
+                list.innerHTML = '<div class="text-xs text-muted text-center py-2">No applicants yet</div>';
+              }
+
+              document.querySelectorAll('.applicant-action').forEach(function(abtn) {
+                abtn.addEventListener('click', function() {
+                  var reqId = this.getAttribute('data-req');
+                  var userId = this.getAttribute('data-user');
+                  var action = this.getAttribute('data-action');
+                  fetch('/api/team/' + reqId + '/applicant/' + action, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: parseInt(userId)})
+                  })
+                  .then(function(r) { return r.json(); })
+                  .then(function(data) {
+                    if (data.success) {
+                      showToast('Applicant ' + action + 'ed!', 'success');
+                      btn.click();
+                    } else {
+                      showToast(data.error || 'Error', 'info');
+                    }
+                  })
+                  .catch(function() { showToast('Error', 'info'); });
+                });
+              });
+            })
+            .catch(function() {});
+        }
+      });
+    });
+  }
+
+  document.getElementById('teamForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var body = {
+      title: document.getElementById('teamTitle').value,
+      opportunityName: document.getElementById('teamOpportunity').value,
+      lookingFor: document.getElementById('teamTags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean),
+      description: document.getElementById('teamDesc').value
+    };
+    fetch('/api/team/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        teamFormModal.classList.add('hidden');
+        document.getElementById('teamForm').reset();
+        showToast('Team request created!', 'success');
+        window.location.reload();
+      } else {
+        showToast(data.error || 'Error', 'info');
+      }
+    })
+    .catch(function() { showToast('Error creating request', 'info'); });
+  });
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  renderTeams();
+});
+</script>
+{% endblock %}
