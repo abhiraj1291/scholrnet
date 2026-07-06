@@ -9,11 +9,13 @@
   <meta property="og:description" content="Recent achievements and posts from the ScholrNet academic community.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://scholrnet.in/public">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.468.0" integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu" crossorigin="anonymous"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',-apple-system,sans-serif;background:#f5f7fa;color:#1a1a2e;line-height:1.6;-webkit-font-smoothing:antialiased;padding:2rem 1rem}
@@ -104,6 +106,6 @@
       &copy; 2026 ScholrNet &middot; <a href="{{ url_for('main.index') }}">Home</a>
     </div>
   </div>
-  <script>if(typeof lucide!=='undefined') lucide.createIcons()</script>
+  <script nonce="{{ csp_nonce }}">if(typeof lucide!=='undefined') lucide.createIcons()</script>
 </body>
 </html>

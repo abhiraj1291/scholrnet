@@ -10,7 +10,9 @@
   <meta property="og:description" content="Sign in to ScholrNet — find internships, scholarships, and hackathons with your verified student profile.">
   <meta property="og:url" content="https://scholrnet.in">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://www.scholrnet.in/static/logo.svg">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <meta name="description" content="Sign in to ScholrNet and access internships, scholarships, hackathons, and your verified academic profile.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -127,7 +129,7 @@
             </div>
             <button type="submit" class="btn-submit" id="loginSubmit"><span class="spinner"></span><span class="btn-text">Sign in</span></button>
           </form>
-          <script>document.getElementById('emailForm').addEventListener('submit',function(){document.getElementById('loginSubmit').classList.add('loading');});</script>
+          <script nonce="{{ csp_nonce }}">document.getElementById('emailForm').addEventListener('submit',function(){document.getElementById('loginSubmit').classList.add('loading');});</script>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;">
           <a href="{{ url_for('auth.forgot_password') }}" class="forgot">Forgot password?</a>
         </div>
@@ -142,7 +144,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     var firebaseConfig = {{ firebase_config | tojson | safe }};
     if (firebaseConfig.apiKey) {
       firebase.initializeApp(firebaseConfig);

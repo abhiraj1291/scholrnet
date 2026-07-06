@@ -11,9 +11,9 @@ api_bp = Blueprint('api', __name__, url_prefix='')
 
 @api_bp.route('/api/admin/posts')
 @login_required
+@super_admin_required
 def api_admin_posts():
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     posts = Post.query.with_entities(Post.id, Post.author_id, Post.title, Post.content, Post.likes, Post.timestamp).order_by(Post.id.desc()).limit(50).all()
     uids = set(p.author_id for p in posts if p.author_id)
     user_rows = db.session.query(User.id, User.name, User.avatar).filter(User.id.in_(uids)).all() if uids else []
@@ -23,9 +23,9 @@ def api_admin_posts():
 
 @api_bp.route('/api/admin/post/<int:post_id>/delete', methods=['DELETE'])
 @login_required
+@super_admin_required
 def api_admin_delete_post(post_id):
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     post = Post.query.get_or_404(post_id)
     Comment.query.filter_by(post_id=post_id).delete()
     UserLike.query.filter_by(post_id=post_id).delete()
@@ -37,9 +37,9 @@ def api_admin_delete_post(post_id):
 
 @api_bp.route('/api/admin/ads')
 @login_required
+@super_admin_required
 def api_admin_ads():
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     page = request.args.get('page', 1, type=int)
     per_page = 50
     pagination = Ad.query.order_by(Ad.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
@@ -50,9 +50,9 @@ def api_admin_ads():
 
 @api_bp.route('/api/admin/ad/create', methods=['POST'])
 @login_required
+@super_admin_required
 def api_admin_create_ad():
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     data = request.json or {}
     ad = Ad(
         title=sanitize_text(data.get('title', ''), 200),
@@ -72,9 +72,9 @@ def api_admin_create_ad():
 
 @api_bp.route('/api/admin/ad/<int:ad_id>/toggle', methods=['POST'])
 @login_required
+@super_admin_required
 def api_admin_ad_toggle(ad_id):
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     ad = Ad.query.get_or_404(ad_id)
     ad.active = not ad.active
     db.session.commit()
@@ -83,9 +83,9 @@ def api_admin_ad_toggle(ad_id):
 
 @api_bp.route('/api/admin/ad/<int:ad_id>/delete', methods=['DELETE'])
 @login_required
+@super_admin_required
 def api_admin_delete_ad(ad_id):
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     ad = Ad.query.get_or_404(ad_id)
     audit_log('delete_ad', 'ad', ad_id, f'title={ad.title}')
     db.session.delete(ad)
@@ -95,9 +95,9 @@ def api_admin_delete_ad(ad_id):
 
 @api_bp.route('/api/admin/schools')
 @login_required
+@super_admin_required
 def api_admin_schools():
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     schools = School.query.order_by(School.id.desc()).all()
     result = []
     for s in schools:
@@ -119,9 +119,9 @@ def api_admin_schools():
 
 @api_bp.route('/api/admin/school/create', methods=['POST'])
 @login_required
+@super_admin_required
 def api_admin_create_school():
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     data = request.json or {}
     name = sanitize_text(data.get('name', ''), 200)
     if not name:
@@ -152,9 +152,9 @@ def api_admin_create_school():
 
 @api_bp.route('/api/admin/school/<int:school_id>/edit', methods=['POST'])
 @login_required
+@super_admin_required
 def api_admin_edit_school(school_id):
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     school = School.query.get_or_404(school_id)
     data = request.json or {}
     if 'name' in data:
@@ -173,9 +173,9 @@ def api_admin_edit_school(school_id):
 
 @api_bp.route('/api/admin/school/<int:school_id>/reset-password', methods=['POST'])
 @login_required
+@super_admin_required
 def api_admin_school_reset_password(school_id):
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     school = School.query.get_or_404(school_id)
     admin = User.query.filter_by(school=school.name, role='admin').first()
     if not admin:
@@ -191,9 +191,9 @@ def api_admin_school_reset_password(school_id):
 
 @api_bp.route('/api/admin/school/<int:school_id>/delete', methods=['DELETE'])
 @login_required
+@super_admin_required
 def api_admin_delete_school(school_id):
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     school = School.query.get_or_404(school_id)
     User.query.filter_by(verified_school_id=school_id).update({'verified_school_id': None, 'school_verified': False})
     User.query.filter_by(school=school.name).update({'school': ''})
@@ -207,9 +207,9 @@ def api_admin_delete_school(school_id):
 
 @api_bp.route('/api/admin/audit-logs')
 @login_required
+@super_admin_required
 def api_admin_audit_logs():
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     page = request.args.get('page', 1, type=int)
     if page < 1:
         page = 1
@@ -237,9 +237,9 @@ def api_admin_audit_logs():
 
 @api_bp.route('/api/admin/policy/stats')
 @login_required
+@super_admin_required
 def api_admin_policy_stats():
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     total_users = User.query.count()
     accepted = User.query.filter(User.terms_accepted == True).count()
     current_version = '1.0'
@@ -255,9 +255,9 @@ def api_admin_policy_stats():
 
 @api_bp.route('/api/admin/policy/update', methods=['POST'])
 @login_required
+@super_admin_required
 def api_admin_policy_update():
-    if current_user.role != 'super_admin':
-        return jsonify({'error': 'Unauthorized'}), 403
+
     data = request.json or {}
     policy_type = data.get('policy_type', '').strip()
     version = data.get('version', '').strip()

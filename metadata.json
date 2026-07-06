@@ -1,6 +1,0 @@
-{
-  "name": "ScholrNet",
-  "description": "ScholrNet is a verified academic networking and portfolio platform for school students, teachers, and coaching institutes to showcase achievements, collaborate on projects, find opportunities, and verify credentials.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

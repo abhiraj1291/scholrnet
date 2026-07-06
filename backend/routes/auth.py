@@ -1,4 +1,4 @@
-import os, re, json, random, uuid, secrets
+import os, re, json, random, uuid, secrets, hmac
 from datetime import datetime, timezone, timedelta
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session, abort, current_app
 from flask_login import login_required, login_user, logout_user, current_user
@@ -33,18 +33,27 @@ def login():
                 return render_template('auth/login.html', error="Invalid credentials")
             user = User.query.filter_by(email=email).first()
             if user and user.password_hash != '*firebase*':
+                if user.locked_until and user.locked_until > datetime.utcnow():
+                    return render_template('auth/login.html', error="Account temporarily locked. Try again later.")
                 if bcrypt.check_password_hash(user.password_hash, password):
+                    user.login_attempts = 0
+                    user.locked_until = None
+                    db.session.commit()
                     login_user(user)
                     session.permanent = True
                     if user.totp_enabled:
                         session['2fa_required'] = True
                         return redirect(url_for('auth.verify_2fa'))
                     return redirect(url_for('main.dashboard'))
+                user.login_attempts = (user.login_attempts or 0) + 1
+                if user.login_attempts >= 5:
+                    user.locked_until = datetime.utcnow() + timedelta(minutes=15)
+                db.session.commit()
             return render_template('auth/login.html', error="Invalid email or password")
         return render_template('auth/login.html',
             firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
     except Exception:
-        import traceback; traceback.print_exc()
+        current_app.logger.exception('auth error')
         return render_template('auth/login.html', error="Login error. Please try again.")
 
 
@@ -184,7 +193,7 @@ def api_firebase_auth():
         session.permanent = True
         return jsonify({'success': True, 'redirect': '/dashboard'})
     except Exception:
-        import traceback; traceback.print_exc()
+        current_app.logger.exception('auth error')
         return jsonify({'success': False, 'error': 'Server error'}), 500
 
 
@@ -202,7 +211,7 @@ def verify_email_otp():
             expires = current_user.email_otp_expires
             if isinstance(expires, str):
                 expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
-            if current_user.email_otp != otp or not expires or datetime.utcnow() > expires:
+            if not hmac.compare_digest(current_user.email_otp or '', otp) or not expires or datetime.utcnow() > expires:
                 return render_template('auth/verify_otp.html', error='Invalid or expired code', email=current_user.email)
             current_user.email_verified = True
             current_user.email_otp = ''
@@ -213,7 +222,7 @@ def verify_email_otp():
                 return redirect(url_for('main.choose_username'))
             return redirect(url_for('main.dashboard'))
         except Exception as e:
-            import traceback; traceback.print_exc()
+            current_app.logger.exception('auth error')
             return render_template('auth/verify_otp.html', error='Verification error', email=current_user.email)
     return render_template('auth/verify_otp.html', email=current_user.email)
 
@@ -306,7 +315,7 @@ def forgot_password():
             return render_template('auth/forgot_sent.html')
         return render_template('auth/forgot.html')
     except Exception:
-        import traceback; traceback.print_exc()
+        current_app.logger.exception('auth error')
         return render_template('auth/forgot.html', error='Something went wrong. Please try again.')
 
 
@@ -331,7 +340,7 @@ def reset_password_otp():
             expires = user.reset_otp_expires
             if isinstance(expires, str):
                 expires = datetime.fromisoformat(expires.replace('Z', '+00:00'))
-            if user.reset_otp != otp or not expires or datetime.utcnow() > expires:
+            if not hmac.compare_digest(user.reset_otp or '', otp) or not expires or datetime.utcnow() > expires:
                 return render_template('auth/reset_otp.html', error='Invalid or expired code', email=email)
             user.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
             user.reset_otp = ''
@@ -340,7 +349,7 @@ def reset_password_otp():
             session.pop('reset_email', None)
             return render_template('auth/reset_success.html')
         except Exception as e:
-            import traceback; traceback.print_exc()
+            current_app.logger.exception('auth error')
             return render_template('auth/reset_otp.html', error=f'Error: {e}', email=email)
     return render_template('auth/reset_otp.html', email=email)
 
@@ -356,7 +365,8 @@ def reset_password(token):
             return render_template('auth/reset.html', error='Password must be 8-128 characters', token=token)
         from datetime import datetime, timezone
         now = datetime.now(timezone.utc).isoformat()
-        u = User.query.filter_by(reset_password_token=token).first()
+        u = User.query.filter(User.reset_password_token != '').all()
+        u = next((x for x in u if hmac.compare_digest(x.reset_password_token or '', token)), None)
         if u and u.reset_password_token_expires and u.reset_password_token_expires > now:
             u.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
             u.reset_password_token = ''
@@ -556,8 +566,9 @@ def api_change_password():
     if not bcrypt.check_password_hash(current_user.password_hash, current_pw):
         return jsonify({'error': 'Current password is incorrect'}), 403
     current_user.password_hash = bcrypt.generate_password_hash(new_pw).decode('utf-8')
+    current_user.session_version += 1
     db.session.commit()
-    session.regenerate()
+    login_user(current_user)
     return jsonify({'success': True})
 
 
@@ -565,8 +576,10 @@ def api_change_password():
 @login_required
 @limiter.limit("5 per hour")
 def api_logout_all():
-    session.regenerate()
-    return jsonify({'success': True, 'message': 'Session regenerated. Please log in again on other devices.'})
+    current_user.session_version += 1
+    db.session.commit()
+    session.clear()
+    return jsonify({'success': True, 'message': 'Logged out of all devices.'})
 
 
 @auth_bp.route('/api/profile/delete-account', methods=['POST'])
@@ -638,7 +651,7 @@ def api_upload_cover():
         db.session.commit()
         return jsonify({"success": True, "url": url})
     except Exception:
-        import traceback; traceback.print_exc()
+        current_app.logger.exception('auth error')
         return jsonify({"success": False, "error": "Upload failed"}), 500
 
 

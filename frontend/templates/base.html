@@ -3,22 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScholrNet — Academic Trust Network</title>
-  <meta name="description" content="ScholrNet helps students find internships, scholarships, hackathons, and clubs with a school-verified academic profile.">
-  <meta property="og:title" content="ScholrNet - Academic Trust Network">
-  <meta property="og:description" content="Find internships, scholarships, hackathons, and clubs. Your achievements, verified by your school.">
+  <title>{% block title %}ScholrNet — Academic Trust Network{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}ScholrNet helps students find internships, scholarships, hackathons, and clubs with a school-verified academic profile.{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}ScholrNet - Academic Trust Network{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Find internships, scholarships, hackathons, and clubs. Your achievements, verified by your school.{% endblock %}">
   <meta property="og:url" content="https://scholrnet.in">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="{{ url_for('static', filename='logo.svg', _external=True) }}">
-  <meta property="og:image:width" content="200">
-  <meta property="og:image:height" content="56">
+  {% block og_image %}
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  {% endblock %}
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ScholrNet - Academic Trust Network">
-  <meta name="twitter:description" content="Find internships, scholarships, hackathons, and clubs. Your achievements, verified by your school.">
+  {% block twitter_image %}
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  {% endblock %}
+  <meta name="twitter:title" content="{% block twitter_title %}ScholrNet - Academic Trust Network{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}Find internships, scholarships, hackathons, and clubs. Your achievements, verified by your school.{% endblock %}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='logo-icon.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo-icon.png') }}">
-  <link rel="canonical" href="{{ request.url }}">
+  <link rel="canonical" href="{{ request.base_url }}">
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://www.gstatic.com">
   <link rel="preconnect" href="https://ngvgawfkzjkibgaxkdpp.supabase.co">
@@ -26,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=10">
-  <script src="https://unpkg.com/lucide@0.468.0" defer></script>
+  <script src="https://unpkg.com/lucide@0.468.0" defer integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu" crossorigin="anonymous"></script>
   {% set palettes = {
     'navy': {'--primary':'#1a2744','--primary-hover':'#2d4a7a','--accent':'#c9a84c','--accent-soft':'#e8d48b','--bg':'#ebf4ff','--bg-card':'#ffffff','--bg-hover':'#fdf0f0','--border':'#cbd5e1','--text-muted':'#5a6a7a','--danger':'#e86565'},
     'coral': {'--primary':'#e86565','--primary-hover':'#d45050','--accent':'#f4b84a','--accent-soft':'#f8d48a','--bg':'#fff5f5','--bg-card':'#ffffff','--bg-hover':'#fef0f0','--border':'#f0d0d0','--text-muted':'#8a6a6a','--danger':'#c0392b'},
@@ -63,8 +68,8 @@
     }
   }
   </script>
-  <script>
-  var CURRENT_USER_ID = {{ current_user.id }};
+  <script nonce="{{ csp_nonce }}">
+  var CURRENT_USER_ID = {{ 'null' if not current_user.is_authenticated else current_user.id }};
   function escapeHtml(s) {
     if (typeof s !== 'string') return s || '';
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -271,7 +276,7 @@
       </div>
     </div>
   </div>
-  <script>if(!localStorage.getItem('cookie-preference')){setTimeout(function(){document.getElementById('cookieBanner').classList.add('show')},500)}</script>
+  <script nonce="{{ csp_nonce }}">if(!localStorage.getItem('cookie-preference')){setTimeout(function(){document.getElementById('cookieBanner').classList.add('show')},500)}</script>
 
   <footer class="app-footer">
     <div class="app-footer-inner">
@@ -304,7 +309,7 @@
   <script defer src="{{ url_for('static', filename='js/chat.js') }}?v=10"></script>
   <script defer src="{{ url_for('static', filename='js/search.js') }}?v=10"></script>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
   function avatarHtml(obj, size) {
     var s = size || 'sm';
     if (obj && obj.avatar_url) {
@@ -315,7 +320,7 @@
   }
   </script>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
   document.getElementById('deleteAccountBtn').addEventListener('click', function() {
     document.getElementById('deleteAccountConfirm').classList.remove('hidden');
   });

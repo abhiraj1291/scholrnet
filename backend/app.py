@@ -1,7 +1,7 @@
-import os, sys, traceback
+import os, sys, traceback, secrets
 from urllib.parse import urlparse
-from datetime import datetime, timezone
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from datetime import datetime, timezone, timedelta
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, g
 from flask_login import login_required, current_user, logout_user
 from config import Config
 from extensions import db, bcrypt, login_manager, compress, limiter
@@ -78,6 +78,21 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
                 return jsonify({'error': 'Forbidden'}), 403
 
     @app.before_request
+    def set_csp_nonce():
+        g.csp_nonce = secrets.token_hex(16)
+
+    @app.before_request
+    def check_idle_timeout():
+        if current_user.is_authenticated and not request.path.startswith('/static/'):
+            last_active = session.get('last_active')
+            now_ts = datetime.now(timezone.utc).timestamp()
+            if last_active and now_ts - last_active > 1800:
+                logout_user()
+                session.clear()
+                return redirect(url_for('auth.login'))
+            session['last_active'] = now_ts
+
+    @app.before_request
     def check_2fa():
         if current_user.is_authenticated and session.get('2fa_required'):
             endpoint = request.endpoint or ''
@@ -112,9 +127,10 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        nonce = getattr(g, 'csp_nonce', '')
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://unpkg.com https://www.gstatic.com https://apis.google.com https://challenges.cloudflare.com; "
+            f"script-src 'self' 'nonce-{nonce}' https://unpkg.com https://www.gstatic.com https://apis.google.com https://challenges.cloudflare.com; "
             "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; "
             "img-src 'self' data: blob: https:; "
             "font-src 'self' data: https://fonts.gstatic.com; "
@@ -132,7 +148,7 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
 
     @app.context_processor
     def inject_globals():
-        return {'schools': []}
+        return {'schools': [], 'csp_nonce': getattr(g, 'csp_nonce', '')}
 
     @app.errorhandler(404)
     def not_found(e):
@@ -158,8 +174,17 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
     @login_manager.user_loader
     def load_user(user_id):
         try:
-            return User.query.get(int(user_id))
-        except (ValueError, TypeError):
+            parts = user_id.split(':')
+            uid = int(parts[0])
+            user = User.query.get(uid)
+            if user is None:
+                return None
+            if len(parts) > 1:
+                expected_version = int(parts[1])
+                if user.session_version != expected_version:
+                    return None
+            return user
+        except (ValueError, TypeError, IndexError):
             return None
 
 

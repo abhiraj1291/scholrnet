@@ -9,6 +9,9 @@
   <meta property="og:description" content="{{ meta_desc }}">
   <meta property="og:type" content="article">
   <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,13 +31,24 @@
     .back-link{display:inline-flex;align-items:center;gap:0.375rem;font-size:0.85rem;color:var(--primary);margin-bottom:1.5rem}
     .back-link:hover{text-decoration:underline}
   </style>
+  {% set opp_type = (opp.type or '').lower() %}
+  {% if 'job' in opp_type or 'intern' in opp_type %}
+    {% set schema_type = 'JobPosting' %}
+  {% elif 'event' in opp_type or 'hackathon' in opp_type or 'compet' in opp_type %}
+    {% set schema_type = 'Event' %}
+  {% else %}
+    {% set schema_type = 'Article' %}
+  {% endif %}
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": "{{ opp.name }}",
-    "description": "{{ (opp.description or '')[:200] }}",
-    "datePublished": "{{ opp.deadline or '' }}"
+    "@type": {{ schema_type|tojson }},
+    "headline": {{ opp.name|tojson }},
+    "description": {{ ((opp.description or '')[:200])|tojson }},
+    "datePublished": {{ (opp.deadline or '')|tojson }}
+    {% if opp.provider and schema_type == 'JobPosting' %},
+    "hiringOrganization": {"@type": "Organization", "name": {{ opp.provider|tojson }}}
+    {% endif %}
   }
   </script>
 </head>

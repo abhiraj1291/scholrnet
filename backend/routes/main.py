@@ -377,7 +377,7 @@ def api_health():
     return jsonify({"status": "healthy"})
 
 
-@main_bp.route('/api/seed')
+@main_bp.route('/api/seed', methods=['POST'])
 @login_required
 def api_seed():
     if current_user.role != 'super_admin':
@@ -388,26 +388,30 @@ def api_seed():
     from extensions import bcrypt
     audit_log('seed_db', 'database', detail='Seeded database with test data')
     _run_seed(bcrypt)
-    return jsonify({"message": "Database seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
+    return jsonify({"message": "Database seeded!"})
 
 
-@main_bp.route('/api/reset-db')
+@main_bp.route('/api/reset-db', methods=['POST'])
 @login_required
 def api_reset_db():
     if current_user.role != 'super_admin':
         return jsonify({'error': 'Unauthorized'}), 403
+    if os.environ.get('ENABLE_ADMIN_TOOLS', '').lower() != 'true':
+        return jsonify({'error': 'Admin tools disabled'}), 403
     from seed import _run_seed
     from extensions import bcrypt
     audit_log('reset_db', 'database', detail='Database reset and re-seeded')
     _run_seed(bcrypt)
-    return jsonify({"message": "Database reset and re-seeded!", "users": ["aarav@scholrnet.com/student123", "shreya@scholrnet.com/school123", "admin@scholrnet.com/admin123"]})
+    return jsonify({"message": "Database reset and re-seeded!"})
 
 
-@main_bp.route('/api/clean-data')
+@main_bp.route('/api/clean-data', methods=['POST'])
 @login_required
 def api_clean_data():
     if current_user.role != 'super_admin':
         return jsonify({'error': 'Unauthorized'}), 403
+    if os.environ.get('ENABLE_ADMIN_TOOLS', '').lower() != 'true':
+        return jsonify({'error': 'Admin tools disabled'}), 403
     from models import EventRegistration, UserLike, Connection, TeamApplicant, MentorshipRequest, MentorInteraction, Notification, ChatMessage, Comment, Post, Achievement, Project, VerificationRequest, SchoolAnnouncement, TeamRequest, Mentor, Opportunity, Ad, School
     audit_log('clean_data', 'database', detail='Removed all seed data')
     EventRegistration.query.delete(); UserLike.query.delete(); Connection.query.delete()
@@ -420,56 +424,12 @@ def api_clean_data():
     return jsonify({"message": "All seed data removed. Test users preserved."})
 
 
-@main_bp.route('/api/migrate')
+@main_bp.route('/api/migrate', methods=['POST'])
 @login_required
 def api_migrate():
     if current_user.role != 'super_admin':
         return jsonify({'error': 'Unauthorized'}), 403
-    from sqlalchemy import text, inspect
-    mig = []
-    try:
-        inspector = inspect(db.engine)
-        posts_cols = [c['name'] for c in inspector.get_columns('posts')]
-        if 'image_url' not in posts_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE posts ADD COLUMN image_url VARCHAR(500) DEFAULT ''")); conn.commit()
-            mig.append("added posts.image_url")
-        if 'video_url' not in posts_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE posts ADD COLUMN video_url VARCHAR(500) DEFAULT ''")); conn.commit()
-            mig.append("added posts.video_url")
-        users_cols = [c['name'] for c in inspector.get_columns('users')]
-        if 'avatar_url' not in users_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(300) DEFAULT ''")); conn.commit()
-            mig.append("added users.avatar_url")
-        if 'username' not in users_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(30) UNIQUE DEFAULT NULL")); conn.commit()
-            mig.append("added users.username")
-        schools_cols = [c['name'] for c in inspector.get_columns('schools')]
-        if 'verification_code' not in schools_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE schools ADD COLUMN verification_code VARCHAR(8) DEFAULT ''")); conn.commit()
-            mig.append("added schools.verification_code")
-        if 'verified_by_email' not in schools_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE schools ADD COLUMN verified_by_email VARCHAR(200) DEFAULT ''")); conn.commit()
-            mig.append("added schools.verified_by_email")
-        if 'school_verified' not in users_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN school_verified BOOLEAN DEFAULT FALSE")); conn.commit()
-            mig.append("added users.school_verified")
-        if 'verified_school_id' not in users_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN verified_school_id INTEGER REFERENCES schools(id)")); conn.commit()
-            mig.append("added users.verified_school_id")
-        if 'cover_banner' not in users_cols:
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN cover_banner VARCHAR(500) DEFAULT ''")); conn.commit()
-            mig.append("added users.cover_banner")
-    except Exception:
-        import traceback; traceback.print_exc()
-        return jsonify({"error": "Migration failed", "ran": mig}), 500
-    audit_log('migrate_db', 'database', detail=f'changes={len(mig)}')
-    return jsonify({"message": "Migration complete", "changes": mig})
+    if os.environ.get('ENABLE_ADMIN_TOOLS', '').lower() != 'true':
+        return jsonify({'error': 'Admin tools disabled'}), 403
+    run_startup_migrations(current_app)
+    return jsonify({"message": "Migrations re-ran"})

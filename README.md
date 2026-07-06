@@ -13,14 +13,6 @@ python run.py
 
 Open http://localhost:3000
 
-## Test Accounts
-
-| Role | Email | Password |
-|------|-------|----------|
-| Student | aarav@scholrnet.com | student123 |
-| Counselor/Admin | shreya@scholrnet.com | school123 |
-| Super Admin | admin@scholrnet.com | admin123 |
-
 ## Project Structure
 
 ```

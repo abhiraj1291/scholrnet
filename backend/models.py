@@ -1,3 +1,4 @@
+import hmac, json, base64, os
 from flask_login import UserMixin
 from datetime import datetime, timezone
 from extensions import db
@@ -15,7 +16,7 @@ class User(UserMixin, db.Model):
     avatar_url = db.Column(db.String(300), default="")
     role = db.Column(db.String(20), default="student", index=True)
     theme_color = db.Column(db.String(30), default="navy")
-    groq_api_key = db.Column(db.String(200), default="")
+    groq_api_key = db.Column(db.String(500), default="")
     username = db.Column(db.String(30), unique=True, nullable=True)
     cover_banner = db.Column(db.String(500), default="")
     school_verified = db.Column(db.Boolean, default=False, nullable=True)
@@ -38,9 +39,44 @@ class User(UserMixin, db.Model):
     terms_accepted_at = db.Column(db.DateTime, nullable=True)
     terms_version = db.Column(db.String(20), default="")
     privacy_accepted_at = db.Column(db.DateTime, nullable=True)
+    session_version = db.Column(db.Integer, default=0)
+    login_attempts = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
 
     achievements = db.relationship('Achievement', backref='user', lazy='dynamic')
     projects = db.relationship('Project', backref='user', lazy='dynamic')
+
+    def get_id(self):
+        return f"{self.id}:{self.session_version}"
+
+    @staticmethod
+    def _fernet_key():
+        key = os.environ.get('API_KEY_ENCRYPTION_KEY', '')
+        if not key:
+            return None
+        return base64.urlsafe_b64decode(key)
+
+    def set_encrypted_groq_key(self, plaintext):
+        key = self._fernet_key()
+        if not key:
+            self.groq_api_key = plaintext
+            return
+        from cryptography.fernet import Fernet
+        f = Fernet(base64.urlsafe_b64encode(key.ljust(32, b'0')[:32]))
+        self.groq_api_key = f.encrypt(plaintext.encode()).decode()
+
+    def get_decrypted_groq_key(self):
+        if not self.groq_api_key:
+            return ''
+        key = self._fernet_key()
+        if not key:
+            return self.groq_api_key
+        try:
+            from cryptography.fernet import Fernet
+            f = Fernet(base64.urlsafe_b64encode(key.ljust(32, b'0')[:32]))
+            return f.decrypt(self.groq_api_key.encode()).decode()
+        except Exception:
+            return self.groq_api_key
 
 class PolicyVersion(db.Model):
     __tablename__ = 'policy_versions'

@@ -16,6 +16,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ScholrNet — Your Verified Academic Profile">
   <meta name="twitter:description" content="Find internships, scholarships, hackathons, and clubs. Your achievements, verified by your school.">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -53,11 +54,12 @@
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      {"@type":"Question","name":"Is ScholrNet free?","acceptedAnswer":{"@type":"Answer","text":"Yes. ScholrNet is completely free for students. Always."}},
-      {"@type":"Question","name":"How does achievement verification work?","acceptedAnswer":{"@type":"Answer","text":"Your school counselor or teacher confirms your achievements through their dashboard. It takes 2 seconds."}},
-      {"@type":"Question","name":"Can colleges see my profile?","acceptedAnswer":{"@type":"Answer","text":"Yes. Your profile generates a shareable verification link. Send it with college applications, scholarship forms, or internship resumes."}},
-      {"@type":"Question","name":"What if my school isn't on ScholrNet yet?","acceptedAnswer":{"@type":"Answer","text":"You can request your school to join, or ask any teacher on the platform to verify your achievements."}},
-      {"@type":"Question","name":"Is my data private?","acceptedAnswer":{"@type":"Answer","text":"Your profile is only visible to connections you approve. Nothing is public by default except your public timeline posts."}}
+      {"@type":"Question","name":"Is ScholrNet free?","acceptedAnswer":{"@type":"Answer","text":"Yes. ScholrNet is completely free for students. Always. No hidden charges, no premium tiers."}},
+      {"@type":"Question","name":"How does achievement verification work?","acceptedAnswer":{"@type":"Answer","text":"Your school counselor or teacher confirms your achievements through their dashboard. It takes 2 seconds. Once verified, your profile shows a trust badge that colleges and employers recognize."}},
+      {"@type":"Question","name":"What if my school isn't on ScholrNet?","acceptedAnswer":{"@type":"Answer","text":"You can request your school to join, or ask any teacher on the platform to verify your achievements. We're adding new schools every week."}},
+      {"@type":"Question","name":"Can colleges see my profile?","acceptedAnswer":{"@type":"Answer","text":"Yes. Your profile generates a shareable verification link. Send it with college applications, scholarship forms, or internship resumes. It's like a resume that can't lie."}},
+      {"@type":"Question","name":"Is my data private?","acceptedAnswer":{"@type":"Answer","text":"Your profile is only visible to connections you approve. Nothing is public by default except posts you choose to share on the public timeline. You control what's visible."}},
+      {"@type":"Question","name":"I'm a teacher. Can I verify students?","acceptedAnswer":{"@type":"Answer","text":"Yes. Sign up as a teacher or school counselor and you'll get a verification dashboard. You can confirm student achievements and post opportunities for your school."}}
     ]
   }
   </script>
@@ -443,41 +445,41 @@
   <section class="section" id="faq" aria-label="Frequently asked questions">
     <div class="section-inner">
       <h2 class="section-title">Frequently asked questions</h2>
-      <div class="faq-list" itemscope itemtype="https://schema.org/FAQPage">
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">Is ScholrNet free?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Yes. ScholrNet is completely free for students. Always. No hidden charges, no premium tiers.</div>
+      <div class="faq-list">
+        <details class="faq-item fade-up">
+          <summary class="faq-question">Is ScholrNet free?</summary>
+          <div class="faq-answer">
+            <div>Yes. ScholrNet is completely free for students. Always. No hidden charges, no premium tiers.</div>
           </div>
         </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">How does achievement verification work?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Your school counselor or teacher confirms your achievements through their dashboard. It takes 2 seconds. Once verified, your profile shows a trust badge that colleges and employers recognize.</div>
+        <details class="faq-item fade-up">
+          <summary class="faq-question">How does achievement verification work?</summary>
+          <div class="faq-answer">
+            <div>Your school counselor or teacher confirms your achievements through their dashboard. It takes 2 seconds. Once verified, your profile shows a trust badge that colleges and employers recognize.</div>
           </div>
         </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">What if my school isn't on ScholrNet?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">You can request your school to join, or ask any teacher on the platform to verify your achievements. We're adding new schools every week.</div>
+        <details class="faq-item fade-up">
+          <summary class="faq-question">What if my school isn't on ScholrNet?</summary>
+          <div class="faq-answer">
+            <div>You can request your school to join, or ask any teacher on the platform to verify your achievements. We're adding new schools every week.</div>
           </div>
         </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">Can colleges see my profile?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Yes. Your profile generates a shareable verification link. Send it with college applications, scholarship forms, or internship resumes. It's like a resume that can't lie.</div>
+        <details class="faq-item fade-up">
+          <summary class="faq-question">Can colleges see my profile?</summary>
+          <div class="faq-answer">
+            <div>Yes. Your profile generates a shareable verification link. Send it with college applications, scholarship forms, or internship resumes. It's like a resume that can't lie.</div>
           </div>
         </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">Is my data private?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Your profile is only visible to connections you approve. Nothing is public by default except posts you choose to share on the public timeline. You control what's visible.</div>
+        <details class="faq-item fade-up">
+          <summary class="faq-question">Is my data private?</summary>
+          <div class="faq-answer">
+            <div>Your profile is only visible to connections you approve. Nothing is public by default except posts you choose to share on the public timeline. You control what's visible.</div>
           </div>
         </details>
-        <details class="faq-item fade-up" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
-          <summary class="faq-question" itemprop="name">I'm a teacher. Can I verify students?</summary>
-          <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
-            <div itemprop="text">Yes. Sign up as a teacher or school counselor and you'll get a verification dashboard. You can confirm student achievements and post opportunities for your school.</div>
+        <details class="faq-item fade-up">
+          <summary class="faq-question">I'm a teacher. Can I verify students?</summary>
+          <div class="faq-answer">
+            <div>Yes. Sign up as a teacher or school counselor and you'll get a verification dashboard. You can confirm student achievements and post opportunities for your school.</div>
           </div>
         </details>
       </div>

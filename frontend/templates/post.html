@@ -9,12 +9,13 @@
   <meta property="og:description" content="{{ post.content[:300] if post.content else 'View this post on ScholrNet' }}">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://scholrnet.in/post/{{ post.id }}">
-  {% if post.image_url %}<meta property="og:image" content="{{ post.image_url }}">{% endif %}
+  {% if post.image_url %}<meta property="og:image" content="{{ post.image_url }}">{% else %}<meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">{% endif %}
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{% if post.image_url %}{{ post.image_url }}{% else %}{{ url_for('static', filename='og-image.png', _external=True) }}{% endif %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@0.468.0" integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu" crossorigin="anonymous"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',-apple-system,sans-serif;background:#f5f7fa;color:#1a1a2e;line-height:1.6;-webkit-font-smoothing:antialiased;padding:2rem 1rem}
@@ -41,15 +42,15 @@
   {
     "@context": "https://schema.org",
     "@type": "Article",
-    "headline": "{{ post.title or 'ScholrNet Post' }}",
-    "description": "{{ (post.content or '')[:200] }}",
+    "headline": {{ (post.title or 'ScholrNet Post')|tojson }},
+    "description": {{ ((post.content or '')[:200])|tojson }},
     "author": {
       "@type": "Person",
-      "name": "{{ author.name if author else 'ScholrNet User' }}"
+      "name": {{ (author.name if author else 'ScholrNet User')|tojson }}
     },
-    "url": "https://scholrnet.in/post/{{ post.id }}"
+    "url": {{ ('https://scholrnet.in/post/' ~ post.id)|tojson }}
     {% if post.image_url %},
-    "image": "{{ post.image_url }}"{% endif %}
+    "image": {{ post.image_url|tojson }}{% endif %}
   }
   </script>
 </head>
@@ -68,13 +69,13 @@
       {% if post.content %}<div class="content">{{ post.content }}</div>{% endif %}
       {% if post.image_url %}
       <div class="image">
-        <img src="{{ post.image_url }}" alt="" onerror="this.parentElement.style.display='none'">
+        <img src="{{ post.image_url }}" alt="Post image" loading="lazy" onerror="this.parentElement.style.display='none'">
       </div>
       {% endif %}
       <a href="{{ url_for('auth.register') }}" class="btn"><i data-lucide="graduation-cap" style="width:14px;height:14px;"></i> Join ScholrNet</a>
     </div>
     <div class="footer">&copy; 2026 ScholrNet &middot; <a href="{{ url_for('main.public_timeline') }}">Public Timeline</a></div>
   </div>
-  <script>if(typeof lucide!=='undefined') lucide.createIcons()</script>
+  <script nonce="{{ csp_nonce }}">if(typeof lucide!=='undefined') lucide.createIcons()</script>
 </body>
 </html>

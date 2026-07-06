@@ -1,4 +1,8 @@
 {% extends "base.html" %}
+{% block title %}{{ puser.name }} — ScholrNet Profile{% endblock %}
+{% block meta_description %}{{ puser.name }}{% if puser.school %} — {{ puser.school }}{% endif %}. View their verified achievements, projects, and academic profile on ScholrNet.{% endblock %}
+{% block og_title %}{{ puser.name }} — ScholrNet Profile{% endblock %}
+{% block og_description %}{{ puser.name }}{% if puser.school %}, {{ puser.school }}{% endif %} — verified academic profile on ScholrNet.{% endblock %}
 {% block content %}
 <div style="max-width:48rem;margin:0 auto;">
   <!-- Profile Header -->
@@ -30,7 +34,7 @@
         </div>
         {% if puser.username %}<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.125rem;">@{{ puser.username }} <button id="shareProfileBtn" class="btn btn-ghost btn-xs" style="display:inline;padding:0 0.25rem;vertical-align:middle;" title="Copy profile link"><i data-lucide="share-2" style="width:0.75rem;height:0.75rem;"></i></button></div>{% endif %}
         <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.125rem;">{{ puser.school }}{% if puser.grade %} &middot; Grade {{ puser.grade }}{% endif %}</div>
-        {% if puser.school_verified or puser.verified_school_id %}<div style="display:inline-flex;align-items:center;gap:0.375rem;margin-top:0.375rem;padding:0.25rem 0.625rem;border-radius:999px;background:rgba(16,185,129,0.1);color:var(--success);font-size:0.7rem;font-weight:700;"><i data-lucide="building-2" style="width:0.75rem;height:0.75rem;flex-shrink:0;"></i> Verified Student at {{ puser.school or 'your school' }}</div><script>if(typeof lucide!=='undefined')lucide.createIcons();</script>{% endif %}
+        {% if puser.school_verified or puser.verified_school_id %}<div style="display:inline-flex;align-items:center;gap:0.375rem;margin-top:0.375rem;padding:0.25rem 0.625rem;border-radius:999px;background:rgba(16,185,129,0.1);color:var(--success);font-size:0.7rem;font-weight:700;"><i data-lucide="building-2" style="width:0.75rem;height:0.75rem;flex-shrink:0;"></i> Verified Student at {{ puser.school or 'your school' }}</div><script nonce="{{ csp_nonce }}">if(typeof lucide!=='undefined')lucide.createIcons();</script>{% endif %}
         {% if puser.bio %}<p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;line-height:1.5;">{{ puser.bio }}</p>{% endif %}
       </div>
     </div>
@@ -167,7 +171,7 @@
       {% if post.content %}<div style="font-size:0.8125rem;color:var(--text-muted);margin-top:0.25rem;line-height:1.6;">{{ post.content }}</div>{% endif %}
       {% if post.image_url %}
       <div style="margin-top:0.5rem;border-radius:0.75rem;overflow:hidden;max-height:300px;">
-        <img src="{{ post.image_url }}" alt="" style="width:100%;height:auto;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'">
+        <img src="{{ post.image_url }}" alt="Post image" loading="lazy" style="width:100%;height:auto;object-fit:cover;display:block;" onerror="this.parentElement.style.display='none'">
       </div>
       {% endif %}
       <div style="font-size:0.6875rem;color:var(--text-muted);margin-top:0.375rem;">{{ post.timestamp or '' }}</div>
@@ -380,7 +384,7 @@
 </div>
 
 <div id="jsDiag" style="display:none"></div>
-<script>
+<script nonce="{{ csp_nonce }}">
 var puserId = {{ puser.id }};
 var puserName = {{ puser.name|tojson }};
 var puserAvatar = {{ puser.avatar|tojson if puser.avatar else '""' }};

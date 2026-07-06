@@ -9,6 +9,9 @@
   <meta property="og:description" content="{{ post.excerpt or '' }}">
   <meta property="og:type" content="article">
   <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,11 +39,11 @@
   {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
-    "headline": "{{ post.title }}",
-    "description": "{{ post.excerpt or '' }}",
-    "author": {"@type": "Person", "name": "{{ post.author }}"},
-    "datePublished": "{{ post.created_at or '' }}",
-    "dateModified": "{{ post.updated_at or '' }}"
+    "headline": {{ post.title|tojson }},
+    "description": {{ (post.excerpt or '')|tojson }},
+    "author": {"@type": "Person", "name": {{ post.author|tojson }}},
+    "datePublished": {{ (post.created_at or '')|tojson }},
+    "dateModified": {{ (post.updated_at or '')|tojson }}
   }
   </script>
 </head>

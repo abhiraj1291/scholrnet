@@ -10,7 +10,9 @@
   <meta property="og:description" content="Create your ScholrNet profile in 30 seconds. Find internships, scholarships, hackathons, and clubs with a school-verified profile.">
   <meta property="og:url" content="https://scholrnet.in">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://www.scholrnet.in/static/logo.svg">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <meta name="description" content="Join ScholrNet — the platform where students discover internships, scholarships, hackathons, and clubs with a school-verified profile.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -165,7 +167,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     (function(){
       var regUsername = document.getElementById('regUsername');
       var usernameStatus = document.getElementById('usernameStatus');
