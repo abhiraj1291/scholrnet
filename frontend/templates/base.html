@@ -121,6 +121,9 @@
               <div style="margin-top:2px;">{% set rc = {'student':'#3b82f6','teacher':'#8b5cf6','mentor':'#f59e0b','admin':'#10b981','super_admin':'#ef4444'} %}<span class="text-xs" style="color:{{ rc.get(user.role, '#6b7280') }};font-weight:600;">{{ user.role.replace('_',' ').upper() if user.role else 'STUDENT' }}</span></div>
             </div>
             <a href="{{ url_for('main.profile_page') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover"><i data-lucide="user" style="width:16px;height:16px;"></i> My Profile</a>
+            {% if current_user.is_authenticated and current_user.org_memberships.filter_by(status='active').count() > 0 %}
+            <a href="{{ url_for('org.org_dashboard') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover"><i data-lucide="building-2" style="width:16px;height:16px;"></i> Organization</a>
+            {% endif %}
             <button id="settings-btn" class="flex items-center gap-2 px-3 py-2 text-sm w-full text-left hover:bg-hover" style="background:none;border:none;color:var(--text);"><i data-lucide="settings" style="width:16px;height:16px;"></i> Settings</button>
             <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover" style="color:var(--danger);"><i data-lucide="log-out" style="width:16px;height:16px;"></i> Sign Out</a>
           </div>

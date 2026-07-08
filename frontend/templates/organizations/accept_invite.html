@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accept Invitation — ScholrNet</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='logo-icon.png') }}">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <style>
+    body{background:linear-gradient(135deg,#f6f7fb 0%,#f0edff 100%);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+    .auth-container{width:100%;max-width:26rem}
+    .auth-card{background:#fff;border:1px solid #f0f0f5;border-radius:20px;padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.08);position:relative;overflow:hidden;text-align:center}
+    .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6C3BF5,#00C4B8)}
+    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.25rem;color:#0F0F1A;letter-spacing:-0.02em}
+    .auth-card .sub{font-size:0.85rem;color:#5A5A72;margin:0 0 1.5rem;line-height:1.6}
+    .auth-card label{font-size:0.8rem;font-weight:600;color:#0F0F1A;display:block;margin-bottom:0.25rem;text-align:left}
+    .auth-card input{width:100%;padding:0.7rem 0.75rem;border:1px solid #e8e8f0;border-radius:10px;font-size:0.875rem;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s;background:#fff;color:#0F0F1A;font-family:inherit}
+    .auth-card input:focus{border-color:#6C3BF5;box-shadow:0 0 0 3px rgba(108,59,245,0.12);transform:translateY(-1px)}
+    .auth-card .field{margin-bottom:0.875rem;text-align:left}
+    .auth-card .btn-submit{width:100%;padding:0.75rem;background:#6C3BF5;color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem}
+    .auth-card .btn-submit:hover{background:#5A2ED8;transform:translateY(-2px);box-shadow:0 4px 12px rgba(108,59,245,0.25)}
+    .auth-card .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    .auth-card .btn-submit .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+    .auth-card .btn-submit.loading .spinner{display:block}
+    .auth-card .btn-submit.loading .btn-text{opacity:0.7}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .auth-card .error-msg{background:#fff5f5;border:1px solid #f0c0c0;border-radius:10px;padding:0.75rem;font-size:0.8rem;color:#c0392b;margin-bottom:1rem}
+    .auth-card .success-icon{font-size:3rem;margin-bottom:0.5rem}
+    .auth-card .pw-strength{display:flex;gap:0.25rem;margin-top:0.375rem}
+    .auth-card .pw-bar{flex:1;height:3px;border-radius:2px;background:#e8e8f0;transition:background 0.3s}
+    .auth-card .pw-bar.active.weak{background:#FF6B6B}
+    .auth-card .pw-bar.active.medium{background:#FFA726}
+    .auth-card .pw-bar.active.strong{background:#6BCB77}
+    .auth-card .pw-bar.active.very-strong{background:#00C4B8}
+    .auth-card .pw-label{font-size:0.65rem;color:#5A5A72;margin-top:0.2rem;text-align:left}
+    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:#5A5A72}
+    .auth-footer a{color:#6C3BF5;text-decoration:none}
+  </style>
+  <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card" id="mainCard">
+      {% if current_user.is_authenticated %}
+        <div style="font-size:3rem;margin-bottom:0.5rem">&#9993;</div>
+        <h1>Accept Invitation</h1>
+        <p class="sub" id="inviteInfo">Loading invitation details...</p>
+        <div id="errorMsg" class="error-msg" style="display:none"></div>
+        <button class="btn-submit" id="acceptLoggedInBtn" onclick="acceptAsLoggedIn()"><span class="spinner"></span><span class="btn-text">Accept Invitation</span></button>
+      {% else %}
+        <div style="font-size:3rem;margin-bottom:0.5rem">&#9993;</div>
+        <h1>You're Invited!</h1>
+        <p class="sub">Create an account to join your organization.</p>
+        <div id="errorMsg" class="error-msg" style="display:none"></div>
+        <form id="inviteForm">
+          <div class="field">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" required placeholder="e.g. Aarav Sharma" value="{{ invite_name }}" autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input type="email" id="email" required placeholder="you@email.com" value="{{ email }}" autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input type="password" id="password" required minlength="8" placeholder="Min. 8 characters" autocomplete="new-password">
+            <div class="pw-strength" id="pwStrength">
+              <div class="pw-bar" data-index="0"></div>
+              <div class="pw-bar" data-index="1"></div>
+              <div class="pw-bar" data-index="2"></div>
+              <div class="pw-bar" data-index="3"></div>
+            </div>
+            <div class="pw-label" id="pwLabel"></div>
+          </div>
+          <button type="submit" class="btn-submit" id="submitBtn"><span class="spinner"></span><span class="btn-text">Accept &amp; Join</span></button>
+        </form>
+      {% endif %}
+    </div>
+    <div class="auth-footer">
+      <a href="/">Back to homepage</a>
+    </div>
+  </div>
+
+  <script nonce="{{ csp_nonce }}">
+  var inviteToken = '{{ token }}';
+  var inviteOrgId = {{ org_id }};
+  var inviteEmail = '{{ email }}';
+
+  {% if not current_user.is_authenticated %}
+  // Password strength
+  var pwInput = document.getElementById('password');
+  var pwBars = document.querySelectorAll('#pwStrength .pw-bar');
+  var pwLabel = document.getElementById('pwLabel');
+  if (pwInput) {
+    pwInput.addEventListener('input', function() {
+      var val = this.value;
+      var score = 0;
+      if (val.length >= 6) score++;
+      if (val.length >= 10) score++;
+      if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score++;
+      if (/\d/.test(val) && /[^a-zA-Z0-9]/.test(val)) score++;
+      var levels = ['', 'weak', 'medium', 'strong', 'very-strong'];
+      var labels = ['', 'Weak', 'Medium', 'Strong', 'Very strong'];
+      pwBars.forEach(function(bar, i) {
+        bar.className = 'pw-bar' + (i < score ? ' active ' + levels[score] : '');
+      });
+      pwLabel.textContent = score > 0 ? labels[score] : '';
+    });
+  }
+
+  document.getElementById('inviteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn = document.getElementById('submitBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    fetch('/api/organization/accept-invite', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        token: inviteToken,
+        org_id: inviteOrgId,
+        email: document.getElementById('email').value.trim().toLowerCase(),
+        name: document.getElementById('name').value.trim(),
+        password: document.getElementById('password').value
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        document.getElementById('mainCard').innerHTML =
+          '<div class="success-icon">&#9989;</div>' +
+          '<h1>Welcome!</h1>' +
+          '<p class="sub">' + d.message + '</p>' +
+          '<a href="{{ url_for("auth.login") }}" class="btn-submit" style="text-decoration:none;display:inline-block;padding:0.75rem 1.5rem;width:auto;">Sign In</a>';
+      } else {
+        document.getElementById('errorMsg').textContent = d.error || 'Failed to accept invitation';
+        document.getElementById('errorMsg').style.display = 'block';
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      document.getElementById('errorMsg').textContent = 'Network error. Please try again.';
+      document.getElementById('errorMsg').style.display = 'block';
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    });
+  });
+  {% else %}
+  function acceptAsLoggedIn() {
+    var btn = document.getElementById('acceptLoggedInBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    fetch('/api/organization/accept-invite', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ token: inviteToken, org_id: inviteOrgId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        document.getElementById('mainCard').innerHTML =
+          '<div class="success-icon">&#9989;</div>' +
+          '<h1>Welcome!</h1>' +
+          '<p class="sub">' + d.message + '</p>' +
+          '<a href="{{ url_for("org.org_dashboard") }}" class="btn-submit" style="text-decoration:none;display:inline-block;padding:0.75rem 1.5rem;width:auto;">Go to Dashboard</a>';
+      } else {
+        document.getElementById('errorMsg').textContent = d.error || 'Failed to accept invitation';
+        document.getElementById('errorMsg').style.display = 'block';
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      document.getElementById('errorMsg').textContent = 'Network error. Please try again.';
+      document.getElementById('errorMsg').style.display = 'block';
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    });
+  }
+  {% endif %}
+  </script>
+</body>
+</html>

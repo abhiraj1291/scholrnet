@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:56rem;margin:0 auto;">
+  <div class="flex items-center gap-3 mb-4">
+    <div style="width:48px;height:48px;border-radius:12px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:800;flex-shrink:0;">
+      {{ org.name[:2]|upper }}
+    </div>
+    <div>
+      <h1 class="text-xl font-black">{{ org.name }}</h1>
+      <div class="text-xs text-muted flex items-center gap-2">
+        <span>{{ org.type.replace('_', ' ').title() }}</span>
+        <span>&middot;</span>
+        <span>{{ role_display }}</span>
+        <span>&middot;</span>
+        <span style="color:{% if org.status == 'active' %}var(--success){% else %}var(--warning){% endif %}">{{ org.status|replace('_', ' ')|title }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-2 mb-4 border-b" style="border-color:var(--border);">
+    <button class="tab-btn active" data-tab="members">Members</button>
+    <button class="tab-btn" data-tab="invite">Invite</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+    <button class="tab-btn" data-tab="audit">Audit Log</button>
+  </div>
+
+  <!-- Members Tab -->
+  <div class="tab-content" id="tab-members">
+    <div class="card">
+      <div class="font-bold text-sm mb-3">Team Members</div>
+      <div id="membersList"><div class="text-sm text-muted py-4 text-center">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- Invite Tab -->
+  <div class="tab-content hidden" id="tab-invite">
+    <div class="card">
+      <div class="font-bold text-sm mb-3">Invite a Member</div>
+      <form id="inviteForm">
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Full Name</label>
+          <input type="text" id="inviteName" class="w-full" required placeholder="e.g. Priya Sharma">
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Email</label>
+          <input type="email" id="inviteEmail" class="w-full" required placeholder="colleague@organization.edu">
+        </div>
+        <div class="mb-3">
+          <label class="text-xs font-bold text-muted block mb-1">Role</label>
+          <select id="inviteRole" class="w-full">
+            <option value="teacher">Teacher</option>
+            <option value="coordinator">Coordinator</option>
+            <option value="counselor">Counselor</option>
+            <option value="office_staff">Office Staff</option>
+          </select>
+        </div>
+        <div id="inviteStatus" class="text-xs mb-2"></div>
+        <button type="submit" class="btn btn-primary" id="inviteBtn">Send Invitation</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div class="tab-content hidden" id="tab-settings">
+    <div class="card">
+      <div class="font-bold text-sm mb-3">Organization Settings</div>
+      <form id="settingsForm">
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Description</label>
+          <textarea id="settingsDesc" rows="3" class="w-full">{{ org.description or '' }}</textarea>
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Address</label>
+          <input type="text" id="settingsAddr" class="w-full" value="{{ org.address or '' }}">
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Phone</label>
+          <input type="tel" id="settingsPhone" class="w-full" value="{{ org.phone or '' }}">
+        </div>
+        <div class="mb-2">
+          <label class="text-xs font-bold text-muted block mb-1">Logo URL</label>
+          <input type="url" id="settingsLogo" class="w-full" value="{{ org.logo or '' }}" placeholder="https://...">
+        </div>
+        <div id="settingsStatus" class="text-xs mb-2"></div>
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Audit Log Tab -->
+  <div class="tab-content hidden" id="tab-audit">
+    <div class="card">
+      <div class="font-bold text-sm mb-3">Activity Log</div>
+      <div id="auditLogs"><div class="text-sm text-muted py-4 text-center">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+// Tab switching
+document.querySelectorAll('[data-tab]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var tab = this.getAttribute('data-tab');
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.add('hidden'); });
+    document.getElementById('tab-' + tab).classList.remove('hidden');
+    if (tab === 'members') loadMembers();
+    if (tab === 'audit') loadAuditLogs();
+  });
+});
+
+var adminRoles = {{ '["principal","director","hr_admin"]'|safe if member.role in ('principal','director','hr_admin') else '[]'|safe }};
+var isAdmin = adminRoles.length > 0;
+
+function loadMembers() {
+  fetch('/api/organization/profile')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('membersList');
+      if (!d.org) { el.innerHTML = '<div class="text-sm text-muted py-4 text-center">Could not load members</div>'; return; }
+
+      // Hide invite/role controls if not admin
+      if (!isAdmin) {
+        document.querySelector('[data-tab="invite"]').classList.add('hidden');
+        document.querySelector('[data-tab="settings"]').classList.add('hidden');
+      }
+
+      var html = '';
+      d.members.forEach(function(m) {
+        var u = m.user || {};
+        var avatar = u.avatar_url ? '<img src="' + u.avatar_url + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : '<div class="avatar avatar-sm">' + (u.name ? u.name.slice(0,2).toUpperCase() : '?') + '</div>';
+        html +=
+          '<div class="flex items-center gap-3 p-3 rounded-xl mb-2" style="background:var(--bg-hover);">' +
+            '<div style="width:36px;height:36px;flex-shrink:0;">' + avatar + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div class="text-sm font-bold">' + escapeHtml(u.name || 'Unknown') + '</div>' +
+              '<div class="text-xs text-muted">' + escapeHtml(u.email || '') + ' &middot; ' + m.role.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }) + '</div>' +
+            '</div>' +
+            (isAdmin && m.status === 'active' ? '<div class="flex items-center gap-1">' +
+              '<select class="role-select text-xs" data-member="' + m.id + '" style="padding:0.25rem 0.5rem;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);">' +
+                '<option value="">Change role...</option>' +
+                {% if org.type == 'school' %}
+                '<option value="principal">Principal</option><option value="vice_principal">Vice Principal</option><option value="coordinator">Coordinator</option><option value="teacher">Teacher</option><option value="counselor">Counselor</option><option value="office_staff">Office Staff</option>' +
+                {% elif org.type == 'institution' %}
+                '<option value="director">Director</option><option value="coordinator">Coordinator</option><option value="instructor">Instructor</option><option value="staff">Staff</option>' +
+                {% elif org.type == 'company' %}
+                '<option value="hr_admin">HR Admin</option><option value="recruiter">Recruiter</option><option value="hiring_manager">Hiring Manager</option><option value="staff">Staff</option>' +
+                {% endif %}
+              '</select>' +
+              '<button class="btn btn-danger btn-sm remove-member" data-member="' + m.id + '" title="Remove"><i data-lucide="x" style="width:14px;height:14px;"></i></button>' +
+            '</div>' : '') +
+          '</div>';
+      });
+      el.innerHTML = html;
+      lucide.createIcons();
+
+      // Role change
+      document.querySelectorAll('.role-select').forEach(function(sel) {
+        sel.addEventListener('change', function() {
+          var mid = this.getAttribute('data-member');
+          var role = this.value;
+          if (!role) return;
+          fetch('/api/organization/member/' + mid + '/role', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({role: role})
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            if (d.success) { showToast('Role updated', 'success'); loadMembers(); }
+            else { showToast(d.error || 'Error', 'info'); }
+          })
+          .catch(function() {});
+        });
+      });
+
+      // Remove member
+      document.querySelectorAll('.remove-member').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          if (!confirm('Remove this member?')) return;
+          var mid = this.getAttribute('data-member');
+          fetch('/api/organization/member/' + mid + '/remove', { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              if (d.success) { showToast('Member removed', 'success'); loadMembers(); }
+              else { showToast(d.error || 'Error', 'info'); }
+            })
+            .catch(function() {});
+        });
+      });
+    })
+    .catch(function() { document.getElementById('membersList').innerHTML = '<div class="text-sm text-muted py-4 text-center">Error loading members</div>'; });
+}
+
+function loadAuditLogs() {
+  fetch('/api/organization/audit-logs')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('auditLogs');
+      if (!d.logs || d.logs.length === 0) {
+        el.innerHTML = '<div class="text-sm text-muted py-4 text-center">No activity yet</div>';
+        return;
+      }
+      var html = '';
+      d.logs.forEach(function(l) {
+        html += '<div class="flex items-center gap-2 p-2 text-sm" style="border-bottom:1px solid var(--border);">' +
+          '<span class="text-xs font-bold" style="color:var(--text-muted);flex-shrink:0;">' + (l.created_at ? new Date(l.created_at).toLocaleString() : '') + '</span>' +
+          '<span>' + l.action.replace(/_/g, ' ') + '</span>' +
+        '</div>';
+      });
+      el.innerHTML = html;
+    })
+    .catch(function() { document.getElementById('auditLogs').innerHTML = '<div class="text-sm text-muted py-4 text-center">Error loading logs</div>'; });
+}
+
+// Invite form
+document.getElementById('inviteForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('inviteBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  fetch('/api/organization/invite', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      name: document.getElementById('inviteName').value.trim(),
+      email: document.getElementById('inviteEmail').value.trim().toLowerCase(),
+      role: document.getElementById('inviteRole').value
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      document.getElementById('inviteStatus').textContent = 'Invitation sent!';
+      document.getElementById('inviteStatus').style.color = 'var(--success)';
+      document.getElementById('inviteForm').reset();
+    } else {
+      document.getElementById('inviteStatus').textContent = d.error || 'Failed';
+      document.getElementById('inviteStatus').style.color = 'var(--danger)';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Send Invitation';
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.textContent = 'Send Invitation';
+  });
+});
+
+// Settings form
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  fetch('/api/organization/settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      description: document.getElementById('settingsDesc').value.trim(),
+      address: document.getElementById('settingsAddr').value.trim(),
+      phone: document.getElementById('settingsPhone').value.trim(),
+      logo: document.getElementById('settingsLogo').value.trim()
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    document.getElementById('settingsStatus').textContent = d.success ? 'Settings saved!' : (d.error || 'Error');
+    document.getElementById('settingsStatus').style.color = d.success ? 'var(--success)' : 'var(--danger)';
+  })
+  .catch(function() {});
+});
+
+loadMembers();
+</script>
+{% endblock %}

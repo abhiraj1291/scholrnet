@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registration Submitted — ScholrNet</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='logo-icon.png') }}">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <style>
+    body{background:linear-gradient(135deg,#f6f7fb 0%,#f0edff 100%);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+    .auth-container{width:100%;max-width:26rem}
+    .auth-card{background:#fff;border:1px solid #f0f0f5;border-radius:20px;padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.08);position:relative;overflow:hidden;text-align:center}
+    .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6C3BF5,#00C4B8)}
+    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.5rem;color:#0F0F1A;letter-spacing:-0.02em}
+    .auth-card .sub{font-size:0.85rem;color:#5A5A72;margin:0 0 1rem;line-height:1.6}
+    .auth-card .status-icon{font-size:3.5rem;margin-bottom:0.5rem}
+    .auth-card .info-box{background:#f0edff;border:1px solid #d8d0f0;border-radius:10px;padding:1rem;font-size:0.8rem;color:#4a3a8a;line-height:1.6;text-align:left;margin-bottom:1.5rem}
+    .auth-card .btn-home{display:inline-block;padding:0.75rem 1.5rem;background:#6C3BF5;color:#fff;border-radius:10px;font-size:0.875rem;font-weight:700;text-decoration:none;transition:background 0.2s,transform 0.15s}
+    .auth-card .btn-home:hover{background:#5A2ED8;transform:translateY(-2px)}
+    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:#5A5A72}
+    .auth-footer a{color:#6C3BF5;text-decoration:none}
+  </style>
+  <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="status-icon">&#9989;</div>
+      <h1>Registration Submitted</h1>
+      <p class="sub">Thank you! Your email has been verified. Your registration is now pending admin review.</p>
+      <div class="info-box">
+        <strong>What happens next?</strong><br><br>
+        1. Our team reviews your submission (usually within 24-48 hours).<br><br>
+        2. You'll receive an email when your registration is approved or if more information is needed.<br><br>
+        3. Once approved, click the link in the email to set up your account and activate your dashboard.
+      </div>
+      <a href="/" class="btn-home">Back to Homepage</a>
+    </div>
+    <div class="auth-footer">
+      <a href="mailto:scolrnetsupport@gmail.com">Questions? Contact support</a>
+    </div>
+  </div>
+</body>
+</html>

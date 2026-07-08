@@ -45,6 +45,7 @@ class User(UserMixin, db.Model):
 
     achievements = db.relationship('Achievement', backref='user', lazy='dynamic')
     projects = db.relationship('Project', backref='user', lazy='dynamic')
+    org_memberships = db.relationship('OrganizationMember', backref='member_user', lazy='dynamic', foreign_keys='OrganizationMember.user_id')
 
     def get_id(self):
         return f"{self.id}:{self.session_version}"

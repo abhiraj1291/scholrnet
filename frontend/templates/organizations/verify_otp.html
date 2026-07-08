@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Email — ScholrNet</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='logo-icon.png') }}">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <style>
+    body{background:linear-gradient(135deg,#f6f7fb 0%,#f0edff 100%);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+    .auth-container{width:100%;max-width:26rem}
+    .auth-card{background:#fff;border:1px solid #f0f0f5;border-radius:20px;padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.08);position:relative;overflow:hidden;text-align:center}
+    .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6C3BF5,#00C4B8)}
+    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.25rem;color:#0F0F1A;letter-spacing:-0.02em}
+    .auth-card .sub{font-size:0.85rem;color:#5A5A72;margin:0 0 1.5rem;line-height:1.6}
+    .auth-card label{font-size:0.8rem;font-weight:600;color:#0F0F1A;display:block;margin-bottom:0.25rem}
+    .auth-card input{width:100%;padding:0.7rem 0.75rem;border:1px solid #e8e8f0;border-radius:10px;font-size:0.875rem;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s;background:#fff;color:#0F0F1A;font-family:inherit;text-align:center;letter-spacing:0.5em;font-size:1.25rem}
+    .auth-card input:focus{border-color:#6C3BF5;box-shadow:0 0 0 3px rgba(108,59,245,0.12);transform:translateY(-1px)}
+    .auth-card .field{margin-bottom:0.875rem;max-width:200px;margin-left:auto;margin-right:auto}
+    .auth-card .btn-submit{width:100%;padding:0.75rem;background:#6C3BF5;color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem;max-width:200px;margin:0 auto}
+    .auth-card .btn-submit:hover{background:#5A2ED8;transform:translateY(-2px);box-shadow:0 4px 12px rgba(108,59,245,0.25)}
+    .auth-card .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    .auth-card .btn-submit .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+    .auth-card .btn-submit.loading .spinner{display:block}
+    .auth-card .btn-submit.loading .btn-text{opacity:0.7}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .auth-card .error-msg{background:#fff5f5;border:1px solid #f0c0c0;border-radius:10px;padding:0.75rem;font-size:0.8rem;color:#c0392b;margin-bottom:1rem}
+    .auth-card .resend{font-size:0.8rem;color:#5A5A72;margin-top:1rem}
+    .auth-card .resend a{color:#6C3BF5;font-weight:600;cursor:pointer;text-decoration:none}
+    .auth-card .resend a:hover{text-decoration:underline}
+    .auth-card .resend a:disabled{opacity:0.5;cursor:default}
+    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:#5A5A72}
+    .auth-footer a{color:#6C3BF5;text-decoration:none}
+    .auth-footer a:hover{text-decoration:underline}
+  </style>
+  <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div style="font-size:3rem;margin-bottom:0.5rem">&#128231;</div>
+      <h1>Verify your email</h1>
+      <p class="sub">We've sent a 6-digit code to your email. Enter it below to confirm your registration.</p>
+
+      <div id="errorMsg" class="error-msg" style="display:none"></div>
+
+      <form id="otpForm">
+        <div class="field">
+          <label for="otp">Verification Code</label>
+          <input type="text" id="otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" required placeholder="000000">
+        </div>
+        <button type="submit" class="btn-submit" id="submitBtn"><span class="spinner"></span><span class="btn-text">Verify</span></button>
+      </form>
+
+      <div class="resend">
+        Didn't receive the code? <a id="resendLink" onclick="resendOtp()">Resend</a>
+      </div>
+    </div>
+    <div class="auth-footer">
+      <a href="/">Back to homepage</a>
+    </div>
+  </div>
+
+  <script nonce="{{ csp_nonce }}">
+  var regId = {{ reg_id }};
+
+  document.getElementById('otpForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn = document.getElementById('submitBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    fetch('/api/organization/verify-otp', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ reg_id: regId, otp: document.getElementById('otp').value.trim() })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        window.location.href = '/registration-pending?reg_id=' + regId;
+      } else {
+        document.getElementById('errorMsg').textContent = d.error || 'Verification failed';
+        document.getElementById('errorMsg').style.display = 'block';
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      document.getElementById('errorMsg').textContent = 'Network error. Please try again.';
+      document.getElementById('errorMsg').style.display = 'block';
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    });
+  });
+
+  function resendOtp() {
+    var link = document.getElementById('resendLink');
+    link.textContent = 'Sending...';
+    link.style.pointerEvents = 'none';
+
+    fetch('/api/organization/resend-otp', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ reg_id: regId })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        document.getElementById('errorMsg').textContent = 'New code sent to your email.';
+        document.getElementById('errorMsg').style.cssText = 'background:#f0faf0;border:1px solid #b0e0b0;padding:0.75rem;font-size:0.8rem;color:#2e7d32;border-radius:10px;margin-bottom:1rem;display:block';
+      } else {
+        document.getElementById('errorMsg').textContent = d.error || 'Failed to resend';
+        document.getElementById('errorMsg').style.display = 'block';
+      }
+      link.textContent = 'Resend';
+      link.style.pointerEvents = 'auto';
+    })
+    .catch(function() {
+      document.getElementById('errorMsg').textContent = 'Network error. Please try again.';
+      document.getElementById('errorMsg').style.display = 'block';
+      link.textContent = 'Resend';
+      link.style.pointerEvents = 'auto';
+    });
+  }
+  </script>
+</body>
+</html>

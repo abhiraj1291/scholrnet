@@ -44,6 +44,7 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
     from routes.api_friends import bp as friends_bp
     from routes.api_schools import bp as schools_bp
     from routes.api_other import bp as other_bp
+    from routes.api_organizations import org_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -54,6 +55,7 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
     app.register_blueprint(friends_bp)
     app.register_blueprint(schools_bp)
     app.register_blueprint(other_bp)
+    app.register_blueprint(org_bp)
 
     @app.before_request
     def csrf_protect():
@@ -105,7 +107,9 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
     @app.before_request
     def check_pending_role():
         if current_user.is_authenticated and current_user.role == 'pending':
-            allowed = ['choose_role', 'api_set_role', 'logout', 'static', 'verify_email_otp', 'api_resend_verify_otp', 'api_change_verify_email']
+            allowed = ['choose_role', 'api_set_role', 'logout', 'static', 'verify_email_otp', 'api_resend_verify_otp', 'api_change_verify_email',
+                       'register_school', 'register_institution', 'register_company',
+                       'verify_org_otp_page', 'registration_pending_page']
             ep = request.endpoint or ''
             if not any(ep == a or ep.endswith('.' + a) for a in allowed) and not request.path.startswith('/static/'):
                 return redirect(url_for('main.choose_role'))

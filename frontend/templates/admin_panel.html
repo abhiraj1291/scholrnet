@@ -37,6 +37,15 @@
     <div id="schoolsList"></div>
   </div>
 
+  <!-- Pending Organizations -->
+  <div class="card mb-3">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="building" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <span class="font-bold text-sm">Pending Organization Registrations</span>
+    </div>
+    <div id="pendingOrgsList"><div class="text-sm text-muted py-4">Loading...</div></div>
+  </div>
+
   <!-- Manage Ads -->
   <div class="card mb-3">
     <div class="flex items-center justify-between mb-3">
@@ -353,6 +362,90 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(function() {});
   }
 
+  // Pending Organizations
+  function loadPendingOrgs() {
+    fetch('/api/admin/pending-organizations')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var el = document.getElementById('pendingOrgsList');
+        if (!data.pending || data.pending.length === 0) {
+          el.innerHTML = '<div class="text-sm text-muted py-4 text-center">No pending organization registrations.</div>';
+          return;
+        }
+        var html = '';
+        data.pending.forEach(function(r) {
+          var riskColor = r.risk_level === 'high' ? '#FF6B6B' : r.risk_level === 'medium' ? '#FFA726' : '#6BCB77';
+          html +=
+            '<div class="flex items-start gap-3 p-3 rounded-xl mb-2" style="background:var(--bg-hover);">' +
+              '<i data-lucide="building-2" style="width:1.5rem;height:1.5rem;color:var(--primary);flex-shrink:0;margin-top:0.15rem;"></i>' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div class="flex items-center gap-2">' +
+                  '<span class="text-sm font-bold">' + escapeHtml(r.org_name) + '</span>' +
+                  '<span class="text-xs px-1.5 py-0.5 rounded" style="background:#f0edff;color:#6C3BF5;font-weight:600;">' + escapeHtml(r.org_type) + '</span>' +
+                  '<span class="text-xs px-1.5 py-0.5 rounded" style="background:' + riskColor + '15;color:' + riskColor + ';font-weight:600;">Risk: ' + r.risk_level + '</span>' +
+                '</div>' +
+                '<div class="text-xs text-muted mt-1">' +
+                  'Applicant: ' + escapeHtml(r.applicant_name) +
+                  (r.applicant_role ? ' (' + escapeHtml(r.applicant_role) + ')' : '') +
+                  ' &middot; ' + escapeHtml(r.applicant_email) +
+                '</div>' +
+                (r.duplicate_flag ? '<div class="text-xs mt-1" style="color:#FFA726;">&#9888; Possible duplicate</div>' : '') +
+                (r.notes ? '<div class="text-xs mt-1 text-muted">Notes: ' + escapeHtml(r.notes) + '</div>' : '') +
+                '<div class="flex gap-2 mt-2">' +
+                  '<button class="btn btn-sm" style="background:rgba(16,185,129,0.15);color:#10b981;border:none;font-weight:600;cursor:pointer;" onclick="approveOrg(' + r.id + ')">Approve</button>' +
+                  '<button class="btn btn-sm" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;font-weight:600;cursor:pointer;" onclick="rejectOrg(' + r.id + ')">Reject</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        });
+        el.innerHTML = html;
+        lucide.createIcons();
+
+        if (data.approved && data.approved.length > 0) {
+          var approvedHtml = '<div class="border-t mt-3 pt-3" style="border-color:var(--border);">' +
+            '<div class="text-xs font-bold text-muted mb-2">Recently Approved</div>';
+          data.approved.forEach(function(a) {
+            approvedHtml += '<div class="text-xs text-muted py-1">' + escapeHtml(a.org_name) + ' (' + a.org_type + ')</div>';
+          });
+          approvedHtml += '</div>';
+          el.innerHTML += approvedHtml;
+        }
+      })
+      .catch(function() { document.getElementById('pendingOrgsList').innerHTML = '<div class="text-sm text-muted py-4 text-center">Error loading</div>'; });
+  }
+
+  window.approveOrg = function(regId) {
+    var reason = prompt('Admin notes (optional):');
+    if (reason === null) return;
+    fetch('/api/admin/organization/' + regId + '/approve', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ admin_notes: reason || '' })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { showToast('Organization approved! Invite email sent.', 'success'); loadPendingOrgs(); }
+      else { showToast(d.error || 'Error', 'info'); }
+    })
+    .catch(function() {});
+  };
+
+  window.rejectOrg = function(regId) {
+    var reason = prompt('Rejection reason (optional):');
+    if (reason === null) return;
+    fetch('/api/admin/organization/' + regId + '/reject', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ reason: reason || '' })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) { showToast('Registration rejected.', 'success'); loadPendingOrgs(); }
+      else { showToast(d.error || 'Error', 'info'); }
+    })
+    .catch(function() {});
+  };
+
   // Ads Management
   document.getElementById('toggleAdFormBtn').addEventListener('click', function() {
     var c = document.getElementById('adFormContainer');
@@ -502,6 +595,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   loadSchools();
+  loadPendingOrgs();
   loadAds();
   loadPosts();
   loadPolicyStats();

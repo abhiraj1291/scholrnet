@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if org_type == 'school' %}Register Your School{% elif org_type == 'institution' %}Register Your Institution{% else %}Register Your Company{% endif %} — ScholrNet</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo-icon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='logo-icon.png') }}">
+  <meta property="og:title" content="{% if org_type == 'school' %}Register Your School{% elif org_type == 'institution' %}Register Your Institution{% else %}Register Your Company{% endif %} — ScholrNet">
+  <meta property="og:description" content="Bring your {% if org_type == 'school' %}school{% elif org_type == 'institution' %}institution{% else %}company{% endif %} to ScholrNet. Verify achievements, build trust, and open doors to opportunities.">
+  <meta property="og:url" content="https://scholrnet.in">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta name="description" content="Register your {% if org_type == 'school' %}school{% elif org_type == 'institution' %}institution{% else %}company{% endif %} on ScholrNet and start building verified academic profiles.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=5">
+  <style>
+    body{background:linear-gradient(135deg,#f6f7fb 0%,#f0edff 100%);font-family:'Inter',-apple-system,system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+    .auth-wrapper{display:flex;gap:2.5rem;max-width:64rem;width:100%;align-items:center}
+    .auth-visual{flex:1;display:none;flex-direction:column;align-items:center}
+    .auth-visual .auth-tagline{font-size:1.75rem;font-weight:700;color:#0F0F1A;line-height:1.3;margin-top:1.5rem;text-align:center;max-width:24rem;letter-spacing:-0.02em}
+    .auth-visual .auth-tagline span{color:#6C3BF5}
+    .auth-container{width:100%;max-width:28rem}
+    .auth-card{background:#fff;border:1px solid #f0f0f5;border-radius:20px;padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.08);position:relative;overflow:hidden}
+    .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6C3BF5,#00C4B8)}
+    .auth-card h1{font-size:1.35rem;font-weight:800;margin:0 0 0.25rem;color:#0F0F1A;letter-spacing:-0.02em}
+    .auth-card .sub{font-size:0.85rem;color:#5A5A72;margin:0 0 1.5rem}
+    .auth-card label{font-size:0.8rem;font-weight:600;color:#0F0F1A;display:block;margin-bottom:0.25rem}
+    .auth-card input,.auth-card select{width:100%;padding:0.7rem 0.75rem;border:1px solid #e8e8f0;border-radius:10px;font-size:0.875rem;outline:none;box-sizing:border-box;transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s;background:#fff;color:#0F0F1A;font-family:inherit}
+    .auth-card input:focus,.auth-card select:focus{border-color:#6C3BF5;box-shadow:0 0 0 3px rgba(108,59,245,0.12);transform:translateY(-1px)}
+    .auth-card .field{margin-bottom:0.875rem}
+    .auth-card .btn-submit{width:100%;padding:0.75rem;background:#6C3BF5;color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;transition:background 0.2s,transform 0.15s,box-shadow 0.2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:0.5rem}
+    .auth-card .btn-submit:hover{background:#5A2ED8;transform:translateY(-2px);box-shadow:0 4px 12px rgba(108,59,245,0.25)}
+    .auth-card .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    .auth-card .btn-submit .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+    .auth-card .btn-submit.loading .spinner{display:block}
+    .auth-card .btn-submit.loading .btn-text{opacity:0.7}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .auth-card .error-msg{background:#fff5f5;border:1px solid #f0c0c0;border-radius:10px;padding:0.75rem;font-size:0.8rem;color:#c0392b;margin-bottom:1rem}
+    .auth-card .type-selector{display:flex;gap:0.5rem;margin-bottom:1.25rem}
+    .auth-card .type-btn{flex:1;padding:0.5rem;border-radius:8px;font-size:0.8rem;font-weight:600;text-align:center;cursor:pointer;border:1px solid #e8e8f0;background:#fff;color:#5A5A72;transition:all 0.2s;font-family:inherit;text-decoration:none}
+    .auth-card .type-btn.active{border-color:#6C3BF5;background:#f0edff;color:#6C3BF5}
+    .auth-card .type-btn:hover{border-color:#6C3BF5}
+    .auth-footer{text-align:center;margin-top:1rem;font-size:0.75rem;color:#5A5A72}
+    .auth-footer a{color:#6C3BF5;text-decoration:none}
+    .auth-footer a:hover{text-decoration:underline}
+    @media(min-width:48rem){.auth-visual{display:flex}}
+    @media(max-width:30rem){.auth-card{padding:1.25rem}.auth-card h1{font-size:1.15rem}}
+  </style>
+  <meta name="google-site-verification" content="H-dGB8FAwUgmXrVFB6_J5cut2rxyDSSKsvoSrY7DTeE" />
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-visual">
+      <svg viewBox="0 0 400 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 280 Q100 180 180 200 Q260 220 280 120 Q300 20 350 40" stroke="#6C3BF5" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.3"/>
+        <path d="M30 300 Q120 260 200 280 Q280 300 340 200 Q380 140 400 160" stroke="#00C4B8" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.25"/>
+        <circle cx="120" cy="100" r="32" fill="#6C3BF5" opacity="0.06"/>
+        <circle cx="310" cy="80" r="24" fill="#00C4B8" opacity="0.08"/>
+        <g transform="translate(160, 60)" opacity="0.12">
+          <path d="M40 10 L0 28 L40 46 L80 28 Z" fill="#6C3BF5"/>
+          <path d="M40 46 L40 62 L20 54 L20 38" stroke="#6C3BF5" stroke-width="2" fill="none"/>
+          <path d="M80 28 L80 44" stroke="#6C3BF5" stroke-width="2"/>
+        </g>
+        <g transform="translate(290, 150)" opacity="0.1">
+          <rect x="0" y="0" width="30" height="36" rx="2" fill="#6C3BF5"/>
+          <rect x="3" y="3" width="24" height="30" rx="1" fill="#fff"/>
+          <line x1="7" y1="10" x2="23" y2="10" stroke="#6C3BF5" stroke-width="1.5"/>
+          <line x1="7" y1="17" x2="23" y2="17" stroke="#6C3BF5" stroke-width="1.5"/>
+          <line x1="7" y1="24" x2="18" y2="24" stroke="#6C3BF5" stroke-width="1.5"/>
+        </g>
+      </svg>
+      <div class="auth-tagline">
+        Bring your {% if org_type == 'school' %}school{% elif org_type == 'institution' %}institution{% else %}company{% endif %}<br><span>to ScholrNet</span>
+      </div>
+    </div>
+
+    <div class="auth-container">
+      <div class="auth-card">
+        <h1>{% if org_type == 'school' %}Register Your School{% elif org_type == 'institution' %}Register Your Institution{% else %}Register Your Company{% endif %}</h1>
+        <p class="sub">{% if org_type == 'school' %}Verify student achievements and build trust{% elif org_type == 'institution' %}Connect students with verified profiles{% else %}Find verified talent for your organization{% endif %}</p>
+
+        <div class="type-selector">
+          <a href="{{ url_for('org.register_school') }}" class="type-btn {{ 'active' if org_type == 'school' else '' }}">School</a>
+          <a href="{{ url_for('org.register_institution') }}" class="type-btn {{ 'active' if org_type == 'institution' else '' }}">Institution</a>
+          <a href="{{ url_for('org.register_company') }}" class="type-btn {{ 'active' if org_type == 'company' else '' }}">Company</a>
+        </div>
+
+        <div id="errorMsg" class="error-msg" style="display:none"></div>
+
+        <form id="regForm">
+          <div class="field">
+            <label for="orgName">{{ 'School' if org_type == 'school' else 'Institution' if org_type == 'institution' else 'Company' }} Name</label>
+            <input type="text" id="orgName" required placeholder="e.g. Delhi Public School">
+          </div>
+          <div class="field">
+            <label for="website">Website {% if org_type == 'company' %}<span style="color:#FF6B6B">*</span>{% endif %}</label>
+            <input type="url" id="website" placeholder="https://yourschool.edu" {{ 'required' if org_type == 'company' else '' }}>
+          </div>
+          <div class="field">
+            <label for="applicantName">Your Full Name</label>
+            <input type="text" id="applicantName" required placeholder="e.g. Aarav Sharma">
+          </div>
+          <div class="field">
+            <label for="applicantRole">Your Role</label>
+            <input type="text" id="applicantRole" placeholder="e.g. Principal, HR Manager">
+          </div>
+          <div class="field">
+            <label for="applicantEmail">Your Email</label>
+            <input type="email" id="applicantEmail" required placeholder="you@organization.edu" autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="applicantPhone">Phone (optional)</label>
+            <input type="tel" id="applicantPhone" placeholder="+91 98765 43210">
+          </div>
+          <div class="field">
+            <label for="notes">Additional Notes (optional)</label>
+            <textarea id="notes" rows="2" style="width:100%;padding:0.7rem 0.75rem;border:1px solid #e8e8f0;border-radius:10px;font-size:0.875rem;outline:none;box-sizing:border-box;font-family:inherit;resize:vertical;" placeholder="Any additional information..."></textarea>
+          </div>
+          <button type="submit" class="btn-submit" id="submitBtn"><span class="spinner"></span><span class="btn-text">Submit Registration</span></button>
+        </form>
+
+        <div style="margin-top:1rem;font-size:0.75rem;color:#5A5A72;text-align:center;line-height:1.6">
+          By submitting, you agree to our <a href="{{ url_for('main.terms_page') }}" style="color:#6C3BF5">Terms</a> and <a href="{{ url_for('main.privacy_page') }}" style="color:#6C3BF5">Privacy Policy</a>.
+          A verification code will be sent to your email.
+        </div>
+      </div>
+      <div class="auth-footer">
+        <a href="/">Back to homepage</a>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="{{ csp_nonce }}">
+  document.getElementById('regForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn = document.getElementById('submitBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    fetch('/api/organization/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        org_name: document.getElementById('orgName').value.trim(),
+        org_type: '{{ org_type }}',
+        website: document.getElementById('website').value.trim(),
+        applicant_name: document.getElementById('applicantName').value.trim(),
+        applicant_role: document.getElementById('applicantRole').value.trim(),
+        applicant_email: document.getElementById('applicantEmail').value.trim().toLowerCase(),
+        applicant_phone: document.getElementById('applicantPhone').value.trim(),
+        notes: document.getElementById('notes').value.trim()
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.success) {
+        window.location.href = '/verify-org-otp?reg_id=' + d.reg_id;
+      } else {
+        document.getElementById('errorMsg').textContent = d.error || 'Registration failed';
+        document.getElementById('errorMsg').style.display = 'block';
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      document.getElementById('errorMsg').textContent = 'Network error. Please try again.';
+      document.getElementById('errorMsg').style.display = 'block';
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    });
+  });
+  </script>
+</body>
+</html>
