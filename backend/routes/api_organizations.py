@@ -1,4 +1,4 @@
-import os, re, secrets, json
+import os, re, secrets, json, html
 from urllib.parse import urlparse
 from datetime import datetime, timezone, timedelta
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session, current_app, abort
@@ -6,10 +6,16 @@ from flask_login import login_required, current_user
 import hmac
 from models import db, User
 from models_organization import Organization, OrganizationRegistration, OrganizationMember, OrgAuditLog, OrgStatus, OrgType, OrgMemberStatus
-from extensions import bcrypt
+from extensions import bcrypt, limiter
 from utils.email import send_email, email_otp_body
 
 org_bp = Blueprint('org', __name__, url_prefix='')
+
+@org_bp.errorhandler(429)
+def org_429(e):
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Too many requests. Please try again later.'}), 429
+    return render_template('error.html', code=429, title='Too Many Requests', message='Please try again in a few minutes.', emoji='⏳'), 429
 
 def _slugify(name):
     s = name.lower().strip()
@@ -41,11 +47,11 @@ def _assess_risk(email_domain, website_domain):
         return 'medium'
     return 'low'
 
-def _check_duplicate(domain, org_type):
+def _check_duplicate_domain(domain, org_type):
     if not domain:
         return None
     existing = Organization.query.filter_by(domain=domain, type=org_type).filter(
-        Organization.status.in_(['approved', 'pending_approval'])
+        Organization.status.in_(['approved', 'active', 'pending_approval'])
     ).first()
     return existing.id if existing else None
 
@@ -75,6 +81,7 @@ def register_school():
 # ─── Registration API ───────────────────────────────────────────
 
 @org_bp.route('/api/organization/register', methods=['POST'])
+@limiter.limit("10 per 15 minutes", methods=['POST'])
 def api_org_register():
     try:
         data = request.json or {}
@@ -91,7 +98,16 @@ def api_org_register():
             return jsonify({'error': 'Missing required fields'}), 400
         if org_type == 'company' and not website:
             return jsonify({'error': 'Website is required for companies'}), 400
-        if OrganizationRegistration.query.filter_by(applicant_email=applicant_email, status='pending_email').first():
+
+        email_domain = _extract_domain(applicant_email)
+        if email_domain in FREE_EMAIL_DOMAINS:
+            return jsonify({'error': 'Registration is not accepted from free email providers. Please use your official organization email.'}), 400
+
+        existing = OrganizationRegistration.query.filter(
+            OrganizationRegistration.applicant_email == applicant_email,
+            OrganizationRegistration.status.in_(['pending_email', 'pending_approval'])
+        ).first()
+        if existing:
             return jsonify({'error': 'A pending registration already exists for this email'}), 409
 
         slug = _slugify(org_name)
@@ -101,10 +117,9 @@ def api_org_register():
             slug = f"{base_slug}-{counter}"
             counter += 1
 
-        email_domain = _extract_domain(applicant_email)
         website_domain = _extract_website_domain(website)
         risk = _assess_risk(email_domain, website_domain)
-        dup_id = _check_duplicate(email_domain or website_domain, org_type)
+        dup_id = _check_duplicate_domain(email_domain or website_domain, org_type)
 
         otp = f"{secrets.randbelow(1000000):06d}"
         reg = OrganizationRegistration(
@@ -119,7 +134,7 @@ def api_org_register():
         )
         db.session.add(reg)
         db.session.flush()
-        _org_audit(0, 'organization_registered', metadata={'reg_id': reg.id, 'type': org_type, 'name': org_name})
+        _org_audit(None, 'organization_registered', metadata={'reg_id': reg.id, 'type': org_type, 'name': org_name})
         db.session.commit()
 
         html = email_otp_body(applicant_name, otp, f'Verify your {org_type} registration on ScholrNet')
@@ -133,6 +148,7 @@ def api_org_register():
 # ─── OTP Verification ───────────────────────────────────────────
 
 @org_bp.route('/api/organization/verify-otp', methods=['POST'])
+@limiter.limit("5 per 15 minutes", methods=['POST'])
 def api_org_verify_otp():
     try:
         data = request.json or {}
@@ -152,9 +168,8 @@ def api_org_verify_otp():
         reg.otp = ''
         reg.status = 'pending_approval'
         db.session.commit()
-        _org_audit(0, 'otp_verified', metadata={'reg_id': reg.id})
+        _org_audit(None, 'otp_verified', metadata={'reg_id': reg.id})
 
-        # Create the Organization record (inactive)
         slug = _slugify(reg.org_name)
         base_slug = slug
         counter = 1
@@ -162,9 +177,11 @@ def api_org_verify_otp():
             slug = f"{base_slug}-{counter}"
             counter += 1
 
+        website_domain = _extract_website_domain(reg.website)
         org = Organization(
             name=reg.org_name, slug=slug, type=reg.org_type,
             website=reg.website, domain=reg.email_domain,
+            website_domain=website_domain,
             status='pending_approval',
             verification_level='unverified',
             risk_level=reg.risk_level,
@@ -177,6 +194,7 @@ def api_org_verify_otp():
         db.session.add(org)
         db.session.flush()
 
+        reg.org_id = org.id
         reg.status = 'pending_approval'
         db.session.commit()
 
@@ -186,6 +204,7 @@ def api_org_verify_otp():
         return jsonify({'error': 'Verification failed'}), 500
 
 @org_bp.route('/api/organization/resend-otp', methods=['POST'])
+@limiter.limit("3 per 15 minutes", methods=['POST'])
 def api_org_resend_otp():
     try:
         data = request.json or {}
@@ -240,7 +259,9 @@ def api_admin_org_approve(reg_id):
     if reg.status not in ('pending_approval',):
         return jsonify({'error': 'Invalid state'}), 400
 
-    org = Organization.query.filter_by(name=reg.org_name, type=reg.org_type, status='pending_approval').first()
+    org = Organization.query.get(reg.org_id) if reg.org_id else None
+    if not org:
+        org = Organization.query.filter_by(name=reg.org_name, type=reg.org_type, status='pending_approval').first()
     if not org:
         return jsonify({'error': 'Organization record not found'}), 404
 
@@ -260,7 +281,7 @@ def api_admin_org_approve(reg_id):
     db.session.commit()
     _org_audit(org.id, 'organization_approved', metadata={'reg_id': reg.id, 'admin_notes': data.get('admin_notes', '')})
 
-    activate_link = f"https://scholrnet.in/activate-organization?token={invite_token}"
+    activate_link = url_for('org.activate_org_page', token=invite_token, _external=True)
     html = f'''<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
@@ -289,11 +310,14 @@ def api_admin_org_reject(reg_id):
         return jsonify({'error': 'Unauthorized'}), 403
     data = request.json or {}
     reason = data.get('reason', '').strip()
+    escaped_reason = html.escape(reason) if reason else ''
     reg = OrganizationRegistration.query.get_or_404(reg_id)
     if reg.status not in ('pending_approval',):
         return jsonify({'error': 'Invalid state'}), 400
 
-    org = Organization.query.filter_by(name=reg.org_name, type=reg.org_type, status='pending_approval').first()
+    org = Organization.query.get(reg.org_id) if reg.org_id else None
+    if not org:
+        org = Organization.query.filter_by(name=reg.org_name, type=reg.org_type, status='pending_approval').first()
     if org:
         org.status = 'rejected'
         org.rejection_reason = reason
@@ -302,7 +326,7 @@ def api_admin_org_reject(reg_id):
     reg.reviewed_at = datetime.now(timezone.utc)
     reg.admin_notes = reason
     db.session.commit()
-    _org_audit(org.id if org else 0, 'organization_rejected', metadata={'reg_id': reg.id, 'reason': reason})
+    _org_audit(org.id if org else None, 'organization_rejected', metadata={'reg_id': reg.id, 'reason': reason})
 
     html = f'''<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -315,7 +339,7 @@ def api_admin_org_reject(reg_id):
 Hi {reg.applicant_name},<br><br>
 Your registration for <strong>{reg.org_name}</strong> was not approved at this time.
 </p>
-{f'<p style="margin:16px 0;font-size:14px;color:#5a6a7a;padding:16px;background:#fef2f2;border-radius:8px"><strong>Reason:</strong> {reason}</p>' if reason else ''}
+{f'<p style="margin:16px 0;font-size:14px;color:#5a6a7a;padding:16px;background:#fef2f2;border-radius:8px"><strong>Reason:</strong> {escaped_reason}</p>' if reason else ''}
 <p style="font-size:13px;color:#5a6a7a">You may re-apply with updated information.</p>
 </td></tr>
 <tr><td style="padding:16px 32px 24px;text-align:center;font-size:11px;color:#9aa6b5;border-top:1px solid #eef0f4">ScholrNet — Academic Trust Network</td></tr>
@@ -330,11 +354,13 @@ def api_admin_org_suspend(reg_id):
     if current_user.role != 'super_admin':
         return jsonify({'error': 'Unauthorized'}), 403
     reg = OrganizationRegistration.query.get_or_404(reg_id)
-    org = Organization.query.filter_by(name=reg.org_name, type=reg.org_type).first()
+    org = Organization.query.get(reg.org_id) if reg.org_id else None
+    if not org:
+        org = Organization.query.filter_by(name=reg.org_name, type=reg.org_type).first()
     if org:
         org.status = 'suspended'
     db.session.commit()
-    _org_audit(org.id if org else 0, 'organization_suspended', metadata={'reg_id': reg.id})
+    _org_audit(org.id if org else None, 'organization_suspended', metadata={'reg_id': reg.id})
     return jsonify({'success': True, 'message': 'Organization suspended.'})
 
 # ─── Activation ─────────────────────────────────────────────────
@@ -364,6 +390,7 @@ def activate_org_page():
     return render_template('organizations/activate.html', reg_id=reg.id, token=token, org_name=reg.org_name)
 
 @org_bp.route('/api/organization/activate', methods=['POST'])
+@limiter.limit("5 per 15 minutes", methods=['POST'])
 def api_org_activate():
     try:
         data = request.json or {}
@@ -384,7 +411,9 @@ def api_org_activate():
         if reg.invite_expires_at and datetime.now(timezone.utc) > reg.invite_expires_at:
             return jsonify({'error': 'Token expired'}), 400
 
-        org = Organization.query.filter_by(name=reg.org_name, type=reg.org_type, status='approved').first()
+        org = Organization.query.get(reg.org_id) if reg.org_id else None
+        if not org:
+            org = Organization.query.filter_by(name=reg.org_name, type=reg.org_type, status='approved').first()
         if not org:
             return jsonify({'error': 'Organization not found'}), 404
 
@@ -401,6 +430,10 @@ def api_org_activate():
             )
             db.session.add(user)
         db.session.flush()
+
+        # Set verified_school_id for school activations (bridges old system)
+        if reg.org_type == 'school':
+            user.verified_school_id = org.id
 
         member = OrganizationMember(
             organization_id=org.id, user_id=user.id,
@@ -446,7 +479,7 @@ def api_org_profile():
         return jsonify({'error': 'Not a member'}), 403
     org = Organization.query.get(member.organization_id)
     members = OrganizationMember.query.filter_by(organization_id=org.id).all()
-    user_ids = [m.user_id for m in members]
+    user_ids = [m.user_id for m in members if m.user_id]
     users = {u.id: {'name': u.name, 'email': u.email, 'avatar_url': u.avatar_url} for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
     return jsonify({
         'org': org.to_dict(),
@@ -492,18 +525,17 @@ def api_org_invite():
         invite_token = secrets.token_urlsafe(48)
         invite = OrganizationMember(
             organization_id=org.id,
-            user_id=existing_user.id if existing_user else 0,
+            user_id=existing_user.id if existing_user else None,
             role=role,
             invited_by=current_user.id,
-            status='pending'
+            status='pending',
+            invite_token=invite_token
         )
-        if existing_user:
-            invite.user_id = existing_user.id
         db.session.add(invite)
         db.session.flush()
         _org_audit(org.id, 'invite_sent', metadata={'email': email, 'role': role, 'invited_by': current_user.id})
 
-        accept_link = f"https://scholrnet.in/accept-invite?token={invite_token}&org_id={org.id}"
+        accept_link = url_for('org.accept_invite_page', token=invite_token, org_id=org.id, _external=True)
         if not existing_user:
             accept_link += f"&email={email}&name={invite_name}"
 
@@ -549,11 +581,19 @@ def accept_invite_page():
     return render_template('organizations/accept_invite.html', token=token, org_id=org_id, email=email, invite_name=invite_name)
 
 @org_bp.route('/api/organization/accept-invite', methods=['POST'])
+@limiter.limit("10 per 15 minutes", methods=['POST'])
 def api_accept_invite():
     try:
         data = request.json or {}
-        token = data.get('token', '')
-        org_id = data.get('org_id', type=int)
+        token = data.get('token', '').strip()
+        org_id_str = data.get('org_id')
+        if not token or not org_id_str:
+            return jsonify({'error': 'Token and organization ID are required'}), 400
+        try:
+            org_id = int(org_id_str)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid organization ID'}), 400
+
         password = data.get('password', '')
         name = data.get('name', '').strip()
         email = data.get('email', '').strip().lower()
@@ -573,13 +613,18 @@ def api_accept_invite():
                 db.session.add(user)
             db.session.flush()
 
-        member = OrganizationMember.query.filter_by(organization_id=org_id, status='pending').first()
+        member = OrganizationMember.query.filter_by(
+            organization_id=org_id,
+            invite_token=token,
+            status='pending'
+        ).first()
         if not member:
-            return jsonify({'error': 'Invitation not found'}), 404
+            return jsonify({'error': 'Invitation not found or invalid token'}), 404
 
         member.user_id = user.id
         member.status = 'active'
         member.joined_at = datetime.now(timezone.utc)
+        member.invite_token = ''
         org = Organization.query.get(org_id)
         _org_audit(org_id, 'invite_accepted', metadata={'user_id': user.id, 'role': member.role})
         db.session.commit()
@@ -595,7 +640,7 @@ def api_accept_invite():
 def org_public_profile(org_id, slug):
     org = Organization.query.get_or_404(org_id)
     members = OrganizationMember.query.filter_by(organization_id=org_id, status='active').all()
-    user_ids = [m.user_id for m in members]
+    user_ids = [m.user_id for m in members if m.user_id]
     users = {u.id: u for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
     return render_template('organizations/profile.html', org=org, members=members, users=users)
 

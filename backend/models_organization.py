@@ -28,6 +28,7 @@ class Organization(db.Model):
     type = db.Column(db.String(20), nullable=False, index=True)
     website = db.Column(db.String(300), default='')
     domain = db.Column(db.String(100), default='')
+    website_domain = db.Column(db.String(100), default='')
     status = db.Column(db.String(30), default=OrgStatus.pending_email.value, index=True)
     verification_level = db.Column(db.String(20), default='unverified')
     logo = db.Column(db.String(500), default='')
@@ -49,7 +50,7 @@ class Organization(db.Model):
     def to_dict(self):
         return {
             'id': self.id, 'name': self.name, 'slug': self.slug,
-            'type': self.type, 'website': self.website, 'domain': self.domain,
+            'type': self.type, 'website': self.website, 'domain': self.domain, 'website_domain': self.website_domain,
             'status': self.status, 'verification_level': self.verification_level,
             'logo': self.logo, 'description': self.description,
             'address': self.address, 'phone': self.phone,
@@ -86,6 +87,7 @@ class OrganizationRegistration(db.Model):
     status = db.Column(db.String(30), default='pending_email', index=True)
     reviewed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     reviewed_at = db.Column(db.DateTime, nullable=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -93,12 +95,13 @@ class OrganizationMember(db.Model):
     __tablename__ = 'organization_members'
     id = db.Column(db.Integer, primary_key=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     role = db.Column(db.String(50), nullable=False, default='staff')
     invited_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     invited_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     joined_at = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='pending', index=True)
+    invite_token = db.Column(db.String(64), default='', index=True)
 
     user = db.relationship('User', foreign_keys=[user_id])
     inviter = db.relationship('User', foreign_keys=[invited_by])
@@ -107,7 +110,7 @@ class OrganizationMember(db.Model):
 class OrgAuditLog(db.Model):
     __tablename__ = 'org_audit_logs'
     id = db.Column(db.Integer, primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False, index=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=True, index=True)
     action = db.Column(db.String(100), nullable=False)
     performed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     metadata_json = db.Column(db.Text, default='')
