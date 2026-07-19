@@ -1,0 +1,117 @@
+# ScholrNet — LLM Overview
+
+> ScholrNet is a free academic networking and opportunity-discovery platform for school students in India.
+> Students build a single school-verified profile (awards, projects, internships), share a trust-portfolio link
+> with colleges/employers, and discover matched opportunities (internships, scholarships, hackathons, clubs).
+
+## Production
+- **URL**: https://scholrnet.in
+- **Stack**: Python/Flask + Jinja2 + vanilla HTML/CSS/JS (no build step)
+- **Hosting**: Vercel free tier (10s function timeout)
+- **Database**: Supabase PostgreSQL + file storage
+- **Auth**: Flask-Login + bcrypt; optional Firebase Google/GitHub OAuth
+- **Email**: Resend (domain verified)
+- **Design**: Purple (#6C3BF5) / Teal (#00C4B8) / Coral (#FF6B6B), Inter font, Lucide icons
+
+## Key Constraints
+- Mobile-first responsive; no React/Node.js
+- All DB counts on landing page are real (never fake)
+- No password confirmation on register; no email-verify enforcement
+- Free forever; no premium tier
+
+## Key Files
+- `backend/app.py` — Flask app factory, 40+ routes, CSP nonce, idle timeout, CSRF
+- `backend/models.py` — User, Post, Achievement, Project, School, Opportunity, Club + 23 more
+- `backend/models_organization.py` — Organization, OrganizationRegistration, OrganizationMember, OrgAuditLog
+- `backend/routes/auth.py` — login, register, password reset, 2FA, Firebase OAuth
+- `backend/routes/main.py` — dashboard, profile, blog, landing, schools, admin panel
+- `backend/routes/api_organizations.py` — org registration, OTP, admin review, activation, invites
+- `backend/routes/api_admin.py` — super admin school/ad/post CRUD, policy management
+- `backend/routes/api_posts.py` — posts, comments, likes, achievements, projects, verification
+- `backend/routes/api_chat.py` — WebSocket chat via Firebase
+- `backend/routes/api_schools.py` — school CRUD, student verification
+- `backend/routes/api_clubs.py` — club CRUD, membership
+- `backend/routes/api_friends.py` — connections, friend requests
+- `backend/routes/api_other.py` — search, notifications, referrals, leads, uploads
+- `backend/config.py` — Config class with env var loading
+- `backend/extensions.py` — db, bcrypt, login_manager, limiter, compress
+- `backend/utils/email.py` — send_email, email_otp_body
+- `backend/services/migration.py` — startup migrations, RLS, blog seeding
+- `frontend/templates/base.html` — master layout, header/nav, chat drawer, footer, CSP nonce
+- `frontend/templates/landing.html` — 10-section marketing page with FAQ Schema.org
+- `frontend/templates/auth/login.html`, `register.html` — auth pages
+- `frontend/templates/organizations/*.html` — 7 org onboarding templates
+- `frontend/templates/admin_panel.html` — super admin dashboard
+- `frontend/static/css/landing.css` — design system + landing styles
+- `frontend/static/css/style.css` — app styles
+- `frontend/static/js/*.js` — main, feed, profile, admin, chat, search, landing
+
+## Routes (Public)
+- `/` — landing page
+- `/login`, `/register` — auth
+- `/register-school`, `/register-institution`, `/register-company` — org onboarding
+- `/activate-organization?token=` — account activation
+- `/accept-invite?token=&org_id=` — accept member invite
+- `/org/<id>/<slug>` — public org profile
+- `/school/<id>/<slug>` — public school landing page
+- `/opportunity/<id>/<slug>` — public opportunity detail
+- `/blog`, `/blog/<slug>` — blog
+- `/robots.txt`, `/sitemap.xml` — SEO
+- `/public` — public timeline
+
+## Routes (Authenticated)
+- `/dashboard`, `/profile`, `/opportunities`, `/teams`, `/mentors`
+- `/analytics`, `/advisor`, `/search`, `/chat`
+- `/school-desk`, `/admin-panel`
+- `/organization/dashboard`
+
+## API Endpoints (Key)
+- `POST /api/organization/register` — start org registration (rate-limited: 10/15min)
+- `POST /api/organization/verify-otp` — verify email OTP (rate-limited: 5/15min)
+- `POST /api/organization/resend-otp` — resend OTP (rate-limited: 3/15min)
+- `POST /api/organization/activate` — activate org account (rate-limited: 5/15min)
+- `POST /api/organization/accept-invite` — accept member invite (rate-limited: 10/15min)
+- `POST /api/organization/invite` — send member invite
+- `POST /api/organization/settings` — update org settings
+- `POST /api/organization/member/<id>/role` — change member role
+- `POST /api/organization/member/<id>/remove` — remove member
+- `GET /api/organization/profile` — org profile + member list
+- `GET /api/organization/audit-logs` — org activity log
+- `GET /api/admin/pending-organizations` — pending registrations
+- `POST /api/admin/organization/<id>/approve` — approve registration
+- `POST /api/admin/organization/<id>/reject` — reject registration
+- `POST /api/admin/organization/<id>/suspend` — suspend org
+- `GET /api/verification-requests` — school verification queue
+- `POST /api/verification-requests/<id>/approve` — approve achievement verification
+- `POST /api/admin/school/create` — create school
+- `GET /api/referral/generate` — generate referral code
+- `POST /api/referral/invite` — send referral invite
+- `POST /api/referral/claim` — claim referral badge
+- `POST /api/leads` — email capture
+
+## Security
+- CSP with per-request nonce (no `unsafe-inline` in script-src)
+- Origin/Referer CSRF check on mutating requests
+- Idle session timeout (30min)
+- Account lockout after 5 failed logins (15min)
+- Timing-safe OTP comparison (`hmac.compare_digest`)
+- Rate limiting on auth and registration endpoints
+- All user content escaped before DOM insertion (`escapeHtml`)
+- Plaintext API keys encrypted with Fernet at rest
+
+## DB Models (Key)
+- **User**: session_version, login_attempts, locked_until, org_memberships, totp_*, email_*
+- **Organization**: type(school/institution/company), status, domain, website_domain, risk_level
+- **OrganizationRegistration**: tracks full flow pending_email→pending_approval→approved/rejected
+- **OrganizationMember**: role, invite_token, status, organization_id, user_id
+- **OrgAuditLog**: action, performed_by, metadata_json
+- **School**: name, location, verification_code (old system, not replaced by Organization)
+- **Achievement**: title, student_id, verified_by, verified_at, school_id
+- **Post, Comment, Like**: social feed
+- **Club, ClubMember**: clubs
+- **Opportunity**: internships, scholarships, hackathons
+- **Mentorship**: mentor relationships
+- **Lead**: email capture
+- **Referral**: referral tracking
+- **BlogPost**: SEO blog content
+- **Policies**: terms/privacy versioning

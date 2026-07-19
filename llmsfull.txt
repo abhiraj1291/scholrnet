@@ -1,0 +1,433 @@
+# ScholrNet — Full Site Reference
+
+> Detailed reference for LLMs and AI agents working on the scholrnet.in codebase.
+> This file expands on llms.txt with full architecture, data model details,
+> route tables, security notes, deployment context, and key code patterns.
+
+## What ScholrNet Is
+
+ScholrNet is a free academic networking and opportunity-discovery platform for school students in India. Its core mechanic: a student builds a single profile listing achievements (awards, projects, certifications, internships), and their school (via a counselor or teacher account) verifies those achievements with one click. The verified profile becomes a "trust portfolio" — a shareable link a student can send with college applications, scholarship forms, internship resumes, or competition entries instead of re-explaining and re-proving their history each time.
+
+Alongside verification, ScholrNet runs an opportunity feed matching students to internships, scholarships, hackathons, competitions, and research opportunities, plus a lightweight social layer: connecting with classmates, teachers, and mentors, joining school clubs, and a public timeline for sharing achievements and opportunities.
+
+Founder: Abhiraj (https://linkedin.com/in/abhiraj129)
+
+## Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.13, Flask 3.x |
+| Frontend | Jinja2 templates, vanilla HTML/CSS/JS |
+| Icons | Lucide (unpkg CDN) |
+| Font | Inter (Google Fonts) |
+| Auth | Flask-Login + bcrypt; Firebase Google/GitHub OAuth; TOTP 2FA |
+| Database | Supabase PostgreSQL (production) / SQLite (development) |
+| File Storage | Supabase Storage |
+| Email | Resend (domain: scholrnet.in) |
+| Hosting | Vercel (free tier, 10s timeout) |
+| Domain | scholrnet.in (production) |
+| Rate Limiting | Flask-Limiter (in-memory) |
+| CSP | Per-request nonce, no unsafe-inline on scripts |
+| CI/CD | GitHub Actions → auto-deploy on push to main |
+
+## Project Structure
+
+```
+scholrnet/
+├── run.py                          # Entry point (dev server)
+├── README.md
+├── AGENTS.md                       # Roadmap & context for AI agents
+├── llms.txt                        # This file
+├── llmsfull.txt                    # Full reference (this file)
+├── .env.example                    # Environment variable template
+├── .github/workflows/deploy.yml    # Auto-deploy to Vercel
+├── api/
+│   └── index.py                   # Vercel serverless entry (calls create_app + enable_rls)
+├── backend/
+│   ├── app.py                     # Flask app factory, all before/after_request hooks
+│   ├── models.py                  # 28 SQLAlchemy models
+│   ├── models_organization.py     # Organization, OrganizationRegistration, Member, AuditLog
+│   ├── config.py                  # Config class from env vars
+│   ├── extensions.py              # db, bcrypt, login_manager, limiter, compress
+│   ├── requirements.txt           # Python dependencies
+│   ├── seed.py                    # DB seeder (deprecated)
+│   ├── services/
+│   │   ├── migration.py           # Startup migrations, RLS enable, blog seeding
+│   │   └── upload.py              # Supabase file upload
+│   ├── routes/
+│   │   ├── main.py                # Page routes (dashboard, profile, blog, etc.)
+│   │   ├── auth.py                # Login, register, password reset, 2FA, Firebase OAuth
+│   │   ├── api_admin.py           # Super admin CRUD for schools, ads, posts, policies
+│   │   ├── api_posts.py           # Posts, comments, likes, achievements, projects, verification
+│   │   ├── api_chat.py            # Chat (Firebase Realtime DB backed), typing indicator
+│   │   ├── api_friends.py         # Connections, friend requests
+│   │   ├── api_clubs.py           # Club CRUD, membership
+│   │   ├── api_schools.py         # School CRUD, student verification
+│   │   ├── api_other.py           # Search, notifications, referrals, leads, uploads
+│   │   └── api_organizations.py   # Organization onboarding, admin review, activation, invites
+│   └── utils/
+│       ├── email.py               # send_email via Resend, email_otp_body
+│       └── sanitizers.py          # Text sanitization, file type validation
+├── frontend/
+│   ├── templates/
+│   │   ├── base.html              # Master layout (header, nav, chat drawer, footer)
+│   │   ├── landing.html           # 10-section marketing page
+│   │   ├── admin_panel.html       # Super admin dashboard
+│   │   ├── auth/                  # login.html, register.html
+│   │   ├── organizations/         # 7 org onboarding templates
+│   │   └── *.html                 # ~30 page templates
+│   └── static/
+│       ├── css/
+│       │   ├── style.css          # App CSS (custom properties, header, tabs, cards, footer)
+│       │   └── landing.css        # Landing page design system + exit modal
+│       └── js/
+│           ├── main.js            # Notifications, settings, account dropdown, search panel
+│           ├── feed.js            # Feed: post CRUD, infinite scroll, likes, comments
+│           ├── profile.js         # Profile: achievements, projects, connections
+│           ├── admin.js           # Admin panel: schools, ads, posts, policies
+│           ├── chat.js            # Chat drawer: friends list, messaging, typing indicator
+│           ├── search.js          # Global search: posts, people, opportunities
+│           └── landing.js         # Landing: email capture, exit intent, scroll animations, FAQ
+```
+
+## Data Models (Full Schema)
+
+### User (`backend/models.py`)
+```
+id                  Integer PK
+name                String(100), not null
+email               String(120), unique, not null
+password_hash       String(256), not null
+school              String(200), indexed
+grade               String(50)
+bio                 Text
+avatar              String(10) — initials fallback
+avatar_url          String(300)
+role                String(20): student|teacher|mentor|counselor|admin|super_admin|pending|recruiter
+theme_color         String(30): navy|coral|blush|gold|slate|ice-blue
+groq_api_key        String(500) — Fernet-encrypted
+username            String(30), unique, nullable
+cover_banner        String(500)
+school_verified     Boolean, nullable
+verified_school_id  Integer FK → schools.id, nullable
+created_at          DateTime
+totp_secret         String(32)
+totp_enabled        Boolean
+totp_backup_codes   Text
+email_verified      Boolean
+email_verify_token  String(128)
+reset_password_token String(128)
+reset_password_token_expires String(30)
+email_otp           String(6)
+email_otp_expires   DateTime, nullable
+reset_otp           String(6)
+reset_otp_expires   DateTime, nullable
+referral_code       String(20), unique, nullable
+referral_badge      Boolean
+terms_accepted      Boolean
+terms_accepted_at   DateTime, nullable
+terms_version       String(20)
+privacy_accepted_at DateTime, nullable
+session_version     Integer — used for session invalidation
+login_attempts      Integer — lockout counter
+locked_until        DateTime, nullable
+
+Relationships:
+  achievements  → Achievement (dynamic)
+  projects      → Project (dynamic)
+  org_memberships → OrganizationMember (dynamic, FK=OrganizationMember.user_id)
+```
+
+### Organization (`backend/models_organization.py`)
+```
+id                  Integer PK
+name                String(300), not null, indexed
+slug                String(300), unique, not null, indexed
+type                String(20): school|institution|company
+website             String(300)
+domain              String(100) — extracted from applicant email
+website_domain      String(100) — extracted from website URL
+status              String(30): pending_email|pending_approval|approved|rejected|suspended|archived
+verification_level  String(20): unverified
+logo                String(500)
+description         Text
+address             String(500)
+phone               String(30)
+business_registration String(100)
+verification_code   String(20) — auto-generated for schools only
+is_verified         Boolean
+risk_level          String(20): low|medium|high
+duplicate_of        Integer FK → organizations.id, nullable
+created_at          DateTime
+approved_at         DateTime, nullable
+approved_by         Integer FK → users.id, nullable
+rejection_reason    Text
+
+Relationships:
+  members → OrganizationMember (dynamic, cascade delete)
+```
+
+### OrganizationRegistration
+```
+id                  Integer PK
+org_name            String(300), not null
+org_type            String(20), not null
+website             String(300)
+applicant_name      String(100), not null
+applicant_role      String(100)
+applicant_email     String(200), not null, indexed
+applicant_phone     String(30)
+notes               Text
+email_domain        String(100)
+risk_level          String(20)
+duplicate_flag      Boolean
+duplicate_org_id    Integer FK → organizations.id, nullable
+otp                 String(6)
+otp_expires_at      DateTime, nullable
+otp_verified_at     DateTime, nullable
+invite_token        String(64) — activation token (48h expiry)
+invite_expires_at   DateTime, nullable
+invite_used_at      DateTime, nullable
+admin_notes         Text
+status              String(30): pending_email|pending_approval|approved|rejected
+reviewed_by         Integer FK → users.id, nullable
+reviewed_at         DateTime, nullable
+org_id              Integer FK → organizations.id, nullable — set when org row created
+created_at          DateTime
+```
+
+### OrganizationMember
+```
+id                  Integer PK
+organization_id     Integer FK → organizations.id, not null, indexed
+user_id             Integer FK → users.id, nullable, indexed (nullable for pending invites)
+role                String(50): principal|vice_principal|coordinator|teacher|counselor|office_staff|director|instructor|staff|hr_admin|recruiter|hiring_manager
+invited_by          Integer FK → users.id, nullable
+invited_at          DateTime
+joined_at           DateTime, nullable
+status              String(20): pending|active|removed
+invite_token        String(64), indexed — used to validate accept-invite
+
+Relationships:
+  user     → User (FK = user_id)
+  inviter  → User (FK = invited_by)
+```
+
+### OrgAuditLog
+```
+id                  Integer PK
+organization_id     Integer FK → organizations.id, nullable, indexed
+action              String(100), not null
+performed_by        Integer FK → users.id, nullable
+metadata_json       Text
+created_at          DateTime
+```
+
+## Route Tables
+
+### Page Routes (main_bp)
+| Path | Function | Auth | Description |
+|------|----------|------|-------------|
+| `/` | landing | No | Marketing landing page |
+| `/dashboard` | dashboard | Yes | Main feed |
+| `/profile` | profile_page | Yes | User profile |
+| `/opportunities` | opportunities_page | Yes | Opportunity listing |
+| `/teams` | teams_page | Yes | Team finder |
+| `/mentors` | mentors_page | Yes | Mentor listing |
+| `/analytics` | analytics_page | Yes | Profile analytics |
+| `/advisor` | advisor_page | Yes | AI advisor chat |
+| `/search` | search_page | Yes | Search page |
+| `/chat` | chat_page | Yes | Chat page |
+| `/school-desk` | school_desk | Yes (admin+) | School verification desk |
+| `/admin-panel` | admin_panel | Yes (super_admin) | System admin |
+| `/about` | about_page | No | About page |
+| `/contact` | contact_page | No | Contact page |
+| `/privacy` | privacy_page | No | Privacy policy |
+| `/terms` | terms_page | No | Terms of service |
+| `/schools` | schools_page | No | For Schools info |
+| `/public` | public_timeline | No | Public feed |
+| `/blog` | blog_index | No | Blog index |
+| `/blog/<slug>` | blog_post | No | Blog post |
+| `/robots.txt` | robots_txt | No | SEO |
+| `/sitemap.xml` | sitemap_xml | No | SEO |
+| `/opportunity/<id>/<slug>` | opportunity_detail | No | Public opp page |
+| `/school/<id>/<slug>` | school_landing | No | Public school page |
+| `/share/achievement/<id>` | share_achievement | No | Share page |
+
+### Auth Routes (auth_bp)
+| Path | Function | Description |
+|------|----------|-------------|
+| `GET/POST /login` | login | Email + password login |
+| `GET/POST /register` | register | Account creation |
+| `GET /logout` | logout | Session destroy |
+| `GET/POST /forgot-password` | forgot_password | Password reset request |
+| `GET/POST /reset-password/<token>` | reset_password | Password reset |
+| `GET /verify-email` | verify_email_otp | Email OTP verification |
+| `POST /api/auth/firebase` | api_firebase_auth | Firebase OAuth callback |
+| `POST /api/auth/change-password` | api_change_password | Password change |
+| `POST /api/auth/logout-all` | api_logout_all | Invalidate all sessions |
+| `POST /api/auth/verify-otp` | api_verify_email_otp | Email OTP check |
+| `POST /api/auth/resend-otp` | api_resend_verify_otp | Resend email OTP |
+| `POST /api/auth/change-verify-email` | api_change_verify_email | Change email |
+| `GET/POST /2fa/setup` | setup_2fa | TOTP setup |
+| `GET/POST /2fa/verify` | verify_2fa | TOTP login verification |
+
+### Organization Routes (org_bp)
+| Path | Function | Auth | Description |
+|------|----------|------|-------------|
+| `GET /register-school` | register_school | No | School registration page |
+| `GET /register-institution` | register_institution | No | Institution registration page |
+| `GET /register-company` | register_company | No | Company registration page |
+| `POST /api/organization/register` | api_org_register | No | Submit registration (10/15min) |
+| `POST /api/organization/verify-otp` | api_org_verify_otp | No | Verify email OTP (5/15min) |
+| `POST /api/organization/resend-otp` | api_org_resend_otp | No | Resend OTP (3/15min) |
+| `GET /verify-org-otp` | verify_org_otp_page | No | OTP input page |
+| `GET /registration-pending` | registration_pending_page | No | Pending approval page |
+| `GET /activate-organization` | activate_org_page | No | Account activation page |
+| `POST /api/organization/activate` | api_org_activate | No | Activate account (5/15min) |
+| `GET /organization/dashboard` | org_dashboard | Yes | Org management dashboard |
+| `GET /api/organization/profile` | api_org_profile | Yes | Org profile JSON |
+| `POST /api/organization/invite` | api_org_invite | Yes | Invite member |
+| `GET /accept-invite` | accept_invite_page | No | Accept invite page |
+| `POST /api/organization/accept-invite` | api_accept_invite | No | Accept invite (10/15min) |
+| `GET /org/<id>/<slug>` | org_public_profile | No | Public org profile |
+| `POST /api/organization/settings` | api_org_settings | Yes | Update org settings |
+| `POST /api/organization/member/<id>/role` | api_org_member_role | Yes | Change member role |
+| `POST /api/organization/member/<id>/remove` | api_org_member_remove | Yes | Remove member |
+| `GET /api/organization/audit-logs` | api_org_audit_logs | Yes | Activity logs |
+| `GET /api/admin/pending-organizations` | api_admin_pending_orgs | Yes (super_admin) | Pending queue |
+| `POST /api/admin/organization/<id>/approve` | api_admin_org_approve | Yes (super_admin) | Approve registration |
+| `POST /api/admin/organization/<id>/reject` | api_admin_org_reject | Yes (super_admin) | Reject registration |
+| `POST /api/admin/organization/<id>/suspend` | api_admin_org_suspend | Yes (super_admin) | Suspend org |
+
+## Security Architecture
+
+### CSP (Content-Security-Policy)
+Set in `app.py` `add_security_headers` after_request handler:
+- `default-src 'self'`
+- `script-src 'self' 'nonce-{nonce}'` — no `unsafe-inline`
+- `style-src 'self' 'unsafe-inline'` — needed for dynamic theme colors
+- `img-src 'self' data: blob: https:`
+- `connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.supabase.co`
+- Per-request nonce generated via `secrets.token_hex(16)` in `set_csp_nonce` before_request
+
+### CSRF Protection
+Applied in `csrf_protect` before_request for all mutating methods (POST/PUT/PATCH/DELETE):
+- Checks Origin or Referer header against allowed hosts (scholrnet.in, localhost, *.vercel.app)
+- Returns 403 if neither header matches
+
+### Session Security
+- Flask session with PERMANENT_SESSION_LIFETIME
+- Idle timeout: 30min via `check_idle_timeout` before_request (sliding window)
+- Session invalidation: `session_version` column on User, password change/logout-all bumps version
+- `get_id()` returns `"{id}:{session_version}"` — user_loader validates version
+
+### Authentication
+- Passwords hashed with bcrypt (Flask-Bcrypt)
+- Login lockout: 5 failed attempts → 15min lockout (checked in auth.py login route)
+- OTP comparisons use `hmac.compare_digest` (timing-safe)
+- Firebase OAuth tokens validated server-side
+- TOTP 2FA for optional extra layer
+
+### Rate Limiting
+- Auth endpoints: 3-30 per 15 minutes depending on sensitivity
+- Org endpoints: 3-10 per 15 minutes
+- Generic API: 5-60 per minute
+- Default: 1000/day, 200/hour (from extensions.py)
+
+### Admin Authorization
+- `@super_admin_required` decorator on admin endpoints
+- Inline `current_user.role != 'super_admin'` checks
+- Role-based access in organization management (only principal/director/hr_admin can manage)
+
+## Organization Onboarding Flow
+
+```
+Registration Page (/register-school, /register-institution, /register-company)
+  │
+  ▼ User submits form
+POST /api/organization/register
+  ├── Free email check → blocked with 400
+  ├── Duplicate check (email + status) → 409 if exists
+  ├── Risk assessment (domain match, free email check)
+  └── Returns reg_id, sends OTP via email
+  │
+  ▼ User enters OTP
+GET /verify-org-otp?reg_id=X
+POST /api/organization/verify-otp
+  ├── Validates OTP (timing-safe, 5/15min rate limit)
+  ├── Creates Organization row (pending_approval)
+  ├── Stores org_id back on OrganizationRegistration
+  └── Redirects to /registration-pending
+  │
+  ▼ Admin reviews in Admin Panel
+GET /api/admin/pending-organizations
+POST /api/admin/organization/<id>/approve
+  ├── Updates org status → 'approved', is_verified → True
+  ├── Generates 48h invite_token, stores on OrganizationRegistration
+  └── Sends activation email with link
+  │
+  ▼ User clicks email link
+GET /activate-organization?token=XXX
+POST /api/organization/activate
+  ├── Validates token (not used, not expired)
+  ├── Creates User + OrganizationMember (principal/director/hr_admin role)
+  ├── Sets verified_school_id for school type
+  ├── Sets org status → 'active'
+  └── User can now log in
+```
+
+## Deployment
+
+### Vercel (Production)
+Auto-deploy via `.github/workflows/deploy.yml` on push to main:
+1. Installs Python dependencies
+2. Builds nothing (pure Python)
+3. Deploys using Vercel CLI with `VERCEL_TOKEN` GitHub secret
+4. Entry point: `api/index.py` → calls `create_app()` then `enable_rls()`
+
+### Environment Variables
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | Supabase PostgreSQL URL |
+| `RESEND_API_KEY` | Yes | Resend email API key |
+| `FLASK_SECRET_KEY` | Yes | Session signing (32+ chars) |
+| `FIREBASE_API_KEY` | No | Firebase project API key for OAuth |
+| `FIREBASE_AUTH_DOMAIN` | No | Firebase auth domain |
+| `FIREBASE_PROJECT_ID` | No | Firebase project ID |
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | Yes | Supabase service role key |
+| `SUPABASE_BUCKET` | Yes | Supabase storage bucket name |
+| `TURNSTILE_SITE_KEY` | No | Cloudflare Turnstile site key |
+| `TURNSTILE_SECRET_KEY` | No | Cloudflare Turnstile secret key |
+| `TURNSTILE_VERIFY_URL` | No | Turnstile verify endpoint |
+| `GEMINI_API_KEY` | No | Google Gemini API key (AI features) |
+| `API_KEY_ENCRYPTION_KEY` | No | Fernet key for groq_api_key encryption |
+| `ENABLE_ADMIN_TOOLS` | No | Enable destructive admin endpoints |
+| `PYTHON_VERSION` | No | Used by Vercel |
+
+## Key Design Decisions
+
+1. **Unified Organization model** with type enum (school/institution/company) instead of separate models — allows future types (NGOs, scholarship providers, training centers) without schema changes.
+
+2. **Manual admin approval mandatory** — email verification alone never activates an organization. Admin must explicitly approve via admin panel.
+
+3. **Invite token activation** — no passwords generated or emailed. Applicant clicks 48h link, sets own password.
+
+4. **Two parallel school systems** exist — the legacy `School` model and the new `Organization` model (type=school). The `verified_school_id` bridge on `User` is set during new-flow activation. Future migration may deprecate `School`.
+
+5. **Schools lazy-loaded via JS API** — not rendered in context processor. Reduces initial page weight.
+
+6. **Landing page uses real DB data only** — never fake numbers, testimonials, or success stories.
+
+7. **Purple primary color** (#6C3BF5) differentiates from competitors (LinkedIn=blue, Internshala=green, Unstop=blue).
+
+8. **No password confirmation** on register — reduced friction tradeoff.
+
+9. **Email verification not enforced** — users can explore before verifying (reduced friction).
+
+## Remaining / Next Steps
+
+1. Submit sitemap to Google Search Console for indexing
+2. Add more blog content (monthly cadence)
+3. Consolidate old School model and new Organization model into single system
