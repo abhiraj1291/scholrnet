@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, Response, session, abort, current_app
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, Response, session, abort, current_app, send_file
 from flask_login import login_required, current_user, logout_user, login_user
 from models import db, User, Achievement, Project, Post, Comment, Ad, Opportunity, School, Club, ClubMember, BlogPost, Lead
 from utils.sanitizers import sanitize_text
@@ -6,6 +6,7 @@ from utils.email import send_email, email_otp_body
 from utils.decorators import super_admin_required
 from services.helpers import is_verified, short_ts, audit_log, active_ads
 from datetime import datetime, timezone
+import os
 
 main_bp = Blueprint('main', __name__)
 
@@ -191,6 +192,16 @@ def robots_txt():
     ]
     return Response('\n'.join(lines), mimetype='text/plain')
 
+
+@main_bp.route('/llms.txt')
+def llms_txt():
+    path = os.path.join(current_app.root_path, '..', 'llms.txt')
+    return send_file(path, mimetype='text/plain')
+
+@main_bp.route('/llmsfull.txt')
+def llmsfull_txt():
+    path = os.path.join(current_app.root_path, '..', 'llmsfull.txt')
+    return send_file(path, mimetype='text/plain')
 
 @main_bp.route('/sitemap.xml')
 def sitemap_xml():
