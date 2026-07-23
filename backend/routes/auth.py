@@ -30,11 +30,11 @@ def login():
             email = request.form.get('email', '').strip().lower()
             password = request.form.get('password', '')
             if len(email) > 254 or len(password) > 128:
-                return render_template('auth/login.html', error="Invalid credentials")
+                return render_template('auth/login.html', error="Invalid credentials", firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
             user = User.query.filter_by(email=email).first()
             if user and user.password_hash != '*firebase*':
                 if user.locked_until and user.locked_until > datetime.utcnow():
-                    return render_template('auth/login.html', error="Account temporarily locked. Try again later.")
+                    return render_template('auth/login.html', error="Account temporarily locked. Try again later.", firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
                 if bcrypt.check_password_hash(user.password_hash, password):
                     user.login_attempts = 0
                     user.locked_until = None
@@ -49,12 +49,12 @@ def login():
                 if user.login_attempts >= 5:
                     user.locked_until = datetime.utcnow() + timedelta(minutes=15)
                 db.session.commit()
-            return render_template('auth/login.html', error="Invalid email or password")
+            return render_template('auth/login.html', error="Invalid email or password", firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
         return render_template('auth/login.html',
             firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
     except Exception:
         current_app.logger.exception('auth error')
-        return render_template('auth/login.html', error="Login error. Please try again.")
+        return render_template('auth/login.html', error="Login error. Please try again.", firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
