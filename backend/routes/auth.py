@@ -139,7 +139,13 @@ def register():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return render_template('auth/register.html', error=f'Registration error ({type(e).__name__}). Please try again.', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
+        err_detail = str(e)
+        if hasattr(e, 'orig') and e.orig:
+            try:
+                err_detail = str(e.orig)
+            except Exception:
+                pass
+        return render_template('auth/register.html', error=f'Registration error ({type(e).__name__}: {err_detail[:200]}). Please try again.', turnstile_site_key=current_app.config.get('TURNSTILE_SITE_KEY', ''))
 
 
 @auth_bp.route('/api/auth/firebase', methods=['POST'])
