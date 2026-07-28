@@ -87,9 +87,9 @@ def explore_page():
         return render_template('explore.html', user=current_user,
             suggested_clubs=[c for c in suggested_clubs if c.id not in member_club_ids][:6],
             opportunities=upcoming_opps)
-    except Exception:
+    except Exception as e:
         import traceback; traceback.print_exc()
-        return render_template('error.html', code=500, title='Something Went Wrong', message='Could not load explore page.', emoji='🔍'), 500
+        return render_template('error.html', code=500, title='Something Went Wrong', message=f'Could not load explore page. [{type(e).__name__}: {e}]', emoji='🔍'), 500
 
 
 @main_bp.route('/dashboard')
