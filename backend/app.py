@@ -139,7 +139,7 @@ def register_routes(app, _bcrypt=None, _login_manager=None, _limiter=None):
             "img-src 'self' data: blob: https:; "
             "font-src 'self' data: https://fonts.gstatic.com; "
             "frame-src 'self' https://*.firebaseapp.com https://challenges.cloudflare.com; "
-            "connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.supabase.co https://challenges.cloudflare.com; "
+            "connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.supabase.co https://challenges.cloudflare.com https://www.gstatic.com https://unpkg.com; "
             "media-src 'self' data: blob:; "
             "object-src 'none'; "
             "base-uri 'self'; "
