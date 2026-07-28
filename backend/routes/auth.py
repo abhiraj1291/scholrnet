@@ -27,11 +27,13 @@ def login():
         if current_user.is_authenticated:
             return redirect(url_for('main.dashboard'))
         if request.method == 'POST':
-            email = request.form.get('email', '').strip().lower()
+            login_input = request.form.get('email', '').strip().lower()
             password = request.form.get('password', '')
-            if len(email) > 254 or len(password) > 128:
+            if len(login_input) > 254 or len(password) > 128:
                 return render_template('auth/login.html', error="Invalid credentials", firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
-            user = User.query.filter_by(email=email).first()
+            user = User.query.filter_by(email=login_input).first()
+            if not user and '@' not in login_input:
+                user = User.query.filter_by(username=login_input).first()
             if user and user.password_hash != '*firebase*':
                 if user.locked_until and user.locked_until > datetime.utcnow():
                     return render_template('auth/login.html', error="Account temporarily locked. Try again later.", firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
@@ -49,7 +51,7 @@ def login():
                 if user.login_attempts >= 5:
                     user.locked_until = datetime.utcnow() + timedelta(minutes=15)
                 db.session.commit()
-            return render_template('auth/login.html', error="Invalid email or password", firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
+            return render_template('auth/login.html', error="Invalid email/username or password", firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
         return render_template('auth/login.html',
             firebase_config=current_app.config.get("FIREBASE_CONFIG", {}))
     except Exception:

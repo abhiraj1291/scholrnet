@@ -274,12 +274,16 @@
     <div class="cookie-banner-inner">
       <p><strong>We use cookies</strong> for login and analytics. <a href="{{ url_for('main.privacy_page') }}">Privacy Policy</a></p>
       <div class="cookie-banner-btns">
-        <button class="cookie-btn cookie-btn-primary" onclick="localStorage.setItem('cookie-preference','all');document.getElementById('cookieBanner').classList.remove('show')">Accept</button>
-        <button class="cookie-btn cookie-btn-secondary" onclick="localStorage.setItem('cookie-preference','essential');document.getElementById('cookieBanner').classList.remove('show')">Essential Only</button>
+        <button class="cookie-btn cookie-btn-primary" id="cookieAccept">Accept</button>
+        <button class="cookie-btn cookie-btn-secondary" id="cookieEssential">Essential Only</button>
       </div>
     </div>
   </div>
-  <script nonce="{{ csp_nonce }}">if(!localStorage.getItem('cookie-preference')){setTimeout(function(){document.getElementById('cookieBanner').classList.add('show')},500)}</script>
+  <script nonce="{{ csp_nonce }}">
+    if(!localStorage.getItem('cookie-preference')){setTimeout(function(){document.getElementById('cookieBanner').classList.add('show')},500)}
+    document.getElementById('cookieAccept')?.addEventListener('click',function(){localStorage.setItem('cookie-preference','all');document.getElementById('cookieBanner').classList.remove('show')});
+    document.getElementById('cookieEssential')?.addEventListener('click',function(){localStorage.setItem('cookie-preference','essential');document.getElementById('cookieBanner').classList.remove('show')});
+  </script>
 
   <footer class="app-footer">
     <div class="app-footer-inner">
