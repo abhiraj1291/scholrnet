@@ -28,6 +28,7 @@ def run_startup_migrations(app):
         _ensure_chat_typing()
         _ensure_chat_messages_group_cols(inspector)
         _create_performance_indexes()
+        _ensure_organization_tables()
         _run_extended_migrations(inspector)
         _clean_duplicate_connections()
         _recalculate_club_member_counts()
@@ -221,6 +222,19 @@ def _create_performance_indexes():
         print(f"AUTO-MIGRATE: performance indexes failed: {e}")
 
 
+def _ensure_organization_tables():
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("CREATE TABLE IF NOT EXISTS organizations (id SERIAL PRIMARY KEY, name VARCHAR(300) NOT NULL, slug VARCHAR(300) UNIQUE NOT NULL, type VARCHAR(20) NOT NULL, website VARCHAR(300) DEFAULT '', domain VARCHAR(100) DEFAULT '', website_domain VARCHAR(100) DEFAULT '', status VARCHAR(30) DEFAULT 'pending_email_verification', verification_level VARCHAR(20) DEFAULT 'unverified', logo VARCHAR(500) DEFAULT '', description TEXT DEFAULT '', address VARCHAR(500) DEFAULT '', phone VARCHAR(30) DEFAULT '', business_registration VARCHAR(100) DEFAULT '', verification_code VARCHAR(20) DEFAULT '', is_verified BOOLEAN DEFAULT FALSE, risk_level VARCHAR(20) DEFAULT 'low', duplicate_of INTEGER REFERENCES organizations(id), created_at TIMESTAMP DEFAULT NOW(), approved_at TIMESTAMP, approved_by INTEGER REFERENCES users(id), rejection_reason TEXT DEFAULT '')"))
+            conn.execute(text("CREATE TABLE IF NOT EXISTS organization_members (id SERIAL PRIMARY KEY, organization_id INTEGER REFERENCES organizations(id) NOT NULL, user_id INTEGER REFERENCES users(id), role VARCHAR(50) NOT NULL DEFAULT 'staff', invited_by INTEGER REFERENCES users(id), invited_at TIMESTAMP DEFAULT NOW(), joined_at TIMESTAMP, status VARCHAR(20) DEFAULT 'pending', invite_token VARCHAR(64) DEFAULT '')"))
+            conn.execute(text("CREATE TABLE IF NOT EXISTS organization_registrations (id SERIAL PRIMARY KEY, org_name VARCHAR(300) NOT NULL, org_type VARCHAR(20) NOT NULL, website VARCHAR(300) DEFAULT '', applicant_name VARCHAR(100) NOT NULL, applicant_role VARCHAR(100) DEFAULT '', applicant_email VARCHAR(200) NOT NULL, applicant_phone VARCHAR(30) DEFAULT '', notes TEXT DEFAULT '', email_domain VARCHAR(100) DEFAULT '', risk_level VARCHAR(20) DEFAULT 'low', duplicate_flag BOOLEAN DEFAULT FALSE, duplicate_org_id INTEGER REFERENCES organizations(id), otp VARCHAR(6) DEFAULT '', otp_expires_at TIMESTAMP, otp_verified_at TIMESTAMP, invite_token VARCHAR(64) DEFAULT '', invite_expires_at TIMESTAMP, invite_used_at TIMESTAMP, admin_notes TEXT DEFAULT '', status VARCHAR(30) DEFAULT 'pending_email', reviewed_by INTEGER REFERENCES users(id), reviewed_at TIMESTAMP, org_id INTEGER REFERENCES organizations(id), created_at TIMESTAMP DEFAULT NOW())"))
+            conn.execute(text("CREATE TABLE IF NOT EXISTS org_audit_logs (id SERIAL PRIMARY KEY, organization_id INTEGER REFERENCES organizations(id), action VARCHAR(100) NOT NULL, performed_by INTEGER REFERENCES users(id), metadata_json TEXT DEFAULT '', created_at TIMESTAMP DEFAULT NOW())"))
+            conn.commit()
+        print("AUTO-MIGRATE: Ensured organization tables exist")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: organization table creation failed: {e}")
+
+
 def _run_extended_migrations(inspector):
     if os.environ.get('RUN_MIGRATIONS', '').lower() != 'true':
         return
@@ -372,7 +386,7 @@ def _create_policy_versions_table():
 def enable_rls():
     """Enable RLS + revoke anon/authenticated perms on all tables."""
     try:
-        rls_tables = ['users','achievements','projects','posts','comments','ads','opportunities','team_requests','team_applicants','verification_requests','mentors','mentorship_requests','mentor_interactions','notifications','chat_messages','chat_typing','clubs','club_members','club_join_requests','schools','school_announcements','connections','user_likes','event_registrations','experiences','audit_logs','leads','referrals','blog_posts']
+        rls_tables = ['users','achievements','projects','posts','comments','ads','opportunities','team_requests','team_applicants','verification_requests','mentors','mentorship_requests','mentor_interactions','notifications','chat_messages','chat_typing','clubs','club_members','club_join_requests','schools','school_announcements','connections','user_likes','event_registrations','experiences','audit_logs','leads','referrals','blog_posts','organizations','organization_members','organization_registrations','org_audit_logs']
         with db.engine.connect() as conn:
             conn.execute(text("SET client_min_messages TO warning"))
             for tbl in rls_tables:
