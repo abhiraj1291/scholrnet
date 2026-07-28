@@ -192,9 +192,9 @@ def api_firebase_auth():
         login_user(user)
         session.permanent = True
         return jsonify({'success': True, 'redirect': '/dashboard'})
-    except Exception as e:
+    except Exception:
         current_app.logger.exception('auth error')
-        return jsonify({'success': False, 'error': f'Server error: {type(e).__name__}'}), 500
+        return jsonify({'success': False, 'error': 'Server error'}), 500
 
 
 @auth_bp.route('/verify-email-otp', methods=['GET', 'POST'])
