@@ -29,6 +29,7 @@ def run_startup_migrations(app):
         _ensure_chat_messages_group_cols(inspector)
         _create_performance_indexes()
         _ensure_organization_tables()
+        _ensure_connections_columns()
         _run_extended_migrations(inspector)
         _clean_duplicate_connections()
         _recalculate_club_member_counts()
@@ -343,6 +344,18 @@ def _add_connection_unique_indexes():
         print("AUTO-MIGRATE: Added unique indexes on connections")
     except Exception as e:
         print(f"AUTO-MIGRATE: connections unique indexes failed: {e}")
+
+
+def _ensure_connections_columns():
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("""
+                ALTER TABLE connections ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'
+            """))
+            conn.commit()
+        print("AUTO-MIGRATE: Ensured connections.status column")
+    except Exception as e:
+        print(f"AUTO-MIGRATE: connections column check failed: {e}")
 
 
 def _add_terms_privacy_columns():

@@ -94,9 +94,10 @@ def api_friend_list():
         ids = set(c.connected_user_id if c.user_id == current_user.id else c.user_id for c in friend_conns)
         user_rows = db.session.query(User.id, User.name, User.avatar, User.avatar_url, User.school, User.username).filter(User.id.in_(ids)).all() if ids else []
         return jsonify({'friends': [{'id': u.id, 'name': u.name, 'avatar': u.avatar or u.name[:2].upper(), 'avatar_url': u.avatar_url, 'school': u.school, 'username': u.username} for u in user_rows]})
-    except Exception:
+    except Exception as e:
         import traceback; traceback.print_exc()
-        return jsonify({'friends': []})
+        current_app.logger.error(f"api_friend_list error for user {current_user.id}: {e}")
+        return jsonify({'friends': [], 'error': str(e)[:200]})
 
 @bp.route('/api/friend/suggestions')
 @login_required
@@ -155,9 +156,10 @@ def api_user_connections(user_id):
             'school': u.school, 'username': u.username,
             'mutual': len(my_ids & {u.id})
         } for u in users]})
-    except Exception:
+    except Exception as e:
         import traceback; traceback.print_exc()
-        return jsonify({'connections': []})
+        current_app.logger.error(f"api_user_connections error for user {user_id}: {e}")
+        return jsonify({'connections': [], 'error': str(e)[:200]})
 
 @bp.route('/api/connection/toggle', methods=['POST'])
 @login_required
