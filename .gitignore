@@ -16,5 +16,12 @@ venv/
 .DS_Store
 Thumbs.db
 tempCodeRunnerFile.*
+cookies*.txt
+login_test*.txt
+session_cookies*.txt
+test_cookies*.txt
+scholrnet.db*
+*.db-shm
+*.db-wal
 
 .vercel

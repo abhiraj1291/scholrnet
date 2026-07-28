@@ -50,8 +50,7 @@ def api_delete_ad(ad_id):
 @bp.route('/api/ad/<int:ad_id>/click', methods=['POST'])
 @limiter.limit("10 per minute")
 def api_ad_click(ad_id):
-    ad = Ad.query.get_or_404(ad_id)
-    ad.clicks = Ad.clicks + 1
+    Ad.query.filter_by(id=ad_id).update({'clicks': Ad.clicks + 1})
     db.session.commit()
     return jsonify({'success': True})
 
@@ -59,8 +58,7 @@ def api_ad_click(ad_id):
 @bp.route('/api/ad/<int:ad_id>/impression', methods=['POST'])
 @limiter.limit("30 per minute")
 def api_ad_impression(ad_id):
-    ad = Ad.query.get_or_404(ad_id)
-    ad.impressions = Ad.impressions + 1
+    Ad.query.filter_by(id=ad_id).update({'impressions': Ad.impressions + 1})
     db.session.commit()
     return jsonify({'success': True})
 
@@ -79,7 +77,7 @@ def api_notifications():
 @bp.route('/api/notifications/read', methods=['POST'])
 @login_required
 def api_notifications_read():
-    Notification.query.filter_by(user_id=current_user.id, unread=True).delete()
+    Notification.query.filter_by(user_id=current_user.id, unread=True).update({'unread': False})
     db.session.commit()
     return jsonify({'success': True})
 

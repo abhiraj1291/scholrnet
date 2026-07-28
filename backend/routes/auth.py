@@ -6,7 +6,7 @@ from models import db, User, Achievement, Project, Post
 from extensions import bcrypt, limiter
 from utils.sanitizers import sanitize_text, validate_file_type
 from utils.email import send_email, email_otp_body
-from services.upload import save_to_supabase
+from services.upload import save_to_supabase, delete_from_supabase
 
 auth_bp = Blueprint('auth', __name__, url_prefix='')
 
@@ -609,6 +609,8 @@ def api_delete_account():
 @login_required
 @limiter.limit("5 per minute")
 def api_upload_avatar():
+    supabase_url = current_app.config.get("SUPABASE_URL","").rstrip("/")
+    supabase_key = current_app.config.get("SUPABASE_STORAGE_KEY","")
     if 'file' not in request.files:
         return jsonify({"success": False, "error": "No file provided"}), 400
     f = request.files['file']
@@ -620,7 +622,9 @@ def api_upload_avatar():
         return jsonify({"success": False, "error": err}), 400
     ext = f.filename.rsplit('.', 1)[-1].lower()
     safe_name = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
-    url = save_to_supabase(f.read(), 'uploads', f"avatars/{safe_name}", supabase_url=current_app.config.get("SUPABASE_URL","").rstrip("/"), supabase_key=current_app.config.get("SUPABASE_STORAGE_KEY",""))
+    if current_user.avatar_url:
+        delete_from_supabase(current_user.avatar_url, supabase_url=supabase_url, supabase_key=supabase_key)
+    url = save_to_supabase(f.read(), 'uploads', f"avatars/{safe_name}", supabase_url=supabase_url, supabase_key=supabase_key)
     if not url:
         return jsonify({"success": False, "error": "Failed to upload file"}), 500
     current_user.avatar_url = url
@@ -632,6 +636,8 @@ def api_upload_avatar():
 @login_required
 @limiter.limit("5 per minute")
 def api_upload_cover():
+    supabase_url = current_app.config.get("SUPABASE_URL","").rstrip("/")
+    supabase_key = current_app.config.get("SUPABASE_STORAGE_KEY","")
     try:
         if 'file' not in request.files:
             return jsonify({"success": False, "error": "No file provided"}), 400
@@ -644,7 +650,9 @@ def api_upload_cover():
             return jsonify({"success": False, "error": err}), 400
         ext = f.filename.rsplit('.', 1)[-1].lower()
         safe_name = f"cover_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
-        url = save_to_supabase(f.read(), 'uploads', f"covers/{safe_name}", supabase_url=current_app.config.get("SUPABASE_URL","").rstrip("/"), supabase_key=current_app.config.get("SUPABASE_STORAGE_KEY",""))
+        if current_user.cover_banner:
+            delete_from_supabase(current_user.cover_banner, supabase_url=supabase_url, supabase_key=supabase_key)
+        url = save_to_supabase(f.read(), 'uploads', f"covers/{safe_name}", supabase_url=supabase_url, supabase_key=supabase_key)
         if not url:
             return jsonify({"success": False, "error": "Failed to upload file"}), 500
         current_user.cover_banner = url

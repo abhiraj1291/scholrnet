@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from models import db, User, Club, ClubMember, ClubJoinRequest, Post, ChatMessage, Notification
 from utils.sanitizers import sanitize_text, validate_file_type
 from services.helpers import is_verified, short_ts, audit_log
-from services.upload import save_to_supabase
+from services.upload import save_to_supabase, delete_from_supabase
 from extensions import limiter
 import uuid
 
@@ -318,6 +318,8 @@ def api_club_upload_avatar(club_id):
             return jsonify({'error': err or 'Invalid file type'}), 400
         ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'png'
         path = f"club_avatars/{club.id}/{uuid.uuid4().hex}.{ext}"
+        if club.avatar:
+            delete_from_supabase(club.avatar, supabase_url=supabase_url, supabase_key=supabase_key)
         url = save_to_supabase(f.read(), 'uploads', path, supabase_url=supabase_url, supabase_key=supabase_key)
         if not url:
             return jsonify({'error': 'Upload failed'}), 500
@@ -349,6 +351,8 @@ def api_club_upload_cover(club_id):
             return jsonify({'error': err or 'Invalid file type'}), 400
         ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'jpg'
         path = f"club_covers/{club.id}/{uuid.uuid4().hex}.{ext}"
+        if club.cover_url:
+            delete_from_supabase(club.cover_url, supabase_url=supabase_url, supabase_key=supabase_key)
         url = save_to_supabase(f.read(), 'uploads', path, supabase_url=supabase_url, supabase_key=supabase_key)
         if not url:
             return jsonify({'error': 'Upload failed'}), 500

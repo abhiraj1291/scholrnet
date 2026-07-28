@@ -44,7 +44,7 @@ def active_ads():
         return q.order_by(Ad.id.desc()).limit(20).all()
     except Exception:
         traceback.print_exc()
-        return Ad.query.limit(20).all()
+        return []
 
 
 def get_gemini_client():
