@@ -37,40 +37,41 @@
       <p class="sub">What describes you best?</p>
 
       <div id="roleList">
-        <div class="role-option" data-role="student" onclick="selectRole('student')">
+        <div class="role-option" data-role="student">
           <div class="role-title"><i data-lucide="graduation-cap" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i> Student</div>
           <div class="role-desc">Explore opportunities, track achievements, and connect with peers</div>
         </div>
-        <div class="role-option" data-role="teacher" onclick="selectRole('teacher')">
+        <div class="role-option" data-role="teacher">
           <div class="role-title"><i data-lucide="presentation" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i> Teacher</div>
           <div class="role-desc">Verify achievements, mentor students, and share resources</div>
         </div>
-        <div class="role-option" data-role="mentor" onclick="selectRole('mentor')">
+        <div class="role-option" data-role="mentor">
           <div class="role-title"><i data-lucide="sparkles" style="width:1.25rem;height:1.25rem;color:#e86565;"></i> Mentor</div>
           <div class="role-desc">Guide students, offer internships, and shape academic careers</div>
         </div>
       </div>
 
-      <button class="btn-continue" id="continueBtn" disabled onclick="submitRole()">Continue</button>
+      <button class="btn-continue" id="continueBtn" disabled>Continue</button>
     </div>
   </div>
 
   <script nonce="{{ csp_nonce }}">
     var selectedRole = '';
 
-    function selectRole(role) {
-      selectedRole = role;
-      document.querySelectorAll('.role-option').forEach(function(el) {
-        el.classList.remove('selected');
+    document.querySelectorAll('.role-option').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var role = this.getAttribute('data-role');
+        selectedRole = role;
+        document.querySelectorAll('.role-option').forEach(function(e) { e.classList.remove('selected'); });
+        this.classList.add('selected');
+        document.getElementById('continueBtn').disabled = false;
+        lucide.createIcons();
       });
-      document.querySelector('.role-option[data-role="' + role + '"]').classList.add('selected');
-      document.getElementById('continueBtn').disabled = false;
-      lucide.createIcons();
-    }
+    });
 
-    function submitRole() {
+    document.getElementById('continueBtn').addEventListener('click', function() {
       if (!selectedRole) return;
-      var btn = document.getElementById('continueBtn');
+      var btn = this;
       btn.disabled = true;
       btn.textContent = 'Saving...';
       fetch('/api/profile/role', {
@@ -93,7 +94,7 @@
         btn.textContent = 'Continue';
         alert('Error saving role');
       });
-    }
+    });
 
     lucide.createIcons();
   </script>
