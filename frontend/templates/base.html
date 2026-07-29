@@ -290,6 +290,35 @@
     </div>
   </div>
 
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav">
+    {% set nav_items = [
+      ('main.explore_page', 'compass', 'Feed'),
+      ('main.search_page', 'search', 'Search'),
+      (None, 'plus-circle', 'Create'),
+      (None, 'bell', 'Notifications'),
+      ('main.profile_page', 'user', 'Profile'),
+    ] %}
+    {% for endpoint, icon, label in nav_items %}
+      {% if endpoint %}
+      <a href="{{ url_for(endpoint) }}" class="mb-nav-item {{ 'active' if request.endpoint == endpoint else '' }}">
+        <i data-lucide="{{ icon }}" style="width:1.25rem;height:1.25rem;"></i>
+        <span class="mb-nav-label">{{ label }}</span>
+      </a>
+      {% elif label == 'Create' %}
+      <button class="mb-nav-item mb-nav-create" id="mbCreateBtn">
+        <div class="mb-create-icon"><i data-lucide="plus" style="width:1.25rem;height:1.25rem;stroke-width:3;"></i></div>
+      </button>
+      {% elif label == 'Notifications' %}
+      <button class="mb-nav-item" id="mbNotifBtn">
+        <i data-lucide="bell" style="width:1.25rem;height:1.25rem;"></i>
+        <span id="mbNotifBadge" class="hidden mb-badge">0</span>
+        <span class="mb-nav-label">{{ label }}</span>
+      </button>
+      {% endif %}
+    {% endfor %}
+  </nav>
+
   <!-- Footer -->
   <div id="cookieBanner" class="cookie-banner">
     <div class="cookie-banner-inner">
@@ -355,6 +384,29 @@
     document.querySelector('[data-action="hide-new-chat"]').addEventListener('click', function() { hideNewChat(); });
     document.querySelector('[data-action="back-to-contacts"]').addEventListener('click', function() { backToContacts(); });
     document.getElementById('sendChatMsgBtn').addEventListener('click', function() { sendChatMessage(document.getElementById('chatInput')); });
+
+    // Mobile bottom nav interactions
+    document.getElementById('mbCreateBtn').addEventListener('click', function() {
+      var modal = document.getElementById('createPostModal');
+      if (modal) { modal.classList.remove('hidden'); return; }
+      window.location.href = '/dashboard';
+    });
+    document.getElementById('mbNotifBtn').addEventListener('click', function(e) {
+      var btn = document.getElementById('notif-btn');
+      if (btn) { e.stopPropagation(); btn.click(); }
+    });
+    // Sync notification badge to bottom nav
+    var notifBadge = document.getElementById('notifBadge');
+    var mbBadge = document.getElementById('mbNotifBadge');
+    if (notifBadge && mbBadge) {
+      var observer = new MutationObserver(function() {
+        mbBadge.textContent = notifBadge.textContent;
+        mbBadge.classList.toggle('hidden', notifBadge.classList.contains('hidden'));
+      });
+      observer.observe(notifBadge, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+      mbBadge.textContent = notifBadge.textContent;
+      mbBadge.classList.toggle('hidden', notifBadge.classList.contains('hidden'));
+    }
   });
   document.getElementById('deleteAccountBtn').addEventListener('click', function() {
     document.getElementById('deleteAccountConfirm').classList.remove('hidden');
