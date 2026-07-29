@@ -225,17 +225,17 @@ function mediaHtml(post) {
     var images = post.image_url.split('|||').filter(Boolean);
     if (images.length > 1) {
       var cid = 'ecr_' + (++carouselIdCounter) + '_' + (post.id || '0');
-      html += '<div class="media-carousel" id="' + cid + '"><div class="media-carousel-track" onscroll="updateCarouselDots(\'' + cid + '\')">';
+      html += '<div class="media-carousel" id="' + cid + '"><div class="media-carousel-track" data-carousel-track="' + cid + '">';
       images.forEach(function(url) {
         if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
           html += '<div class="media-carousel-slide"><video src="' + url + '" controls style="object-fit:contain;background:#000;"></video></div>';
         } else {
-          html += '<div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div>';
+          html += '<div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" data-img-error="show-error"></div>';
         }
       });
       html += '</div><div class="media-carousel-dots">';
       for (var di = 0; di < images.length; di++) {
-        html += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" onclick="goCarouselSlide(\'' + cid + '\',' + di + ')"></button>';
+        html += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" data-carousel-dot="' + cid + '" data-slide-idx="' + di + '"></button>';
       }
       html += '</div></div>';
     } else {
@@ -243,7 +243,7 @@ function mediaHtml(post) {
         if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
           html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><video src="' + url + '" controls style="object-fit:contain;background:#000;"></video></div></div></div>';
         } else {
-          html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div></div></div>';
+          html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" data-img-error="show-error"></div></div></div>';
         }
       });
     }
@@ -625,6 +625,16 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   document.getElementById('deletePostModal').addEventListener('click', function(e) {
     if (e.target === this) { this.classList.add('hidden'); window._deleteTargetDiv = null; }
+  });
+
+  // Delegated carousel handlers
+  document.addEventListener('scroll', function(e) {
+    var track = e.target.closest('[data-carousel-track]');
+    if (track) updateCarouselDots(track.getAttribute('data-carousel-track'));
+  }, true);
+  document.addEventListener('click', function(e) {
+    var dot = e.target.closest('[data-carousel-dot]');
+    if (dot) goCarouselSlide(dot.getAttribute('data-carousel-dot'), parseInt(dot.getAttribute('data-slide-idx')));
   });
 
   // Trending topics

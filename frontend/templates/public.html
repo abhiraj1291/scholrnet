@@ -93,7 +93,7 @@
         {% if p.content %}<div class="post-content">{{ p.content }}</div>{% endif %}
         {% if p.image_url %}
         <div class="post-image">
-          <img src="{{ p.image_url }}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'">
+          <img src="{{ p.image_url }}" alt="" loading="lazy" data-img-error="hide-parent">
         </div>
         {% endif %}
       </div>

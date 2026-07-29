@@ -8,7 +8,7 @@
   <!-- Profile Header -->
   <div class="card mb-3" style="padding:0;overflow:hidden;">
     <!-- Cover Banner -->
-    <div id="coverBannerWrap" style="position:relative;width:100%;height:8rem;background:linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);{% if puser.cover_banner %}background-image:url('{{ puser.cover_banner }}');background-size:cover;background-position:center;{% endif %}flex-shrink:0;{% if is_own %}cursor:pointer;{% endif %}" {% if is_own %}onclick="document.getElementById('coverUploadInput').click();"{% endif %}>
+    <div id="coverBannerWrap" style="position:relative;width:100%;height:8rem;background:linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);{% if puser.cover_banner %}background-image:url('{{ puser.cover_banner }}');background-size:cover;background-position:center;{% endif %}flex-shrink:0;{% if is_own %}cursor:pointer;{% endif %}" {% if is_own %}data-action="upload-cover"{% endif %}>
       {% if is_own %}
       <div style="position:absolute;bottom:0.5rem;right:0.5rem;width:28px;height:28px;background:rgba(0,0,0,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;"><i data-lucide="camera" style="width:14px;height:14px;color:#fff;"></i></div>
       <input type="file" id="coverUploadInput" accept="image/*" style="display:none;">
@@ -115,7 +115,7 @@
     <div class="modal">
       <div class="modal-header">
         <span class="font-bold">Edit Experience</span>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('editExpModal').classList.add('hidden')"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+        <button class="btn btn-ghost btn-sm" data-action="close-edit-exp"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
       </div>
       <div class="modal-body">
         <div class="mb-2">
@@ -239,7 +239,7 @@
       </div>
       <div class="flex items-center gap-2">
         <input type="text" id="2faCodeInput" placeholder="Enter 6-digit code" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="flex:1;text-align:center;letter-spacing:0.3em;">
-        <button onclick="enable2FA()" class="btn btn-primary" style="white-space:nowrap;">Enable</button>
+        <button id="enable2FABtn" class="btn btn-primary" style="white-space:nowrap;">Enable</button>
       </div>
       <p id="2faError" class="text-xs mt-1" style="color:var(--danger);display:none;"></p>
     </div>
@@ -247,7 +247,7 @@
       <p class="text-xs text-muted mb-2">2FA is currently enabled. To disable, enter your password.</p>
       <div class="flex items-center gap-2">
         <input type="password" id="2faPasswordInput" placeholder="Enter your password" style="flex:1;">
-        <button onclick="disable2FA()" class="btn btn-outline" style="white-space:nowrap;color:var(--danger);border-color:var(--danger);">Disable</button>
+        <button id="disable2FABtn" class="btn btn-outline" style="white-space:nowrap;color:var(--danger);border-color:var(--danger);">Disable</button>
       </div>
       <p id="2faDisableError" class="text-xs mt-1" style="color:var(--danger);display:none;"></p>
     </div>
@@ -384,16 +384,27 @@
 </div>
 
 <div id="jsDiag" style="display:none"></div>
-<script nonce="{{ csp_nonce }}">
-var puserId = {{ puser.id }};
-var puserName = {{ puser.name|tojson }};
-var puserAvatar = {{ puser.avatar|tojson if puser.avatar else '""' }};
-var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }};
-var isOwn = {{ 'true' if is_own else 'false' }};
+  <script nonce="{{ csp_nonce }}">
+  var puserId = {{ puser.id }};
+  var puserName = {{ puser.name|tojson }};
+  var puserAvatar = {{ puser.avatar|tojson if puser.avatar else '""' }};
+  var puserAvatarUrl = {{ puser.avatar_url|tojson if puser.avatar_url else '""' }};
+  var isOwn = {{ 'true' if is_own else 'false' }};
 
-document.querySelectorAll('[data-post-img]').forEach(function(img) {
-  img.addEventListener('error', function() { this.parentElement.style.display = 'none'; });
-});
+  document.addEventListener('DOMContentLoaded', function() {
+    var coverWrap = document.querySelector('[data-action="upload-cover"]');
+    if (coverWrap) coverWrap.addEventListener('click', function() { document.getElementById('coverUploadInput').click(); });
+    document.querySelector('[data-action="close-edit-exp"]').addEventListener('click', function() { document.getElementById('editExpModal').classList.add('hidden'); });
+    document.getElementById('enable2FABtn').addEventListener('click', function() { enable2FA(); });
+    document.getElementById('disable2FABtn').addEventListener('click', function() { disable2FA(); });
+  });
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.first-achievement-link')) { e.preventDefault(); document.getElementById('toggleAchievementForm').click(); }
+    if (e.target.closest('.first-project-link')) { e.preventDefault(); document.getElementById('toggleProjectForm').click(); }
+  });
+  document.querySelectorAll('[data-post-img]').forEach(function(img) {
+    img.addEventListener('error', function() { this.parentElement.style.display = 'none'; });
+  });
 
 function fetchWithRetry(url, retries, delay) {
   if (retries === undefined) retries = 2;
@@ -523,7 +534,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
             });
           });
         } else {
-          list.innerHTML = '<div class="text-center" style="padding:1.5rem 0;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.5rem;"><circle cx="12" cy="8" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg><p style="font-size:0.8rem;color:#d0d0e0;margin:0;">No achievements yet.</p>' + (isOwn ? '<a href="#" onclick="document.getElementById(\'toggleAchievementForm\').click();return false;" style="font-size:0.75rem;color:#6C3BF5;font-weight:600;text-decoration:none;margin-top:0.5rem;display:inline-block;">Add your first achievement</a>' : '') + '</div>';
+          list.innerHTML = '<div class="text-center" style="padding:1.5rem 0;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.5rem;"><circle cx="12" cy="8" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg><p style="font-size:0.8rem;color:#d0d0e0;margin:0;">No achievements yet.</p>' + (isOwn ? '<a href="#" class="first-achievement-link" style="font-size:0.75rem;color:#6C3BF5;font-weight:600;text-decoration:none;margin-top:0.5rem;display:inline-block;">Add your first achievement</a>' : '') + '</div>';
         }
       })
       .catch(function() {});
@@ -566,7 +577,7 @@ document.getElementById('jsDiag').textContent = 'JS: DOMContentLoaded fired!';
           });
           lucide.createIcons();
         } else {
-          list.innerHTML = '<div class="text-center" style="padding:1.5rem 0;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.5rem;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><p style="font-size:0.8rem;color:#d0d0e0;margin:0;">No projects yet.</p>' + (isOwn ? '<a href="#" onclick="document.getElementById(\'toggleProjectForm\').click();return false;" style="font-size:0.75rem;color:#6C3BF5;font-weight:600;text-decoration:none;margin-top:0.5rem;display:inline-block;">Add your first project</a>' : '') + '</div>';
+          list.innerHTML = '<div class="text-center" style="padding:1.5rem 0;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d0d0e0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.5rem;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><p style="font-size:0.8rem;color:#d0d0e0;margin:0;">No projects yet.</p>' + (isOwn ? '<a href="#" class="first-project-link" style="font-size:0.75rem;color:#6C3BF5;font-weight:600;text-decoration:none;margin-top:0.5rem;display:inline-block;">Add your first project</a>' : '') + '</div>';
         }
       })
       .catch(function() {});

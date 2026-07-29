@@ -58,7 +58,7 @@
       </form>
 
       <div class="resend">
-        Didn't receive the code? <a id="resendLink" onclick="resendOtp()">Resend</a>
+        Didn't receive the code? <a id="resendLink" href="#">Resend</a>
       </div>
     </div>
     <div class="auth-footer">
@@ -68,6 +68,8 @@
 
   <script nonce="{{ csp_nonce }}">
   var regId = {{ reg_id }};
+
+  document.getElementById('resendLink').addEventListener('click', function(e) { e.preventDefault(); resendOtp(); });
 
   document.getElementById('otpForm').addEventListener('submit', function(e) {
     e.preventDefault();

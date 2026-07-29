@@ -69,7 +69,7 @@
       {% if post.content %}<div class="content">{{ post.content }}</div>{% endif %}
       {% if post.image_url %}
       <div class="image">
-        <img src="{{ post.image_url }}" alt="Post image" loading="lazy" onerror="this.parentElement.style.display='none'">
+        <img src="{{ post.image_url }}" alt="Post image" loading="lazy" data-img-error="hide-parent">
       </div>
       {% endif %}
       <a href="{{ url_for('auth.register') }}" class="btn"><i data-lucide="graduation-cap" style="width:14px;height:14px;"></i> Join ScholrNet</a>

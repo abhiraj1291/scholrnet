@@ -136,18 +136,18 @@
         <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign In</a>
         <a href="{{ url_for('auth.register') }}" class="btn-primary">Join Free</a>
       </div>
-      <button class="nav-mobile-toggle" aria-label="Toggle menu" onclick="toggleMobileNav()">
+      <button class="nav-mobile-toggle" aria-label="Toggle menu" data-action="toggle-mobile-nav">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
     <div class="nav-mobile" id="mobileNav">
-      <a href="/#features" class="nav-link" onclick="toggleMobileNav()">Features</a>
-      <a href="/#how-it-works" class="nav-link" onclick="toggleMobileNav()">How It Works</a>
-      <a href="/blog" class="nav-link" onclick="toggleMobileNav()">Resources</a>
-      <a href="/schools" class="nav-link" onclick="toggleMobileNav()">For Schools</a>
-      <a href="/about" class="nav-link" onclick="toggleMobileNav()">About</a>
-      <a href="/contact" class="nav-link" onclick="toggleMobileNav()">Contact</a>
-      <a href="/#faq" class="nav-link" onclick="toggleMobileNav()">FAQ</a>
+      <a href="/#features" class="nav-link">Features</a>
+      <a href="/#how-it-works" class="nav-link">How It Works</a>
+      <a href="/blog" class="nav-link">Resources</a>
+      <a href="/schools" class="nav-link">For Schools</a>
+      <a href="/about" class="nav-link">About</a>
+      <a href="/contact" class="nav-link">Contact</a>
+      <a href="/#faq" class="nav-link">FAQ</a>
       <div class="nav-mobile-actions">
         <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign In</a>
         <a href="{{ url_for('auth.register') }}" class="btn-primary">Join Free</a>
@@ -255,7 +255,7 @@
       <div class="founder-grid">
         <div class="about-card" style="padding:2rem;">
           <div class="founder-avatar" style="overflow:hidden;background:none;">
-            <img src="https://media.licdn.com/dms/image/v2/D5603AQHCzsk5G5Qa5w/profile-displayphoto-crop_800_800/B56Z0kWtWRKAAI-/0/1774431429194?e=1784160000&v=beta&t=gHKBUPeB0sL9odnpmgPnhjlqcrjdeh8XKGYqOJL6458" alt="Abhiraj" width="120" height="120" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(135deg,var(--primary),#8B6CFF)';this.parentElement.textContent='A';">
+            <img src="https://media.licdn.com/dms/image/v2/D5603AQHCzsk5G5Qa5w/profile-displayphoto-crop_800_800/B56Z0kWtWRKAAI-/0/1774431429194?e=1784160000&v=beta&t=gHKBUPeB0sL9odnpmgPnhjlqcrjdeh8XKGYqOJL6458" alt="Abhiraj" width="120" height="120" style="width:100%;height:100%;object-fit:cover;" data-img-error="hide-with-fallback">
           </div>
           <div class="founder-name">Abhiraj</div>
           <div class="founder-title">Founder, ScholrNet</div>
@@ -419,6 +419,13 @@
     </div>
   </footer>
 
+  <script nonce="{{ csp_nonce }}">
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-action="toggle-mobile-nav"], #mobileNav a').forEach(function(el) {
+      el.addEventListener('click', function() { toggleMobileNav(); });
+    });
+  });
+  </script>
   <script src="{{ url_for('static', filename='js/landing.js') }}?v=8"></script>
 </body>
 </html>

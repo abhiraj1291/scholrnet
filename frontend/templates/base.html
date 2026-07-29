@@ -74,6 +74,27 @@
     if (typeof s !== 'string') return s || '';
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
+  document.addEventListener('error', function(e) {
+    if (e.target.tagName !== 'IMG') return;
+    var action = e.target.getAttribute('data-img-error');
+    if (!action) return;
+    if (action === 'hide-parent' && e.target.parentElement) e.target.parentElement.style.display = 'none';
+    else if (action === 'hide-self') e.target.style.display = 'none';
+    else if (action === 'show-error') {
+      if (e.target.parentElement) e.target.parentElement.innerHTML = '<div class="text-xs text-muted py-4" style="text-align:center">Image could not load</div>';
+    }
+    else if (action === 'show-fallback') {
+      e.target.style.display = 'none';
+      if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = 'flex';
+    }
+    else if (action === 'hide-with-fallback') {
+      e.target.style.display = 'none';
+      if (e.target.parentElement) {
+        e.target.parentElement.style.background = 'linear-gradient(135deg,var(--primary),#8B6CFF)';
+        e.target.parentElement.textContent = 'A';
+      }
+    }
+  }, true);
   </script>
 </head>
 <body>
@@ -193,25 +214,25 @@
     </div>
     <div id="chat-body" class="hidden">
       <div class="flex border-b" style="border-color:var(--border);">
-        <button id="chatTabFriends" class="chat-tab active" onclick="switchChatTab('friends')">Friends</button>
-        <button id="chatTabGroups" class="chat-tab" onclick="switchChatTab('groups')">Groups</button>
+        <button id="chatTabFriends" class="chat-tab active" data-action="switch-chat-friends">Friends</button>
+        <button id="chatTabGroups" class="chat-tab" data-action="switch-chat-groups">Groups</button>
       </div>
       <div id="chat-contact-list"></div>
       <div id="new-chat-view" class="hidden">
         <div class="flex items-center gap-2 p-2" style="border-bottom:1px solid var(--border);">
-          <i data-lucide="arrow-left" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;color:var(--text-muted);" onclick="hideNewChat()"></i>
+          <i data-lucide="arrow-left" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;color:var(--text-muted);" data-action="hide-new-chat"></i>
           <input type="text" id="newChatSearch" placeholder="Search users..." inputmode="search" autocomplete="off" style="flex:1;border:none;outline:none;background:transparent;color:var(--text);">
         </div>
         <div id="newChatResults" class="chat-contact-list"></div>
       </div>
       <div id="chat-messages-view" class="hidden">
-        <div class="chat-header" style="background:var(--bg-hover);color:var(--text);border-radius:0;cursor:pointer;" onclick="backToContacts()">
+        <div class="chat-header" style="background:var(--bg-hover);color:var(--text);border-radius:0;cursor:pointer;" data-action="back-to-contacts">
           <span class="flex items-center gap-2"><i data-lucide="arrow-left" style="width:16px;height:16px;"></i> <span class="chat-contact-name font-bold">User</span></span>
         </div>
         <div id="chat-messages-container" class="chat-messages"></div>
         <div class="chat-input">
           <input type="text" id="chatInput" placeholder="Type a message..." inputmode="text" autocomplete="off">
-          <button class="btn btn-primary btn-sm" onclick="sendChatMessage(document.getElementById('chatInput'))"><i data-lucide="send" style="width:16px;height:16px;"></i></button>
+          <button class="btn btn-primary btn-sm" id="sendChatMsgBtn"><i data-lucide="send" style="width:16px;height:16px;"></i></button>
         </div>
       </div>
     </div>
@@ -328,6 +349,13 @@
   </script>
 
   <script nonce="{{ csp_nonce }}">
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelector('[data-action="switch-chat-friends"]').addEventListener('click', function() { switchChatTab('friends'); });
+    document.querySelector('[data-action="switch-chat-groups"]').addEventListener('click', function() { switchChatTab('groups'); });
+    document.querySelector('[data-action="hide-new-chat"]').addEventListener('click', function() { hideNewChat(); });
+    document.querySelector('[data-action="back-to-contacts"]').addEventListener('click', function() { backToContacts(); });
+    document.getElementById('sendChatMsgBtn').addEventListener('click', function() { sendChatMessage(document.getElementById('chatInput')); });
+  });
   document.getElementById('deleteAccountBtn').addEventListener('click', function() {
     document.getElementById('deleteAccountConfirm').classList.remove('hidden');
   });

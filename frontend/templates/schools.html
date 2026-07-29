@@ -65,17 +65,17 @@
         <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign In</a>
         <a href="{{ url_for('auth.register') }}" class="btn-primary">Join Free</a>
       </div>
-      <button class="nav-mobile-toggle" aria-label="Toggle menu" onclick="toggleMobileNav()">
+      <button class="nav-mobile-toggle" aria-label="Toggle menu" data-action="toggle-mobile-nav">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
     <div class="nav-mobile" id="mobileNav">
-      <a href="{{ url_for('main.blog_index') }}" class="nav-link" onclick="toggleMobileNav()">Resources</a>
-      <a href="{{ url_for('main.about_page') }}" class="nav-link" onclick="toggleMobileNav()">About</a>
-      <a href="{{ url_for('main.contact_page') }}" class="nav-link" onclick="toggleMobileNav()">Contact</a>
+      <a href="{{ url_for('main.blog_index') }}" class="nav-link">Resources</a>
+      <a href="{{ url_for('main.about_page') }}" class="nav-link">About</a>
+      <a href="{{ url_for('main.contact_page') }}" class="nav-link">Contact</a>
       <div class="nav-mobile-actions">
-        <a href="{{ url_for('auth.login') }}" class="btn-ghost" onclick="toggleMobileNav()">Sign In</a>
-        <a href="{{ url_for('auth.register') }}" class="btn-primary" onclick="toggleMobileNav()">Join Free</a>
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary">Join Free</a>
       </div>
     </div>
   </nav>
@@ -138,7 +138,7 @@
       <h2 style="text-align:center">Register your school</h2>
       <div class="register-card">
         <div id="formStatus" class="form-status"></div>
-        <form id="schoolForm" onsubmit="return handleSchoolReg(event)">
+        <form id="schoolForm">
           <div class="form-group">
             <label for="schoolName">School Name</label>
             <input type="text" id="schoolName" required placeholder="e.g. Delhi Public School">
@@ -202,6 +202,15 @@
   </footer>
   <script src="{{ url_for('static', filename='js/landing.js') }}?v=8"></script>
   <script nonce="{{ csp_nonce }}">
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-action="toggle-mobile-nav"]').forEach(function(el) {
+      el.addEventListener('click', function() { toggleMobileNav(); });
+    });
+    document.querySelectorAll('#mobileNav a').forEach(function(el) {
+      el.addEventListener('click', function() { toggleMobileNav(); });
+    });
+    document.getElementById('schoolForm').addEventListener('submit', function(e) { return handleSchoolReg(e); });
+  });
   async function handleSchoolReg(e) {
     e.preventDefault();
     var btn = document.getElementById('submitBtn');

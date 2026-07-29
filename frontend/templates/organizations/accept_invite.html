@@ -51,7 +51,7 @@
         <h1>Accept Invitation</h1>
         <p class="sub" id="inviteInfo">Loading invitation details...</p>
         <div id="errorMsg" class="error-msg" style="display:none"></div>
-        <button class="btn-submit" id="acceptLoggedInBtn" onclick="acceptAsLoggedIn()"><span class="spinner"></span><span class="btn-text">Accept Invitation</span></button>
+        <button class="btn-submit" id="acceptLoggedInBtn"><span class="spinner"></span><span class="btn-text">Accept Invitation</span></button>
       {% else %}
         <div style="font-size:3rem;margin-bottom:0.5rem">&#9993;</div>
         <h1>You're Invited!</h1>
@@ -153,6 +153,7 @@
     });
   });
   {% else %}
+  document.getElementById('acceptLoggedInBtn').addEventListener('click', function(e) { acceptAsLoggedIn(); });
   function acceptAsLoggedIn() {
     var btn = document.getElementById('acceptLoggedInBtn');
     btn.classList.add('loading');

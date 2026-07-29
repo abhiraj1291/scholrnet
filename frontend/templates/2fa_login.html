@@ -20,12 +20,13 @@
     <div id="errorMsg" class="toast success" style="position: static; margin-bottom: 1rem; display: none;"></div>
     <input type="text" id="codeInput" placeholder="000 000" maxlength="6" inputmode="numeric" pattern="[0-9]*"
       class="text-center text-2xl tracking-widest" style="padding: 0.75rem; width: 100%; margin-bottom: 1rem; letter-spacing: 0.5em;">
-    <button onclick="verify2FA()" class="btn btn-primary w-full" style="padding: 0.75rem;">Verify</button>
+    <button id="verify2FABtn" class="btn btn-primary w-full" style="padding: 0.75rem;">Verify</button>
     <p class="text-xs text-muted text-center mt-4">
       <a href="{{ url_for('auth.logout') }}" class="font-bold">Back to login</a>
     </p>
   </div>
   <script nonce="{{ csp_nonce }}">
+  document.getElementById('verify2FABtn').addEventListener('click', function() { verify2FA(); });
   document.getElementById('codeInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') verify2FA();
   });

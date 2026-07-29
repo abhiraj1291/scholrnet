@@ -12,7 +12,7 @@
         <input type="text" id="oppSearch" placeholder="Search..." class="w-full">
       </div>
       {% if current_user.role in ('admin','super_admin','teacher','mentor') %}
-      <button class="btn btn-primary btn-sm whitespace-nowrap" onclick="showToast('Coming soon', 'info')"><i data-lucide="plus" style="width:14px;height:14px;"></i> Post</button>
+      <button class="btn btn-primary btn-sm whitespace-nowrap" id="postOppBtn"><i data-lucide="plus" style="width:14px;height:14px;"></i> Post</button>
       {% endif %}
     </div>
   </div>
@@ -54,8 +54,9 @@ var OPPORTUNITIES_DATA = [
 </script>
 
 <script nonce="{{ csp_nonce }}">
-document.addEventListener('DOMContentLoaded', function() {
-  var currentFilter = 'all';
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('postOppBtn').addEventListener('click', function() { showToast('Coming soon', 'info'); });
+    var currentFilter = 'all';
   var allOpportunities = OPPORTUNITIES_DATA;
 
   function renderOpportunities() {

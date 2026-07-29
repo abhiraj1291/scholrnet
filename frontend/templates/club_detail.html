@@ -48,19 +48,19 @@
       <div class="flex flex-col gap-2 club-actions" style="flex-shrink:0;">
         {% if is_member %}
           {% if user_role in ('owner', 'admin') %}
-          <button class="btn btn-secondary btn-sm" onclick="showEditClub()"><i data-lucide="settings" style="width:14px;height:14px;"></i> Edit</button>
+          <button class="btn btn-secondary btn-sm" id="editClubBtn"><i data-lucide="settings" style="width:14px;height:14px;"></i> Edit</button>
           {% if user_role == 'owner' %}
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('avatarUpload').click()"><i data-lucide="camera" style="width:14px;height:14px;"></i> Avatar</button>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('coverUpload').click()"><i data-lucide="image" style="width:14px;height:14px;"></i> Cover</button>
+          <button class="btn btn-outline btn-sm" id="avatarUploadBtn"><i data-lucide="camera" style="width:14px;height:14px;"></i> Avatar</button>
+          <button class="btn btn-outline btn-sm" id="coverUploadBtn"><i data-lucide="image" style="width:14px;height:14px;"></i> Cover</button>
           <input type="file" id="avatarUpload" accept="image/*" style="display:none;">
           <input type="file" id="coverUpload" accept="image/*" style="display:none;">
           {% endif %}
           {% endif %}
-          <button class="btn btn-outline btn-sm" onclick="leaveClub({{ club.id }})" style="color:var(--danger);border-color:var(--danger);">Leave</button>
+          <button class="btn btn-outline btn-sm" id="leaveClubBtn" style="color:var(--danger);border-color:var(--danger);">Leave</button>
         {% elif join_request_pending %}
           <button class="btn btn-outline btn-sm" disabled><i data-lucide="clock" style="width:14px;height:14px;"></i> Request Pending</button>
         {% else %}
-          <button class="btn btn-primary btn-sm" onclick="joinClub({{ club.id }})">{{ 'Request to Join' if club.is_private else 'Join' }}</button>
+          <button class="btn btn-primary btn-sm" id="joinClubBtn">{{ 'Request to Join' if club.is_private else 'Join' }}</button>
         {% endif %}
       </div>
     </div>
@@ -70,16 +70,16 @@
   {% if is_member and user_role in ('owner', 'admin') %}
   <div id="editClubModal" class="modal-overlay hidden">
     <div class="modal">
-      <div class="modal-header"><span class="font-bold">Edit Club</span><button class="btn btn-ghost btn-sm" onclick="document.getElementById('editClubModal').classList.add('hidden')"><i data-lucide="x" style="width:20px;height:20px;"></i></button></div>
+      <div class="modal-header"><span class="font-bold">Edit Club</span><button class="btn btn-ghost btn-sm" id="closeEditClubModal"><i data-lucide="x" style="width:20px;height:20px;"></i></button></div>
       <div class="modal-body">
         <div class="mb-3"><label class="text-xs font-bold text-muted block mb-1">Name</label><input type="text" id="editClubName" value="{{ club.name }}" maxlength="200"></div>
         <div class="mb-3"><label class="text-xs font-bold text-muted block mb-1">Description</label><textarea id="editClubDesc" rows="2" maxlength="5000">{{ club.description or '' }}</textarea></div>
         <div class="mb-3"><label class="text-xs font-bold text-muted block mb-1">Bio</label><textarea id="editClubBio" rows="3" maxlength="5000" placeholder="Longer bio about the club...">{{ club.bio or '' }}</textarea></div>
         <div class="mb-3"><label class="text-xs font-bold text-muted block mb-1">Tags</label><input type="text" id="editClubTags" value="{{ club.tags or '' }}"></div>
         <div class="mb-3"><label class="flex items-center gap-2 text-xs font-bold text-muted"><input type="checkbox" id="editClubPrivate" style="width:auto;" {{ 'checked' if club.is_private else '' }}> Private club (members need approval)</label></div>
-        <button class="btn btn-primary w-full" onclick="saveClub({{ club.id }})">Save</button>
+        <button class="btn btn-primary w-full" id="saveClubBtn">Save</button>
         {% if user_role == 'owner' %}
-        <button class="btn btn-outline w-full mt-2" onclick="deleteClub({{ club.id }})" style="color:var(--danger);border-color:var(--danger);">Delete Club</button>
+        <button class="btn btn-outline w-full mt-2" id="deleteClubBtn" style="color:var(--danger);border-color:var(--danger);">Delete Club</button>
         {% endif %}
       </div>
     </div>
@@ -100,7 +100,7 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(12rem,1fr));gap:0.75rem;">
       {% for m in members %}
       {% set u = user_map.get(m.user_id) %}
-      <a href="/profile/{{ m.user_id }}" class="flex items-center gap-2 p-2" style="border-radius:0.5rem;text-decoration:none;color:inherit;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'">
+      <a href="/profile/{{ m.user_id }}" class="flex items-center gap-2 p-2 hover:bg-hover" style="border-radius:0.5rem;text-decoration:none;color:inherit;transition:background 0.15s;">
         <div class="avatar avatar-sm" style="width:2rem;height:2rem;font-size:0.625rem;{% if u and u.avatar_url %}overflow:hidden;{% endif %}">{% if u and u.avatar_url %}<img src="{{ u.avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;">{% elif u %}{{ u.avatar or u.name[:2]|upper }}{% else %}?{% endif %}</div>
         <div style="flex:1;min-width:0;">
           <div class="text-xs font-bold truncate">{{ u.name if u else 'Unknown' }}</div>
@@ -142,7 +142,7 @@
     <div id="clubChatMessages" style="max-height:300px;overflow-y:auto;margin-bottom:0.75rem;padding:0.5rem;background:var(--bg);border-radius:0.5rem;"></div>
     <div class="flex gap-2">
       <input type="text" id="clubChatInput" placeholder="Type a message..." class="flex-1" style="padding:0.5rem 0.75rem;border-radius:0.5rem;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-      <button class="btn btn-primary btn-sm" onclick="sendClubMessage()"><i data-lucide="send" style="width:16px;height:16px;"></i></button>
+      <button class="btn btn-primary btn-sm" id="sendClubMsgBtn"><i data-lucide="send" style="width:16px;height:16px;"></i></button>
     </div>
   </div>
   {% endif %}
@@ -304,13 +304,22 @@ function loadJoinRequests() {
         var avatarEl = (r.user && r.user.avatar_url) ?
           '<div style="width:2rem;height:2rem;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="' + r.user.avatar_url + '" alt="" style="width:100%;height:100%;object-fit:cover;"></div>' :
           '<div class="avatar avatar-sm">' + ((r.user && r.user.avatar) ? r.user.avatar : '?') + '</div>';
+        var approveBtn = document.createElement('button');
+        approveBtn.className = 'btn btn-primary btn-xs';
+        approveBtn.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i>';
+        approveBtn.addEventListener('click', function() { approveRequest(r.id); });
+        var rejectBtn = document.createElement('button');
+        rejectBtn.className = 'btn btn-outline btn-xs';
+        rejectBtn.style.cssText = 'color:var(--danger);border-color:var(--danger);';
+        rejectBtn.innerHTML = '<i data-lucide="x" style="width:12px;height:12px;"></i>';
+        rejectBtn.addEventListener('click', function() { rejectRequest(r.id); });
         div.innerHTML =
           '<div class="flex items-center gap-2">' + avatarEl +
             '<div><div class="font-bold text-xs">' + name + '</div><div class="text-xs text-muted">' + (r.user && r.user.school ? escapeHtml(r.user.school) : '') + '</div></div></div>' +
-          '<div class="flex gap-1">' +
-            '<button class="btn btn-primary btn-xs" onclick="approveRequest(' + r.id + ')"><i data-lucide="check" style="width:12px;height:12px;"></i></button>' +
-            '<button class="btn btn-outline btn-xs" onclick="rejectRequest(' + r.id + ')" style="color:var(--danger);border-color:var(--danger);"><i data-lucide="x" style="width:12px;height:12px;"></i></button>' +
-          '</div>';
+          '<div class="flex gap-1"></div>';
+        var btnContainer = div.querySelector('.flex.gap-1');
+        btnContainer.appendChild(approveBtn);
+        btnContainer.appendChild(rejectBtn);
         list.appendChild(div);
       });
       if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -367,13 +376,13 @@ function loadClubPosts() {
           (p.image_url ? (function() {
             var imgs = p.image_url.split('|||').filter(Boolean);
             var cid2 = 'cr_' + (p.id || '0') + '_' + Math.random().toString(36).slice(2,6);
-            var h = '<div class="media-carousel" id="' + cid2 + '"><div class="media-carousel-track" onscroll="carouselDotSync(\'' + cid2 + '\')">';
+            var h = '<div class="media-carousel" id="' + cid2 + '"><div class="media-carousel-track" data-carousel-track="' + cid2 + '">';
             imgs.forEach(function(u) {
               if (u.match(/\.(mp4|mov|avi|webm)$/i)) { h += '<div class="media-carousel-slide"><video src="' + escapeHtml(u) + '" controls style="object-fit:contain;background:#000;"></video></div>'; }
               else { h += '<div class="media-carousel-slide"><img src="' + escapeHtml(u) + '" loading="lazy"></div>'; }
             });
             h += '</div><div class="media-carousel-dots">';
-            for (var di = 0; di < imgs.length; di++) { h += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" onclick="goCarouselSlide(\'' + cid2 + '\',' + di + ')"></button>'; }
+            for (var di = 0; di < imgs.length; di++) { h += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" data-carousel-dot="' + cid2 + '" data-slide-idx="' + di + '"></button>'; }
             return h + '</div></div>';
           })() : '') +
           '<div class="text-xs text-muted mt-2">' + (p.timestamp || '') + '</div>';
@@ -551,6 +560,25 @@ document.addEventListener('DOMContentLoaded', function() {
       if (e.key === 'Enter') { e.preventDefault(); sendClubMessage(); }
     });
   }
+  document.getElementById('editClubBtn').addEventListener('click', function() { showEditClub(); });
+  document.getElementById('avatarUploadBtn').addEventListener('click', function() { document.getElementById('avatarUpload').click(); });
+  document.getElementById('coverUploadBtn').addEventListener('click', function() { document.getElementById('coverUpload').click(); });
+  document.getElementById('leaveClubBtn').addEventListener('click', function() { leaveClub(CLUB_ID); });
+  document.getElementById('joinClubBtn').addEventListener('click', function() { joinClub(CLUB_ID); });
+  document.getElementById('closeEditClubModal').addEventListener('click', function() { document.getElementById('editClubModal').classList.add('hidden'); });
+  document.getElementById('saveClubBtn').addEventListener('click', function() { saveClub(CLUB_ID); });
+  document.getElementById('deleteClubBtn').addEventListener('click', function() { deleteClub(CLUB_ID); });
+  document.getElementById('sendClubMsgBtn').addEventListener('click', function() { sendClubMessage(); });
+});
+
+// Delegated handlers for carousels
+document.addEventListener('scroll', function(e) {
+  var track = e.target.closest('[data-carousel-track]');
+  if (track) carouselDotSync(track.getAttribute('data-carousel-track'));
+}, true);
+document.addEventListener('click', function(e) {
+  var dot = e.target.closest('[data-carousel-dot]');
+  if (dot) goCarouselSlide(dot.getAttribute('data-carousel-dot'), parseInt(dot.getAttribute('data-slide-idx')));
 });
 </script>
 {% endblock %}

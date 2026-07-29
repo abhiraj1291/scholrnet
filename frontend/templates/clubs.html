@@ -10,7 +10,7 @@
 <div style="max-width:56rem;margin:0 auto;">
   <div class="flex items-center justify-between mb-4 clubs-header">
     <h1 class="text-xl font-black">Clubs</h1>
-    <button class="btn btn-primary btn-sm" onclick="showCreateClubModal()"><i data-lucide="plus" style="width:16px;height:16px;"></i> New Club</button>
+    <button class="btn btn-primary btn-sm" id="createClubBtn"><i data-lucide="plus" style="width:16px;height:16px;"></i> New Club</button>
   </div>
 
   <!-- Search -->
@@ -68,11 +68,15 @@
 
 {% block scripts %}
 <script nonce="{{ csp_nonce }}">
-function showCreateClubModal() {
-  document.getElementById('createClubModal').classList.remove('hidden');
-}
+  function showCreateClubModal() {
+    document.getElementById('createClubModal').classList.remove('hidden');
+  }
 
-var closeCreateBtn = document.getElementById('closeCreateClub');
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('createClubBtn').addEventListener('click', function() { showCreateClubModal(); });
+  });
+
+  var closeCreateBtn = document.getElementById('closeCreateClub');
 if (closeCreateBtn) {
   closeCreateBtn.addEventListener('click', function() {
     document.getElementById('createClubModal').classList.add('hidden');

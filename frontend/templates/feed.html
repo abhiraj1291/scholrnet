@@ -305,17 +305,17 @@ document.addEventListener('DOMContentLoaded', function() {
       var images = post.image_url.split('|||').filter(Boolean);
       if (images.length > 1) {
         var cid = 'cr_' + (++carouselIdCounter) + '_' + (post.id || '0');
-        html += '<div class="media-carousel" id="' + cid + '"><div class="media-carousel-track" onscroll="updateCarouselDots(\'' + cid + '\')">';
+        html += '<div class="media-carousel" id="' + cid + '"><div class="media-carousel-track" data-carousel-track="' + cid + '">';
         images.forEach(function(url) {
           if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
             html += '<div class="media-carousel-slide"><video src="' + url + '" controls style="object-fit:contain;background:#000;"></video></div>';
           } else {
-            html += '<div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div>';
+            html += '<div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" data-img-error="show-error"></div>';
           }
         });
         html += '</div><div class="media-carousel-dots">';
         for (var di = 0; di < images.length; di++) {
-          html += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" onclick="goCarouselSlide(\'' + cid + '\',' + di + ')"></button>';
+          html += '<button class="media-carousel-dot' + (di === 0 ? ' active' : '') + '" data-carousel-dot="' + cid + '" data-slide-idx="' + di + '"></button>';
         }
         html += '</div></div>';
       } else {
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (url.match(/\.(mp4|mov|avi|webm)$/i)) {
             html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><video src="' + url + '" controls style="object-fit:contain;background:#000;"></video></div></div></div>';
           } else {
-            html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'text-xs text-muted py-4\\\' style=\\\'text-align:center\\\'>Image could not load</div>\';"></div></div></div>';
+            html += '<div class="media-carousel"><div class="media-carousel-track"><div class="media-carousel-slide"><img src="' + url + '" alt="Post media" loading="lazy" data-img-error="show-error"></div></div></div>';
           }
         });
       }
@@ -383,10 +383,10 @@ document.addEventListener('DOMContentLoaded', function() {
       '<div style="display:flex;align-items:center;gap:0.5rem;padding:0 1rem 0.25rem;">' +
         '<div class="post-timestamp" style="font-size:0.65rem;color:var(--text-light);margin-top:0.125rem;">' + formatTime(post.timestamp) + '</div>' +
         ((post.author_id || (post.author && post.author.id)) === CURRENT_USER_ID ?
-          '<button class="post-edit-btn" data-post-id="' + post.id + '" data-title="' + escapeHtml(post.title || '') + '" data-content="' + escapeHtml(post.content || '') + '" title="Edit" style="background:none;border:none;cursor:pointer;color:var(--text-light);padding:2px;display:inline-flex;align-items:center;margin-left:auto;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'">' +
+          '<button class="post-edit-btn hover-bg-hover" data-post-id="' + post.id + '" data-title="' + escapeHtml(post.title || '') + '" data-content="' + escapeHtml(post.content || '') + '" title="Edit" style="background:none;border:none;cursor:pointer;color:var(--text-light);padding:2px;display:inline-flex;align-items:center;margin-left:auto;border-radius:4px;transition:background 0.15s;">' +
             '<i data-lucide="pencil" style="width:12px;height:12px;"></i>' +
           '</button>' +
-          '<button class="post-delete-btn" data-post-id="' + post.id + '" title="Delete" style="background:none;border:none;cursor:pointer;color:var(--danger);padding:2px;display:inline-flex;align-items:center;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'transparent\'">' +
+          '<button class="post-delete-btn hover-bg-hover" data-post-id="' + post.id + '" title="Delete" style="background:none;border:none;cursor:pointer;color:var(--danger);padding:2px;display:inline-flex;align-items:center;border-radius:4px;transition:background 0.15s;">' +
             '<i data-lucide="trash-2" style="width:12px;height:12px;"></i>' +
           '</button>' : '') +
       '</div>' +
@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function() {
           data.ads.forEach(function(ad, i) {
             var adEl = document.createElement('div');
             adEl.className = 'ad-card';
-            var adImage = ad.image ? '<img src="' + ad.image + '" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:0.5rem 0.5rem 0 0;display:block;" onerror="this.style.display=\'none\'">' : '';
+            var adImage = ad.image ? '<img src="' + ad.image + '" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:0.5rem 0.5rem 0 0;display:block;" data-img-error="hide-self">' : '';
             adEl.innerHTML =
               '<div style="position:relative;">' +
               adImage +
@@ -892,6 +892,16 @@ document.addEventListener('DOMContentLoaded', function() {
     commentPollTimer = setTimeout(pollComments, 10000);
   }
   pollComments();
+
+  // Delegated carousel handlers
+  document.addEventListener('scroll', function(e) {
+    var track = e.target.closest('[data-carousel-track]');
+    if (track) updateCarouselDots(track.getAttribute('data-carousel-track'));
+  }, true);
+  document.addEventListener('click', function(e) {
+    var dot = e.target.closest('[data-carousel-dot]');
+    if (dot) goCarouselSlide(dot.getAttribute('data-carousel-dot'), parseInt(dot.getAttribute('data-slide-idx')));
+  });
 });
 </script>
 {% endblock %}
