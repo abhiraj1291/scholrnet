@@ -1,6 +1,29 @@
 (function(){
   'use strict';
 
+  // Image error fallbacks (standalone pages don't load base.html's handler)
+  document.addEventListener('error', function(e) {
+    if (e.target.tagName !== 'IMG') return;
+    var action = e.target.getAttribute('data-img-error');
+    if (!action) return;
+    if (action === 'hide-parent' && e.target.parentElement) e.target.parentElement.style.display = 'none';
+    else if (action === 'hide-self') e.target.style.display = 'none';
+    else if (action === 'show-error') {
+      if (e.target.parentElement) e.target.parentElement.innerHTML = '<div class="text-xs text-muted py-4" style="text-align:center">Image could not load</div>';
+    }
+    else if (action === 'show-fallback') {
+      e.target.style.display = 'none';
+      if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = 'flex';
+    }
+    else if (action === 'hide-with-fallback') {
+      e.target.style.display = 'none';
+      if (e.target.parentElement) {
+        e.target.parentElement.style.background = 'linear-gradient(135deg,var(--primary),#8B6CFF)';
+        e.target.parentElement.textContent = 'A';
+      }
+    }
+  }, true);
+
   // Nav scroll shadow
   var nav = document.querySelector('.nav');
   if (nav) {
