@@ -379,19 +379,20 @@
 
   <script nonce="{{ csp_nonce }}">
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelector('[data-action="switch-chat-friends"]').addEventListener('click', function() { switchChatTab('friends'); });
-    document.querySelector('[data-action="switch-chat-groups"]').addEventListener('click', function() { switchChatTab('groups'); });
-    document.querySelector('[data-action="hide-new-chat"]').addEventListener('click', function() { hideNewChat(); });
-    document.querySelector('[data-action="back-to-contacts"]').addEventListener('click', function() { backToContacts(); });
-    document.getElementById('sendChatMsgBtn').addEventListener('click', function() { sendChatMessage(document.getElementById('chatInput')); });
+    var el;
+    el = document.querySelector('[data-action="switch-chat-friends"]'); if (el) el.addEventListener('click', function() { switchChatTab('friends'); });
+    el = document.querySelector('[data-action="switch-chat-groups"]'); if (el) el.addEventListener('click', function() { switchChatTab('groups'); });
+    el = document.querySelector('[data-action="hide-new-chat"]'); if (el) el.addEventListener('click', function() { hideNewChat(); });
+    el = document.querySelector('[data-action="back-to-contacts"]'); if (el) el.addEventListener('click', function() { backToContacts(); });
+    el = document.getElementById('sendChatMsgBtn'); if (el) el.addEventListener('click', function() { sendChatMessage(document.getElementById('chatInput')); });
 
     // Mobile bottom nav interactions
-    document.getElementById('mbCreateBtn').addEventListener('click', function() {
+    el = document.getElementById('mbCreateBtn'); if (el) el.addEventListener('click', function() {
       var modal = document.getElementById('createPostModal');
       if (modal) { modal.classList.remove('hidden'); return; }
       window.location.href = '/dashboard';
     });
-    document.getElementById('mbNotifBtn').addEventListener('click', function(e) {
+    el = document.getElementById('mbNotifBtn'); if (el) el.addEventListener('click', function(e) {
       var btn = document.getElementById('notif-btn');
       if (btn) { e.stopPropagation(); btn.click(); }
     });
@@ -408,13 +409,13 @@
       mbBadge.classList.toggle('hidden', notifBadge.classList.contains('hidden'));
     }
   });
-  document.getElementById('deleteAccountBtn').addEventListener('click', function() {
-    document.getElementById('deleteAccountConfirm').classList.remove('hidden');
+  var delBtn = document.getElementById('deleteAccountBtn'); if (delBtn) delBtn.addEventListener('click', function() {
+    var c = document.getElementById('deleteAccountConfirm'); if (c) c.classList.remove('hidden');
   });
-  document.getElementById('deleteCancelBtn').addEventListener('click', function() {
-    document.getElementById('deleteAccountConfirm').classList.add('hidden');
+  var delCancel = document.getElementById('deleteCancelBtn'); if (delCancel) delCancel.addEventListener('click', function() {
+    var c = document.getElementById('deleteAccountConfirm'); if (c) c.classList.add('hidden');
   });
-  document.getElementById('deleteConfirmBtn').addEventListener('click', function() {
+  var delConfirm = document.getElementById('deleteConfirmBtn'); if (delConfirm) delConfirm.addEventListener('click', function() {
     var btn = this;
     var pw = document.getElementById('deletePasswordInput').value;
     var status = document.getElementById('deleteAccountStatus');

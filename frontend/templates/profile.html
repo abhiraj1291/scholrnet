@@ -394,13 +394,13 @@
   document.addEventListener('DOMContentLoaded', function() {
     var coverWrap = document.querySelector('[data-action="upload-cover"]');
     if (coverWrap) coverWrap.addEventListener('click', function() { document.getElementById('coverUploadInput').click(); });
-    document.querySelector('[data-action="close-edit-exp"]').addEventListener('click', function() { document.getElementById('editExpModal').classList.add('hidden'); });
-    document.getElementById('enable2FABtn').addEventListener('click', function() { enable2FA(); });
-    document.getElementById('disable2FABtn').addEventListener('click', function() { disable2FA(); });
+    var closeExp = document.querySelector('[data-action="close-edit-exp"]'); if (closeExp) closeExp.addEventListener('click', function() { var m = document.getElementById('editExpModal'); if (m) m.classList.add('hidden'); });
+    var en2fa = document.getElementById('enable2FABtn'); if (en2fa) en2fa.addEventListener('click', function() { enable2FA(); });
+    var dis2fa = document.getElementById('disable2FABtn'); if (dis2fa) dis2fa.addEventListener('click', function() { disable2FA(); });
   });
   document.addEventListener('click', function(e) {
-    if (e.target.closest('.first-achievement-link')) { e.preventDefault(); document.getElementById('toggleAchievementForm').click(); }
-    if (e.target.closest('.first-project-link')) { e.preventDefault(); document.getElementById('toggleProjectForm').click(); }
+    if (e.target.closest('.first-achievement-link')) { e.preventDefault(); var el = document.getElementById('toggleAchievementForm'); if (el) el.click(); }
+    if (e.target.closest('.first-project-link')) { e.preventDefault(); var el = document.getElementById('toggleProjectForm'); if (el) el.click(); }
   });
   document.querySelectorAll('[data-post-img]').forEach(function(img) {
     img.addEventListener('error', function() { this.parentElement.style.display = 'none'; });
