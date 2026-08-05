@@ -1,53 +1,62 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="max-width:42rem;margin:0 auto;">
-  <div class="flex items-center gap-3 mb-4">
-    <div class="avatar" style="width:3rem;height:3rem;background:var(--accent);">AI</div>
-    <div>
-      <h1 class="text-xl font-black">ScholrAI Counselor</h1>
-      <p class="text-sm text-muted">Your AI academic advisor</p>
+<div style="max-width:48rem;margin:0 auto;">
+  <!-- Header -->
+  <div class="scholr-header">
+    <div class="scholr-ai-avatar" aria-hidden="true">
+      <i data-lucide="sparkles" style="width:1.4rem;height:1.4rem;color:#fff;"></i>
     </div>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-xl font-black" style="letter-spacing:-0.01em;">ScholrAI Mentor</h1>
+      <p class="text-sm text-muted" style="margin-top:2px;">Your AI academic &amp; career mentor. It reads your portfolio and answers with specifics.</p>
+    </div>
+    <span class="scholr-status"><span class="scholr-status-dot"></span> Online</span>
   </div>
 
-
-  <!-- Analyze Portfolio Button -->
-  <div class="card mb-3">
-    <p class="text-sm text-muted mb-3">Get AI-powered insights on your academic portfolio, identify strengths, and discover areas for improvement.</p>
-    <button id="analyzeBtn" class="btn btn-primary w-full" style="padding:0.75rem;">
-      <i data-lucide="sparkles" style="width:1.25rem;height:1.25rem;"></i> Analyze My Portfolio
+  <!-- Quick prompt chips -->
+  <div class="scholr-chips" id="quickChips">
+    <button type="button" class="scholr-chip" data-q="review">
+      <i data-lucide="sparkles" style="width:0.9rem;height:0.9rem;"></i> Review my portfolio
+    </button>
+    <button type="button" class="scholr-chip" data-q="Find internships I can apply to right now">
+      <i data-lucide="briefcase" style="width:0.9rem;height:0.9rem;"></i> Internships for me
+    </button>
+    <button type="button" class="scholr-chip" data-q="Which scholarships should I apply to?">
+      <i data-lucide="graduation-cap" style="width:0.9rem;height:0.9rem;"></i> Scholarships
+    </button>
+    <button type="button" class="scholr-chip" data-q="Plan my next 30 days to strengthen my profile">
+      <i data-lucide="calendar" style="width:0.9rem;height:0.9rem;"></i> 30-day plan
     </button>
   </div>
 
-  <!-- Response Area -->
-  <div id="advisorResponse" class="card mb-3 hidden">
-    <div class="flex items-center gap-2 mb-2">
-      <div class="avatar avatar-sm" style="background:var(--accent);">AI</div>
-      <span class="font-bold text-sm">ScholrAI</span>
+  <!-- Profile analyzer -->
+  <form id="profileAnalyzer" class="scholr-analyzer" autocomplete="off">
+    <div class="flex items-center gap-2">
+      <i data-lucide="user-search" style="width:1rem;height:1rem;color:var(--text-muted);flex-shrink:0;"></i>
+      <input type="text" id="profileRef" class="w-full" placeholder="Analyze any profile — paste a link or @username, e.g. /u/rahul123" style="border:none;outline:none;background:transparent;font-size:0.875rem;">
+      <button type="submit" class="btn btn-primary btn-sm" style="flex-shrink:0;">Analyze</button>
     </div>
-    <div id="advisorResponseText" class="text-sm" style="line-height:1.7;white-space:pre-wrap;"></div>
+  </form>
+
+  <!-- Chat log -->
+  <div class="scholr-chat" id="chatLog" aria-live="polite"></div>
+
+  <!-- Typing indicator -->
+  <div class="scholr-typing hidden" id="typingIndicator">
+    <div class="scholr-ai-avatar scholr-ai-avatar-sm" aria-hidden="true"><i data-lucide="sparkles" style="width:0.9rem;height:0.9rem;color:#fff;"></i></div>
+    <div class="scholr-bubble-ai scholr-typing-body">
+      <span class="scholr-dot"></span><span class="scholr-dot"></span><span class="scholr-dot"></span>
+    </div>
   </div>
 
-  <!-- Q&A Input -->
-  <div class="card">
-    <div class="flex items-center gap-2 mb-3">
-      <i data-lucide="message-circle" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
-      <span class="font-bold text-sm">Ask a Question</span>
-    </div>
-    <form id="advisorForm">
-      <div class="mb-3">
-        <textarea id="advisorQuestion" rows="3" placeholder="Ask anything about academics, career paths, college applications, research opportunities..." class="w-full"></textarea>
-      </div>
-      <button type="submit" class="btn btn-primary w-full" style="padding:0.75rem;">
-        <i data-lucide="send" style="width:1rem;height:1rem;"></i> Ask Advisor
-      </button>
-    </form>
-  </div>
-
-  <!-- Loading indicator -->
-  <div id="advisorLoader" class="hidden text-center py-4">
-    <div class="shimmer" style="height:6rem;width:100%;"></div>
-    <p class="text-xs text-muted mt-2">ScholrAI is thinking...</p>
-  </div>
+  <!-- Input -->
+  <form id="advisorForm" class="scholr-inputbar" autocomplete="off">
+    <textarea id="advisorQuestion" rows="1" placeholder="Ask anything — academics, careers, college apps, competitions..." class="w-full"></textarea>
+    <button type="submit" id="sendBtn" class="scholr-send" aria-label="Send message">
+      <i data-lucide="send" style="width:1.1rem;height:1.1rem;"></i>
+    </button>
+  </form>
+  <p class="text-xs text-muted" style="text-align:center;margin-top:0.5rem;">AI can make mistakes — double-check important deadlines and official guidelines.</p>
 
   <!-- Fallback notice -->
   <div id="advisorFallback" class="hidden text-center text-xs text-muted mt-3 p-3 rounded-lg" style="background:rgba(245,158,11,0.1);color:var(--warning);">
@@ -57,109 +66,266 @@
 
 <script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-  var loading = false;
-  var responseArea = document.getElementById('advisorResponse');
-  var responseText = document.getElementById('advisorResponseText');
-  var loader = document.getElementById('advisorLoader');
+  var chatLog = document.getElementById('chatLog');
+  var typing = document.getElementById('typingIndicator');
+  var history = [];
+  var busy = false;
   var fallback = document.getElementById('advisorFallback');
 
-      // Check if Gemini is configured
-      fetch('/api/gemini/status')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (!data.configured) {
-            fallback.classList.remove('hidden');
-          }
-        })
-        .catch(function() {
-          fallback.classList.remove('hidden');
-        });
+  function escapeHtml(s) {
+    if (typeof s !== 'string') return s || '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
 
-      // Analyze portfolio
-  document.getElementById('analyzeBtn').addEventListener('click', function() {
-    if (loading) return;
-    loading = true;
-    this.disabled = true;
-    this.innerHTML = '<i data-lucide="loader-2" style="width:1.25rem;height:1.25rem;animation:spin 1s linear infinite;"></i> Analyzing...';
-    loader.classList.remove('hidden');
-    responseArea.classList.add('hidden');
+  function mdInline(t) {
+    t = escapeHtml(t);
+    t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+    t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    t = t.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    return t;
+  }
+
+  function renderMarkdown(t) {
+    var lines = t.split('\n');
+    var html = '';
+    var inList = false;
+    lines.forEach(function(line) {
+      var l = line.trim();
+      if (!l) { if (inList) { html += '</ul>'; inList = false; } return; }
+      if (/^###\s/.test(l)) { if (inList) { html += '</ul>'; inList = false; } html += '<h4>' + mdInline(l.slice(3)) + '</h4>'; return; }
+      if (/^##\s/.test(l)) { if (inList) { html += '</ul>'; inList = false; } html += '<h3>' + mdInline(l.slice(2)) + '</h3>'; return; }
+      if (/^#\s/.test(l)) { if (inList) { html += '</ul>'; inList = false; } html += '<h2>' + mdInline(l.slice(1)) + '</h2>'; return; }
+      if (/^[-*]\s/.test(l)) { if (!inList) { html += '<ul>'; inList = true; } html += '<li>' + mdInline(l.slice(1)) + '</li>'; return; }
+      if (/^>\s?/.test(l)) { if (inList) { html += '</ul>'; inList = false; } html += '<blockquote>' + mdInline(l.replace(/^>\s?/, '')) + '</blockquote>'; return; }
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<p>' + mdInline(l) + '</p>';
+    });
+    if (inList) html += '</ul>';
+    return html;
+  }
+
+  function scrollBottom() {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  function addUserMsg(text) {
+    var wrap = document.createElement('div');
+    wrap.className = 'scholr-row scholr-row-user';
+    wrap.innerHTML = '<div class="scholr-bubble-user">' + escapeHtml(text) + '</div>';
+    chatLog.appendChild(wrap);
+    scrollBottom();
+  }
+
+  function addAiMsg(text, suggestions) {
+    var wrap = document.createElement('div');
+    wrap.className = 'scholr-row scholr-row-ai';
+    var inner = document.createElement('div');
+    inner.className = 'scholr-bubble-ai';
+    inner.innerHTML = '<div class="scholr-ai-name"><span class="scholr-ai-avatar scholr-ai-avatar-sm" aria-hidden="true"><i data-lucide="sparkles" style="width:0.9rem;height:0.9rem;color:#fff;"></i></span><span class="font-bold text-xs">ScholrAI</span></div>' +
+      '<div class="scholr-md">' + renderMarkdown(text) + '</div>' +
+      '<button type="button" class="scholr-copy" aria-label="Copy answer"><i data-lucide="copy" style="width:0.85rem;height:0.85rem;"></i> Copy</button>';
+    var chips = document.createElement('div');
+    chips.className = 'scholr-followups';
+    if (suggestions && suggestions.length) {
+      suggestions.forEach(function(s) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'scholr-followup';
+        b.textContent = s;
+        b.addEventListener('click', function() { sendQuestion(s); });
+        chips.appendChild(b);
+      });
+      inner.appendChild(chips);
+    }
+    wrap.appendChild(inner);
+    chatLog.appendChild(wrap);
     lucide.createIcons();
+    var copyBtn = inner.querySelector('.scholr-copy');
+    if (copyBtn) copyBtn.addEventListener('click', function() {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() {
+          copyBtn.innerHTML = '<i data-lucide="check" style="width:0.85rem;height:0.85rem;"></i> Copied';
+          lucide.createIcons();
+          setTimeout(function() {
+            copyBtn.innerHTML = '<i data-lucide="copy" style="width:0.85rem;height:0.85rem;"></i> Copy';
+            lucide.createIcons();
+          }, 1800);
+        });
+      }
+    });
+    scrollBottom();
+  }
 
-    fetch('/api/gemini/analyze-portfolio', { method: 'POST' })
-      .then(function(r) { return r.json(); })
+  function setTyping(on) {
+    if (on) { typing.classList.remove('hidden'); } else { typing.classList.add('hidden'); }
+    scrollBottom();
+  }
+
+  function apiCall(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function(r) { return r.json(); });
+  }
+
+  function sendQuestion(question) {
+    if (busy) return;
+    var q = (question || '').trim();
+    if (!q) return;
+    busy = true;
+    addUserMsg(q);
+    history.push({ role: 'user', content: q });
+    document.getElementById('advisorQuestion').value = '';
+    setTyping(true);
+    apiCall('/api/gemini/ask-advisor', { message: q, history: history })
       .then(function(data) {
-        loading = false;
-        loader.classList.add('hidden');
-        document.getElementById('analyzeBtn').disabled = false;
-        document.getElementById('analyzeBtn').innerHTML = '<i data-lucide="sparkles" style="width:1.25rem;height:1.25rem;"></i> Analyze My Portfolio';
-        if (data.answer) {
-          responseText.textContent = data.answer;
-          responseArea.classList.remove('hidden');
-        } else {
-          responseText.textContent = 'No response received. Please try again.';
-          responseArea.classList.remove('hidden');
-        }
-        lucide.createIcons();
+        var answer = data.answer || 'Sorry, I did not get a response. Please try again.';
+        history.push({ role: 'assistant', content: answer });
+        addAiMsg(answer, data.suggestions);
       })
       .catch(function() {
-        loading = false;
-        loader.classList.add('hidden');
-        document.getElementById('analyzeBtn').disabled = false;
-        document.getElementById('analyzeBtn').innerHTML = '<i data-lucide="sparkles" style="width:1.25rem;height:1.25rem;"></i> Analyze My Portfolio';
-        responseText.textContent = 'An error occurred. Please check the Gemini API configuration.';
-        responseArea.classList.remove('hidden');
-        lucide.createIcons();
+        addAiMsg('Something went wrong. Please check the Gemini API configuration.', ['Retry']);
+      })
+      .finally(function() {
+        busy = false;
+        setTyping(false);
+      });
+  }
+
+  // Quick chips
+  document.querySelectorAll('#quickChips .scholr-chip').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      var q = chip.getAttribute('data-q');
+      if (q === 'review') { analyzePortfolio(); } else { sendQuestion(q); }
+    });
+  });
+
+  // Portfolio analysis
+  function analyzePortfolio() {
+    if (busy) return;
+    busy = true;
+    addUserMsg('Analyze my portfolio');
+    setTyping(true);
+    apiCall('/api/gemini/analyze-portfolio', {})
+      .then(function(data) {
+        addAiMsg(data.answer || 'No response received. Please try again.', data.suggestions);
+      })
+      .catch(function() {
+        addAiMsg('Something went wrong. Please check the Gemini API configuration.', ['Retry portfolio analysis']);
+      })
+      .finally(function() {
+        busy = false;
+        setTyping(false);
+      });
+  }
+
+  // Profile analysis
+  var analyzerForm = document.getElementById('profileAnalyzer');
+  analyzerForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (busy) return;
+    var ref = document.getElementById('profileRef').value.trim();
+    if (!ref) return;
+    busy = true;
+    addUserMsg('Analyze profile: ' + ref);
+    document.getElementById('profileRef').value = '';
+    setTyping(true);
+    apiCall('/api/gemini/analyze-profile', { profile: ref })
+      .then(function(data) {
+        if (data.error) { addAiMsg(data.error, ['Review my portfolio instead']); }
+        else { addAiMsg(data.answer || 'No response received. Please try again.', data.suggestions); }
+      })
+      .catch(function() {
+        addAiMsg('Something went wrong. Please check the Gemini API configuration.', ['Retry']);
+      })
+      .finally(function() {
+        busy = false;
+        setTyping(false);
       });
   });
 
-  // Ask advisor
-  document.getElementById('advisorForm').addEventListener('submit', function(e) {
+  // Send on submit / Enter
+  var advisorForm = document.getElementById('advisorForm');
+  var input = document.getElementById('advisorQuestion');
+  advisorForm.addEventListener('submit', function(e) {
     e.preventDefault();
-    if (loading) return;
-    var question = document.getElementById('advisorQuestion').value.trim();
-    if (!question) return;
+    sendQuestion(input.value);
+  });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendQuestion(input.value);
+    }
+  });
+  input.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+  });
 
-    loading = true;
-    var submitBtn = this.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i data-lucide="loader-2" style="width:1rem;height:1rem;animation:spin 1s linear infinite;"></i> Thinking...';
-    loader.classList.remove('hidden');
-    lucide.createIcons();
-
-    fetch('/api/gemini/ask-advisor', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({question: question})
-    })
+  // Gemini status
+  fetch('/api/gemini/status')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      loading = false;
-      loader.classList.add('hidden');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i data-lucide="send" style="width:1rem;height:1rem;"></i> Ask Advisor';
-      if (data.answer) {
-        responseText.textContent = data.answer;
-        responseArea.classList.remove('hidden');
-      } else {
-        responseText.textContent = 'No response received. Please try again.';
-        responseArea.classList.remove('hidden');
-      }
-      lucide.createIcons();
+      if (!data.configured) fallback.classList.remove('hidden');
     })
-    .catch(function() {
-      loading = false;
-      loader.classList.add('hidden');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i data-lucide="send" style="width:1rem;height:1rem;"></i> Ask Advisor';
-      responseText.textContent = 'An error occurred. Please check the Gemini API configuration.';
-      responseArea.classList.remove('hidden');
-      lucide.createIcons();
-    });
-  });
+    .catch(function() { fallback.classList.remove('hidden'); });
+
+  // Welcome message
+  addAiMsg('Hi! I\'m your ScholrAI mentor. I can read your portfolio — your achievements, projects, and experiences — and give you specific suggestions. Try one of the quick topics above, paste a **profile link** to analyze another student, or just ask me anything about academics, careers, college applications, and opportunities.', ['Review my portfolio', 'Find internships for me', 'Which scholarships should I apply to?']);
 });
 </script>
 
 <style>
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.scholr-header{display:flex;align-items:center;gap:0.85rem;padding:1.25rem 1rem 0.75rem;background:linear-gradient(135deg,rgba(108,59,245,0.06),rgba(0,196,184,0.05));border:1px solid var(--border);border-radius:1rem;margin-bottom:0.75rem;}
+.scholr-ai-avatar{width:2.75rem;height:2.75rem;border-radius:50%;background:linear-gradient(135deg,#6C3BF5,#00C4B8);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(108,59,245,0.35);}
+.scholr-ai-avatar-sm{width:1.5rem;height:1.5rem;border-radius:50%;box-shadow:0 2px 6px rgba(108,59,245,0.3);}
+.scholr-status{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.72rem;font-weight:600;color:#059669;background:rgba(5,150,105,0.08);padding:0.3rem 0.6rem;border-radius:999px;white-space:nowrap;}
+.scholr-status-dot{width:7px;height:7px;border-radius:50%;background:#059669;animation:scholrPulse 1.6s ease-in-out infinite;}
+@keyframes scholrPulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+.scholr-chips{display:flex;gap:0.5rem;overflow-x:auto;padding:0.25rem 0.25rem 0.75rem;scrollbar-width:none;}
+.scholr-chips::-webkit-scrollbar{display:none;}
+.scholr-chip{display:inline-flex;align-items:center;gap:0.4rem;padding:0.45rem 0.85rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s ease;}
+.scholr-chip:hover{border-color:var(--primary);color:var(--primary);background:rgba(108,59,245,0.05);}
+.scholr-analyzer{display:flex;align-items:center;gap:0.5rem;padding:0.55rem 0.85rem;border:1px solid var(--border);border-radius:0.9rem;background:var(--bg-card);margin-bottom:0.75rem;}
+.scholr-analyzer:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(108,59,245,0.12);}
+.scholr-chat{display:flex;flex-direction:column;gap:0.85rem;padding-bottom:0.75rem;}
+.scholr-row{display:flex;}
+.scholr-row-user{justify-content:flex-end;}
+.scholr-row-ai{justify-content:flex-start;}
+.scholr-bubble-user{max-width:85%;padding:0.7rem 1rem;background:var(--primary);color:#fff;border-radius:1.1rem 0.35rem 1.1rem 1.1rem;font-size:0.9rem;line-height:1.55;white-space:pre-wrap;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+.scholr-bubble-ai{max-width:92%;padding:0.75rem 0.95rem;background:var(--bg-card);border:1px solid var(--border);border-radius:0.35rem 1.1rem 1.1rem 1.1rem;box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,0.06));}
+.scholr-ai-name{display:flex;align-items:center;gap:0.45rem;margin-bottom:0.5rem;}
+.scholr-md{font-size:0.9rem;line-height:1.65;color:var(--text);word-break:break-word;}
+.scholr-md h2,.scholr-md h3,.scholr-md h4{font-weight:800;margin:0.6rem 0 0.3rem;line-height:1.35;}
+.scholr-md h2{font-size:1rem;}
+.scholr-md h3{font-size:0.95rem;color:var(--primary);}
+.scholr-md h4{font-size:0.88rem;}
+.scholr-md p{margin:0.35rem 0;}
+.scholr-md ul{margin:0.35rem 0;padding-left:1.15rem;}
+.scholr-md ul li{margin:0.25rem 0;}
+.scholr-md blockquote{margin:0.5rem 0;padding:0.4rem 0.75rem;border-left:3px solid var(--primary);background:rgba(108,59,245,0.05);border-radius:0 0.5rem 0.5rem 0;font-style:italic;}
+.scholr-md code{background:rgba(108,59,245,0.08);color:var(--primary);padding:0.1rem 0.35rem;border-radius:0.35rem;font-size:0.8rem;}
+.scholr-md a{color:var(--primary);font-weight:600;text-decoration:underline;}
+.scholr-copy{display:inline-flex;align-items:center;gap:0.3rem;margin-top:0.6rem;background:none;border:none;color:var(--text-muted);font-size:0.72rem;font-weight:600;cursor:pointer;padding:0.25rem 0.5rem;border-radius:0.5rem;}
+.scholr-copy:hover{background:var(--bg-hover);color:var(--primary);}
+.scholr-followups{display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.6rem;padding-top:0.6rem;border-top:1px dashed var(--border);}
+.scholr-followup{font-size:0.75rem;font-weight:600;color:var(--primary);background:rgba(108,59,245,0.07);border:1px solid rgba(108,59,245,0.2);border-radius:999px;padding:0.32rem 0.7rem;cursor:pointer;transition:all 0.2s ease;}
+.scholr-followup:hover{background:rgba(108,59,245,0.14);}
+.scholr-typing{display:flex;align-items:flex-end;gap:0.5rem;margin-bottom:0.75rem;}
+.scholr-typing-body{padding:0.75rem 1rem;display:flex;gap:0.3rem;align-items:center;width:fit-content;}
+.scholr-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);animation:scholrBounce 1.2s infinite;}
+.scholr-dot:nth-child(2){animation-delay:0.15s;}
+.scholr-dot:nth-child(3){animation-delay:0.3s;}
+@keyframes scholrBounce{0%,60%,100%{transform:translateY(0);opacity:0.5;}30%{transform:translateY(-4px);opacity:1;}}
+.scholr-inputbar{display:flex;align-items:flex-end;gap:0.6rem;padding:0.6rem 0.7rem;background:var(--bg-card);border:1px solid var(--border);border-radius:1.1rem;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.scholr-inputbar:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(108,59,245,0.12);}
+.scholr-inputbar textarea{border:none;outline:none;background:transparent;resize:none;font-size:0.9rem;max-height:140px;color:var(--text);}
+.scholr-send{width:2.5rem;height:2.5rem;border-radius:0.85rem;border:none;background:linear-gradient(135deg,#6C3BF5,#00C4B8);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform 0.15s ease;box-shadow:0 3px 10px rgba(108,59,245,0.35);}
+.scholr-send:hover{transform:translateY(-1px);}
+.scholr-send:active{transform:translateY(0);}
+.scholr-send:disabled{opacity:0.5;cursor:not-allowed;}
+@media(min-width:40rem){.scholr-bubble-user{max-width:70%;}.scholr-bubble-ai{max-width:80%;}}
 </style>
 {% endblock %}

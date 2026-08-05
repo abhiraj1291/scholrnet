@@ -877,28 +877,129 @@ def api_gemini_status():
     return jsonify({"configured": client is not None})
 
 
+def _portfolio_context(u):
+    """Build a compact academic portfolio summary for AI prompts."""
+    parts = [f"Name: {u.name or 'Student'}, Grade: {u.grade or 'Not set'}, School: {u.school or 'Not set'}"]
+    if getattr(u, 'bio', ''):
+        parts.append(f"Bio: {sanitize_text(u.bio, 300)}")
+    achs = Achievement.query.filter_by(user_id=u.id).order_by(Achievement.id.desc()).limit(15).all()
+    if achs:
+        lines = []
+        for a in achs:
+            status = 'Verified' if a.verification_status == 'Verified' else 'Unverified'
+            extra = a.year or ''
+            if a.institution:
+                extra = (extra + ', ' if extra else '') + a.institution
+            desc = sanitize_text(a.description, 90)
+            if desc:
+                extra = (extra + ' — ' if extra else '') + desc
+            lines.append(f"- {a.title} ({a.category or 'Achievement'}) [{status}]" + (f" {extra}" if extra else ""))
+        parts.append("Achievements:\n" + "\n".join(lines))
+    projs = Project.query.filter_by(user_id=u.id).order_by(Project.id.desc()).limit(10).all()
+    if projs:
+        lines = []
+        for p in projs:
+            status = 'Verified' if p.verification_status == 'Verified' else 'Unverified'
+            desc = sanitize_text(p.description, 90)
+            line = f"- {p.title} [{status}]"
+            if p.skills:
+                line += f", skills: {sanitize_text(p.skills, 120)}"
+            if desc:
+                line += f" — {desc}"
+            lines.append(line)
+        parts.append("Projects:\n" + "\n".join(lines))
+    exps = Experience.query.filter_by(user_id=u.id).order_by(Experience.id.desc()).limit(6).all()
+    if exps:
+        lines = []
+        for e in exps:
+            line = f"- {e.role} at {e.company}"
+            if e.description:
+                line += f" — {sanitize_text(e.description, 90)}"
+            lines.append(line)
+        parts.append("Experience:\n" + "\n".join(lines))
+    return "\n".join(parts)
+
+
+def _gemini_reply(client, system, user_msg):
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=f"{system}\n\n{user_msg}",
+        config={"max_output_tokens": 1200}
+    )
+    return (response.text or "").strip()
+
+
+_ADVISOR_SYSTEM = (
+    "You are ScholrAI, a friendly AI career and academic mentor for high school and early-college "
+    "students in India. Give specific, actionable advice with concrete examples (real competitions, "
+    "scholarships, internships, projects, platforms). Be encouraging but honest. Use markdown: short "
+    "headings, bold, and bullet lists. Keep answers under 350 words. Never invent fake student success "
+    "stories, fake user counts, or fake partnerships."
+)
+
+
 @posts_bp.route('/api/gemini/analyze-portfolio', methods=['POST'])
 @login_required
 @limiter.limit("5 per minute")
 def api_gemini_analyze():
     client = get_gemini_client()
     if not client:
-        return jsonify({"academicReview": f"Strong portfolio, {current_user.name}!", "strengths": ["Academic Dedication", "Project Building"], "opportunitiesRecommended": [], "portfolioEnhancements": ["Add more verified achievements"]})
+        return jsonify({"answer": "**Portfolio summary**\n\n- **Academic Dedication** — you're building a portfolio, which already puts you ahead.\n- **Next step:** add and verify more achievements so colleges and employers can trust your profile.\n\nTry adding your top 3 achievements with certificates and getting them verified by your school counselor.", "suggestions": ["Give me a 30-day improvement plan", "Which scholarships fit my profile?", "What projects should I build?"]})
     try:
-        prompt = f"Analyze this student portfolio. Name: {current_user.name}, Grade: {current_user.grade}"
-        response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt, config={"response_mime_type": "application/json", "max_output_tokens": 1000})
-        result = json.loads(response.text.strip())
-        return jsonify(result)
-    except json.JSONDecodeError:
-        return jsonify({"academicReview": "Analysis unavailable at this time.", "strengths": [], "opportunitiesRecommended": [], "portfolioEnhancements": []})
+        prompt = (
+            "Analyze this student's academic portfolio and give a detailed review:\n\n"
+            + _portfolio_context(current_user) +
+            "\n\nProvide: 1) Overall assessment (2-3 sentences). 2) Top 3 strengths with reasons. "
+            "3) Gaps or weaknesses. 4) Five specific suggestions with concrete examples — e.g. "
+            "scholarships, competitions, internships, or projects to build — matched to their grade, "
+            "school, and achievements. Format as markdown with short headings and bullets."
+        )
+        answer = _gemini_reply(client, _ADVISOR_SYSTEM, prompt)
+        return jsonify({"answer": answer, "suggestions": ["Give me a 30-day improvement plan", "Which scholarships fit my profile?", "What projects should I build next?"]})
     except Exception as e:
         current_app.logger.error(f"Gemini analyze error: {e}")
-        return jsonify({"academicReview": "Analysis unavailable at this time.", "strengths": [], "opportunitiesRecommended": [], "portfolioEnhancements": []})
+        return jsonify({"answer": "Sorry, I couldn't analyze your portfolio right now. Please try again in a moment.", "suggestions": ["Retry portfolio analysis"]})
+
+
+@posts_bp.route('/api/gemini/analyze-profile', methods=['POST'])
+@login_required
+@limiter.limit("5 per minute")
+def api_gemini_analyze_profile():
+    client = get_gemini_client()
+    data = request.json or {}
+    ref = sanitize_text(data.get('profile') or data.get('username') or data.get('url') or data.get('profile_id', ''), 200).strip()
+    if not ref:
+        return jsonify({"error": "Profile link or username is required"}), 400
+    target = None
+    if ref.isdigit():
+        target = User.query.get(int(ref))
+    else:
+        username = ref.rstrip('/').split('/')[-1].lower()
+        target = User.query.filter_by(username=username).first()
+    if not target:
+        return jsonify({"error": "Profile not found. Check the link or username and try again."}), 404
+    if not client:
+        return jsonify({"answer": f"**Quick look at {target.name}'s profile**\n\n- **What stands out:** their school, grade, and portfolio structure.\n- **Next step:** ask them to verify their achievements so the profile is fully credible.\n\nFor a deeper AI review, configure the Gemini API key in the project settings.", "suggestions": ["How is my profile compared to theirs?", "What can I learn from their path?"]})
+    try:
+        prompt = (
+            "Analyze this student's profile and give constructive feedback they could use to grow:\n\n"
+            + _portfolio_context(target) +
+            "\n\nProvide: 1) A 2-3 sentence assessment of their profile. 2) What they're doing well "
+            "with examples from their own achievements/projects. 3) 5 specific suggestions with "
+            "concrete examples (scholarships, competitions, internships, projects, skills) tailored "
+            "to their grade and interests. 4) If most achievements are unverified, explain why "
+            "verification matters. Format as markdown with short headings and bullets."
+        )
+        answer = _gemini_reply(client, _ADVISOR_SYSTEM, prompt)
+        return jsonify({"answer": answer, "suggestions": ["How is my profile compared to theirs?", "What can I learn from their path?", "Suggest opportunities similar to theirs"]})
+    except Exception as e:
+        current_app.logger.error(f"Gemini analyze-profile error: {e}")
+        return jsonify({"answer": "Sorry, I couldn't analyze that profile right now. Please try again in a moment.", "suggestions": ["Retry profile analysis"]})
 
 
 @posts_bp.route('/api/gemini/ask-advisor', methods=['POST'])
 @login_required
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")
 def api_gemini_ask():
     client = get_gemini_client()
     data = request.json or {}
@@ -906,14 +1007,30 @@ def api_gemini_ask():
     if not user_msg:
         return jsonify({"error": "Message is required"}), 400
     if not client:
-        fallbacks = ["To apply for CBSE gold seals, upload your certificate and request verification.", "KVPY fellowships require verified academic evidence.", "For research projects, host code on GitHub and link to your profile."]
-        return jsonify({"answer": random.choice(fallbacks)})
+        fallbacks = [
+            "To apply for CBSE gold seals, upload your certificate and request verification.",
+            "KVPY fellowships require verified academic evidence.",
+            "For research projects, host code on GitHub and link to your profile.",
+            "Start with the opportunities in the feed — filter by your grade and interests.",
+        ]
+        return jsonify({"answer": random.choice(fallbacks), "suggestions": ["Find internships for me", "Scholarships I should apply to", "Review my portfolio"]})
     try:
-        response = client.models.generate_content(model="gemini-2.5-flash", contents=f"You are ScholrAI, a student counselor. Question: {user_msg}", config={"max_output_tokens": 1000})
-        return jsonify({"answer": response.text})
+        history = data.get('history') or []
+        turns = []
+        for m in history[-6:]:
+            if isinstance(m, dict):
+                role = 'user' if m.get('role') == 'user' else 'assistant'
+                txt = sanitize_text(str(m.get('content', ''))[:800], 800)
+                if txt:
+                    turns.append(f"{role}: {txt}")
+        context = _portfolio_context(current_user)
+        system = _ADVISOR_SYSTEM + "\n\nThe student's own portfolio (use it to personalize your answer):\n" + context
+        user_msg_full = "Previous conversation:\n" + "\n".join(turns) + "\n\nLatest question: " + user_msg
+        answer = _gemini_reply(client, system, user_msg_full)
+        return jsonify({"answer": answer, "suggestions": ["Give me a step-by-step plan", "More details, please", "What about scholarships?"]})
     except Exception as e:
         current_app.logger.error(f"Gemini ask error: {e}")
-        return jsonify({"answer": "Sorry, I'm having trouble right now. Please try again later."})
+        return jsonify({"answer": "Sorry, I'm having trouble right now. Please try again later.", "suggestions": ["Retry"]})
 
 
 @posts_bp.route('/api/groq/analyze-portfolio', methods=['POST'])
