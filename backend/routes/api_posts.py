@@ -949,19 +949,19 @@ def _groq_chat(system, user_msg, key):
 
 
 def _mentor_reply(system, user_msg):
-    """Reply via Groq (primary, free tier) with Gemini as automatic fallback."""
-    groq_key = current_user.get_decrypted_groq_key() or current_app.config.get("GROQ_API_KEY", "")
-    if groq_key:
-        try:
-            return _groq_chat(system, user_msg, groq_key)
-        except Exception as e:
-            current_app.logger.error(f"Groq mentor error: {e}")
+    """Reply via Gemini (primary) with Groq as automatic fallback."""
     client = get_gemini_client()
     if client:
         try:
             return _gemini_reply(client, system, user_msg)
         except Exception as e:
             current_app.logger.error(f"Gemini mentor error: {e}")
+    groq_key = current_user.get_decrypted_groq_key() or current_app.config.get("GROQ_API_KEY", "")
+    if groq_key:
+        try:
+            return _groq_chat(system, user_msg, groq_key)
+        except Exception as e:
+            current_app.logger.error(f"Groq mentor error: {e}")
     return None
 
 
