@@ -873,8 +873,8 @@ def api_upload_token():
 @posts_bp.route('/api/gemini/status')
 @login_required
 def api_gemini_status():
-    client = get_gemini_client()
-    return jsonify({"configured": client is not None})
+    groq_key = current_user.get_decrypted_groq_key() or current_app.config.get("GROQ_API_KEY", "")
+    return jsonify({"configured": bool(groq_key) or get_gemini_client() is not None})
 
 
 def _portfolio_context(u):
@@ -929,6 +929,42 @@ def _gemini_reply(client, system, user_msg):
     return (response.text or "").strip()
 
 
+def _groq_chat(system, user_msg, key):
+    import json, urllib.request
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_msg}
+    ]
+    last = None
+    for model in ("llama-3.3-70b-versatile", "llama-3.1-8b-instant"):
+        try:
+            body = json.dumps({"model": model, "messages": messages, "max_tokens": 1200}).encode()
+            req = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions",
+                data=body, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, method="POST")
+            resp = json.loads(urllib.request.urlopen(req, timeout=25).read())
+            return resp["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            last = e
+    raise last
+
+
+def _mentor_reply(system, user_msg):
+    """Reply via Groq (primary, free tier) with Gemini as automatic fallback."""
+    groq_key = current_user.get_decrypted_groq_key() or current_app.config.get("GROQ_API_KEY", "")
+    if groq_key:
+        try:
+            return _groq_chat(system, user_msg, groq_key)
+        except Exception as e:
+            current_app.logger.error(f"Groq mentor error: {e}")
+    client = get_gemini_client()
+    if client:
+        try:
+            return _gemini_reply(client, system, user_msg)
+        except Exception as e:
+            current_app.logger.error(f"Gemini mentor error: {e}")
+    return None
+
+
 _ADVISOR_SYSTEM = (
     "You are ScholrAI, a friendly AI career and academic mentor for high school and early-college "
     "students in India. Give specific, actionable advice with concrete examples (real competitions, "
@@ -942,9 +978,6 @@ _ADVISOR_SYSTEM = (
 @login_required
 @limiter.limit("5 per minute")
 def api_gemini_analyze():
-    client = get_gemini_client()
-    if not client:
-        return jsonify({"answer": "**Portfolio summary**\n\n- **Academic Dedication** — you're building a portfolio, which already puts you ahead.\n- **Next step:** add and verify more achievements so colleges and employers can trust your profile.\n\nTry adding your top 3 achievements with certificates and getting them verified by your school counselor.", "suggestions": ["Give me a 30-day improvement plan", "Which scholarships fit my profile?", "What projects should I build?"]})
     try:
         prompt = (
             "Analyze this student's academic portfolio and give a detailed review:\n\n"
@@ -954,10 +987,12 @@ def api_gemini_analyze():
             "scholarships, competitions, internships, or projects to build — matched to their grade, "
             "school, and achievements. Format as markdown with short headings and bullets."
         )
-        answer = _gemini_reply(client, _ADVISOR_SYSTEM, prompt)
+        answer = _mentor_reply(_ADVISOR_SYSTEM, prompt)
+        if not answer:
+            return jsonify({"answer": "**Portfolio summary**\n\n- **Academic Dedication** — you're building a portfolio, which already puts you ahead.\n- **Next step:** add and verify more achievements so colleges and employers can trust your profile.\n\nTry adding your top 3 achievements with certificates and getting them verified by your school counselor.", "suggestions": ["Give me a 30-day improvement plan", "Which scholarships fit my profile?", "What projects should I build?"]})
         return jsonify({"answer": answer, "suggestions": ["Give me a 30-day improvement plan", "Which scholarships fit my profile?", "What projects should I build next?"]})
     except Exception as e:
-        current_app.logger.error(f"Gemini analyze error: {e}")
+        current_app.logger.error(f"Mentor analyze error: {e}")
         return jsonify({"answer": "Sorry, I couldn't analyze your portfolio right now. Please try again in a moment.", "suggestions": ["Retry portfolio analysis"]})
 
 
@@ -965,7 +1000,6 @@ def api_gemini_analyze():
 @login_required
 @limiter.limit("5 per minute")
 def api_gemini_analyze_profile():
-    client = get_gemini_client()
     data = request.json or {}
     ref = sanitize_text(data.get('profile') or data.get('username') or data.get('url') or data.get('profile_id', ''), 200).strip()
     if not ref:
@@ -978,8 +1012,6 @@ def api_gemini_analyze_profile():
         target = User.query.filter_by(username=username).first()
     if not target:
         return jsonify({"error": "Profile not found. Check the link or username and try again."}), 404
-    if not client:
-        return jsonify({"answer": f"**Quick look at {target.name}'s profile**\n\n- **What stands out:** their school, grade, and portfolio structure.\n- **Next step:** ask them to verify their achievements so the profile is fully credible.\n\nFor a deeper AI review, configure the Gemini API key in the project settings.", "suggestions": ["How is my profile compared to theirs?", "What can I learn from their path?"]})
     try:
         prompt = (
             "Analyze this student's profile and give constructive feedback they could use to grow:\n\n"
@@ -990,10 +1022,12 @@ def api_gemini_analyze_profile():
             "to their grade and interests. 4) If most achievements are unverified, explain why "
             "verification matters. Format as markdown with short headings and bullets."
         )
-        answer = _gemini_reply(client, _ADVISOR_SYSTEM, prompt)
+        answer = _mentor_reply(_ADVISOR_SYSTEM, prompt)
+        if not answer:
+            return jsonify({"answer": f"**Quick look at {target.name}'s profile**\n\n- **What stands out:** their school, grade, and portfolio structure.\n- **Next step:** ask them to verify their achievements so the profile is fully credible.\n\nFor a deeper AI review, configure a Groq or Gemini API key in the project settings.", "suggestions": ["How is my profile compared to theirs?", "What can I learn from their path?"]})
         return jsonify({"answer": answer, "suggestions": ["How is my profile compared to theirs?", "What can I learn from their path?", "Suggest opportunities similar to theirs"]})
     except Exception as e:
-        current_app.logger.error(f"Gemini analyze-profile error: {e}")
+        current_app.logger.error(f"Mentor analyze-profile error: {e}")
         return jsonify({"answer": "Sorry, I couldn't analyze that profile right now. Please try again in a moment.", "suggestions": ["Retry profile analysis"]})
 
 
@@ -1001,19 +1035,10 @@ def api_gemini_analyze_profile():
 @login_required
 @limiter.limit("10 per minute")
 def api_gemini_ask():
-    client = get_gemini_client()
     data = request.json or {}
     user_msg = sanitize_text(data.get('message') or data.get('question', ''), 2000)
     if not user_msg:
         return jsonify({"error": "Message is required"}), 400
-    if not client:
-        fallbacks = [
-            "To apply for CBSE gold seals, upload your certificate and request verification.",
-            "KVPY fellowships require verified academic evidence.",
-            "For research projects, host code on GitHub and link to your profile.",
-            "Start with the opportunities in the feed — filter by your grade and interests.",
-        ]
-        return jsonify({"answer": random.choice(fallbacks), "suggestions": ["Find internships for me", "Scholarships I should apply to", "Review my portfolio"]})
     try:
         history = data.get('history') or []
         turns = []
@@ -1026,56 +1051,19 @@ def api_gemini_ask():
         context = _portfolio_context(current_user)
         system = _ADVISOR_SYSTEM + "\n\nThe student's own portfolio (use it to personalize your answer):\n" + context
         user_msg_full = "Previous conversation:\n" + "\n".join(turns) + "\n\nLatest question: " + user_msg
-        answer = _gemini_reply(client, system, user_msg_full)
+        answer = _mentor_reply(system, user_msg_full)
+        if not answer:
+            fallbacks = [
+                "To apply for CBSE gold seals, upload your certificate and request verification.",
+                "KVPY fellowships require verified academic evidence.",
+                "For research projects, host code on GitHub and link to your profile.",
+                "Start with the opportunities in the feed — filter by your grade and interests.",
+            ]
+            return jsonify({"answer": random.choice(fallbacks), "suggestions": ["Find internships for me", "Scholarships I should apply to", "Review my portfolio"]})
         return jsonify({"answer": answer, "suggestions": ["Give me a step-by-step plan", "More details, please", "What about scholarships?"]})
     except Exception as e:
-        current_app.logger.error(f"Gemini ask error: {e}")
+        current_app.logger.error(f"Mentor ask error: {e}")
         return jsonify({"answer": "Sorry, I'm having trouble right now. Please try again later.", "suggestions": ["Retry"]})
-
-
-@posts_bp.route('/api/groq/analyze-portfolio', methods=['POST'])
-@login_required
-@limiter.limit("5 per minute")
-def api_groq_analyze():
-    key = current_user.groq_api_key or current_app.config.get("GROQ_API_KEY", "")
-    if not key:
-        return jsonify({"response": "No Groq API key configured. Add yours in the key field above."})
-    achs = Achievement.query.filter_by(user_id=current_user.id).all()
-    projects_data = Project.query.filter_by(user_id=current_user.id).all()
-    prompt = f"Analyze this academic portfolio for {current_user.name} ({current_user.school}, {current_user.grade}). Achievements: {[(a.title, a.category, a.description[:100]) for a in achs]}. Projects: {[(p.title, p.description[:100], p.skills) for p in projects_data]}. Give strengths, improvements, and career suggestions."
-    try:
-        import json, urllib.request
-        body = json.dumps({"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": prompt}], "max_tokens": 1000}).encode()
-        req = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions",
-            data=body, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, method="POST")
-        resp = json.loads(urllib.request.urlopen(req, timeout=30).read())
-        return jsonify({"response": resp["choices"][0]["message"]["content"]})
-    except Exception as e:
-        current_app.logger.error(f"Groq analyze error: {e}")
-        return jsonify({"response": "Error calling Groq API. Check your key and try again."})
-
-
-@posts_bp.route('/api/groq/ask-advisor', methods=['POST'])
-@login_required
-@limiter.limit("5 per minute")
-def api_groq_ask():
-    key = current_user.groq_api_key or current_app.config.get("GROQ_API_KEY", "")
-    data = request.json or {}
-    user_msg = sanitize_text(data.get('question', ''), 2000)
-    if not user_msg:
-        return jsonify({"response": "Please enter a question."})
-    if not key:
-        return jsonify({"response": "No Groq API key configured. Add yours in the key field above."})
-    try:
-        import json, urllib.request
-        body = json.dumps({"model": "llama-3.1-8b-instant", "messages": [{"role": "system", "content": "You are ScholrAI, a student counselor. Be concise and helpful."}, {"role": "user", "content": user_msg}], "max_tokens": 1000}).encode()
-        req = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions",
-            data=body, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, method="POST")
-        resp = json.loads(urllib.request.urlopen(req, timeout=30).read())
-        return jsonify({"response": resp["choices"][0]["message"]["content"]})
-    except Exception as e:
-        current_app.logger.error(f"Groq ask error: {e}")
-        return jsonify({"response": "Error calling Groq API. Check your key and try again."})
 
 
 @posts_bp.route('/api/switch-role', methods=['POST'])
